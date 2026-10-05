@@ -30,7 +30,7 @@ try
     while (true)
     {
         Console.WriteLine();
-        Console.Write("Use default: Anonymize the first JSON file in docs/input with mask? [Y/n]: ");
+        Console.Write("Use default: Anonymize the first JSON file in docs/input? [Y/n]: ");
         string? answer = Console.ReadLine()?.Trim().ToLowerInvariant();
         if (answer is null) break;
 
@@ -65,7 +65,7 @@ try
                 case "default":
                     string firstJson = InputFiles("json")[0];
                     Console.WriteLine($"Using the first JSON file in docs/input: {Path.GetFileName(firstJson)}");
-                    Anonymize(new Input(File.ReadAllText(firstJson), "json", firstJson), "mask");
+                    AnonymizeDefault(new Input(File.ReadAllText(firstJson), "json", firstJson));
                     break;
                 case "1": Analyze(ReadInput()); break;
                 case "2": Anonymize(ReadInput(), ReadOperator()); break;
@@ -194,6 +194,16 @@ void Anonymize(Input input, string op)
     string result = PythonHost.Call("anonymize", input.Content, input.Format, op);
     Console.WriteLine(result);
     Save(input, $"anonymize-{op}", result);
+    End();
+}
+
+// Default mode: names -> [PASSENGER_NAME], emails -> xxxx@domain, phones and cards -> last 4 digits.
+void AnonymizeDefault(Input input)
+{
+    Begin("Anonymize (default rules)", input);
+    string result = PythonHost.Call("anonymize_default", input.Content, input.Format);
+    Console.WriteLine(result);
+    Save(input, "anonymize-default", result);
     End();
 }
 

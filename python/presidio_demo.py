@@ -95,6 +95,46 @@ OPERATORS = {
 }
 
 
+def _pnr_wins(results):
+    """spaCy sometimes also labels a PNR as PERSON with a higher score; the PNR must win."""
+    pnrs = [r for r in results if r.entity_type == "PNR_LOCATOR"]
+    return [r for r in results if r.entity_type == "PNR_LOCATOR"
+            or not any(r.start < p.end and p.start < r.end for p in pnrs)]
+
+
+def _keep_last4_digits(value):
+    """'4111 1111 1111 1111' -> '**** **** **** 1111'; separators stay."""
+    digits = [i for i, c in enumerate(value) if c.isdigit()]
+    hidden = set(digits[:-4])
+    return "".join("*" if i in hidden else c for i, c in enumerate(value))
+
+
+def _hide_email_user(value):
+    """'sarah.mitchell@example.com' -> 'xxxx@example.com'."""
+    return "xxxx@" + value.split("@", 1)[1] if "@" in value else "xxxx"
+
+
+DEFAULT_RULES = {
+    "PERSON": OperatorConfig("replace", {"new_value": "[PASSENGER_NAME]"}),
+    "EMAIL_ADDRESS": OperatorConfig("custom", {"lambda": _hide_email_user}),
+    "PHONE_NUMBER": OperatorConfig("custom", {"lambda": _keep_last4_digits}),
+    "CREDIT_CARD": OperatorConfig("custom", {"lambda": _keep_last4_digits}),
+    "PNR_LOCATOR": OperatorConfig("keep"),
+    "PASSENGER_ID": OperatorConfig("keep"),
+    "DEFAULT": OPERATORS["mask"],  # anything else that is detected
+}
+
+
+def anonymize_default(content, fmt):
+    """The app's default mode: one rule per entity type, applied to every value (remarks too)."""
+    def protect(value, field):
+        results = _pnr_wins(_analyze_value(custom_analyzer, value, field))
+        return anonymizer.anonymize(text=value, analyzer_results=results,
+                                    operators=DEFAULT_RULES).text
+
+    return _map_values(content, fmt, protect)
+
+
 def anonymize(content, fmt, mode):
     def protect(value, field):
         results = _analyze_value(analyzer, value, field)
@@ -138,11 +178,7 @@ def tokenize(content, fmt):
     }
 
     def protect(value, field):
-        results = _analyze_value(custom_analyzer, value, field)
-        # spaCy sometimes also labels a PNR as PERSON with a higher score; the PNR must win.
-        pnrs = [r for r in results if r.entity_type == "PNR_LOCATOR"]
-        results = [r for r in results if r.entity_type == "PNR_LOCATOR"
-                   or not any(r.start < p.end and p.start < r.end for p in pnrs)]
+        results = _pnr_wins(_analyze_value(custom_analyzer, value, field))
         return anonymizer.anonymize(text=value, analyzer_results=results, operators=operators).text
 
     document = _map_values(content, fmt, protect)

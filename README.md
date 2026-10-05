@@ -15,7 +15,9 @@ The menu has four demos:
 | 5. Run all | Runs every demo on the built-in sample text |
 
 When the app starts, its first question is whether to use the **default**: anonymize the first
-JSON file in `docs/input` with `mask`. Press Enter (or `y`) to run it, or `n` to open the menu above.
+JSON file in `docs/input` with the default rules (names become `[PASSENGER_NAME]`, emails
+`xxxx@example.com`, phones and cards keep their last 4 digits). Press Enter (or `y`) to run it, or
+`n` to open the menu above.
 
 Options 1 to 4 can read **user input** (text, JSON or XML typed or pasted into the console) or a
 **local file** (JSON or XML placed in `docs/input`). See [Using the app](#using-the-app).
@@ -116,12 +118,12 @@ Things to know:
 Start the app (`dotnet run`, or `Ctrl+F5` in Visual Studio). The first question is always:
 
 ```
-Use default: Anonymize the first JSON file in docs/input with mask? [Y/n]:
+Use default: Anonymize the first JSON file in docs/input? [Y/n]:
 ```
 
 - **Enter or `y`:** runs the default with no further questions. It takes the first `.json` file in
-  `docs/input` in alphabetical order (`booking-sample.json` unless you add others), masks it, prints
-  the result and saves it to `docs/output`.
+  `docs/input` in alphabetical order (`booking-sample.json` unless you add others), applies the
+  default rules below, prints the result and saves it to `docs/output`.
 - **`n`:** shows the full menu:
 
 ```
@@ -133,6 +135,21 @@ Use default: Anonymize the first JSON file in docs/input with mask? [Y/n]:
 0. Exit
 Choose:
 ```
+
+**Default rules.** They apply to every value, including free text such as `remarks`:
+
+| Detected as | Shown as | Example |
+|---|---|---|
+| Name (`PERSON`) | `[PASSENGER_NAME]` | `Sarah Mitchell` → `[PASSENGER_NAME]` |
+| Email (`EMAIL_ADDRESS`) | `xxxx@` + the original domain | `sarah.mitchell@example.com` → `xxxx@example.com` |
+| Phone (`PHONE_NUMBER`) | Last 4 digits; separators kept | `312-555-0182` → `***-***-0182` |
+| Card (`CREDIT_CARD`) | Last 4 digits; separators kept | `4111 1111 1111 1111` → `**** **** **** 1111` |
+| PNR, passenger ID | Unchanged | `R4TZ8N`, `PAX-3001` |
+| Anything else detected | Masked with `*` | |
+
+The default uses the custom recognizers (PNR and passenger ID), so spaCy can't mistake a passenger
+ID or PNR for a name. The rules are the `DEFAULT_RULES` table in `python/presidio_demo.py`; edit it
+to change what the default does.
 
 After each run the app asks the default question again. To exit, answer `n`, then `0`.
 
@@ -180,7 +197,8 @@ saved to `docs/output` as `<file name>.<demo>.<extension>`:
 | Demo | Saved file for `booking-sample.json` |
 |---|---|
 | 1. Analyze | `booking-sample.analyze.json` (list of findings) |
-| Default / 2. Anonymize | `booking-sample.anonymize-mask.json` (the operator is in the name) |
+| Default | `booking-sample.anonymize-default.json` |
+| 2. Anonymize | `booking-sample.anonymize-mask.json` (the operator is in the name) |
 | 3. Custom recognizers | `booking-sample.custom-analyze.json` (list of findings) |
 | 4. Reversible tokenization | `booking-sample.tokenized.json` |
 
@@ -208,7 +226,7 @@ Please call Kevin Price at 646-555-0110 or email kevin.price@example.com
 
 The first column is the field name; it shows `-` for plain text.
 
-### Example 2 – The default: mask the first JSON file
+### Example 2 – The default: anonymize the first JSON file
 
 Keys: Enter.
 
@@ -220,25 +238,30 @@ Using the first JSON file in docs/input: booking-sample.json
   "pnr": "R4TZ8N",
   ...
 }
-===== OUTPUT: Anonymize (mask) =========================================
+===== OUTPUT: Anonymize (default rules) ================================
 {
   "pnr": "R4TZ8N",
   "messageType": "booking",
   "passengers": [
     {
       "passengerId": "PAX-3001",
-      "name": "**************",
-      "email": "**************************",
-      "phone": "************"
+      "name": "[PASSENGER_NAME]",
+      "email": "xxxx@example.com",
+      "phone": "***-***-0182"
     },
-    ...
+    {
+      "passengerId": "PAX-3002",
+      "name": "[PASSENGER_NAME]",
+      "email": "xxxx@example.com",
+      "phone": "***-***-0164"
+    }
   ],
-  "remarks": "************** requests an aisle seat. Call ************ if the flight changes.",
+  "remarks": "[PASSENGER_NAME] requests an aisle seat. Call ***-***-0182 if the flight changes.",
   "payment": {
-    "cardNumber": "*******************"
+    "cardNumber": "**** **** **** 1111"
   }
 }
-Saved: docs/output/booking-sample.anonymize-mask.json
+Saved: docs/output/booking-sample.anonymize-default.json
 ========================================================================
 ```
 
@@ -332,7 +355,7 @@ the output valid XML.
 ### Use your own file
 
 1. Copy a `.json` or `.xml` file into `docs/input`.
-2. Either press Enter for the default (it masks the first JSON file by name), or answer `n`, pick a
+2. Either press Enter for the default (it uses the first JSON file by name), or answer `n`, pick a
    demo, then **2** (Local file), the format, and your file's number.
 3. Open the result in `docs/output`.
 
@@ -560,6 +583,46 @@ OPERATORS = {
 }
 
 
+def _pnr_wins(results):
+    """spaCy sometimes also labels a PNR as PERSON with a higher score; the PNR must win."""
+    pnrs = [r for r in results if r.entity_type == "PNR_LOCATOR"]
+    return [r for r in results if r.entity_type == "PNR_LOCATOR"
+            or not any(r.start < p.end and p.start < r.end for p in pnrs)]
+
+
+def _keep_last4_digits(value):
+    """'4111 1111 1111 1111' -> '**** **** **** 1111'; separators stay."""
+    digits = [i for i, c in enumerate(value) if c.isdigit()]
+    hidden = set(digits[:-4])
+    return "".join("*" if i in hidden else c for i, c in enumerate(value))
+
+
+def _hide_email_user(value):
+    """'sarah.mitchell@example.com' -> 'xxxx@example.com'."""
+    return "xxxx@" + value.split("@", 1)[1] if "@" in value else "xxxx"
+
+
+DEFAULT_RULES = {
+    "PERSON": OperatorConfig("replace", {"new_value": "[PASSENGER_NAME]"}),
+    "EMAIL_ADDRESS": OperatorConfig("custom", {"lambda": _hide_email_user}),
+    "PHONE_NUMBER": OperatorConfig("custom", {"lambda": _keep_last4_digits}),
+    "CREDIT_CARD": OperatorConfig("custom", {"lambda": _keep_last4_digits}),
+    "PNR_LOCATOR": OperatorConfig("keep"),
+    "PASSENGER_ID": OperatorConfig("keep"),
+    "DEFAULT": OPERATORS["mask"],  # anything else that is detected
+}
+
+
+def anonymize_default(content, fmt):
+    """The app's default mode: one rule per entity type, applied to every value (remarks too)."""
+    def protect(value, field):
+        results = _pnr_wins(_analyze_value(custom_analyzer, value, field))
+        return anonymizer.anonymize(text=value, analyzer_results=results,
+                                    operators=DEFAULT_RULES).text
+
+    return _map_values(content, fmt, protect)
+
+
 def anonymize(content, fmt, mode):
     def protect(value, field):
         results = _analyze_value(analyzer, value, field)
@@ -603,11 +666,7 @@ def tokenize(content, fmt):
     }
 
     def protect(value, field):
-        results = _analyze_value(custom_analyzer, value, field)
-        # spaCy sometimes also labels a PNR as PERSON with a higher score; the PNR must win.
-        pnrs = [r for r in results if r.entity_type == "PNR_LOCATOR"]
-        results = [r for r in results if r.entity_type == "PNR_LOCATOR"
-                   or not any(r.start < p.end and p.start < r.end for p in pnrs)]
+        results = _pnr_wins(_analyze_value(custom_analyzer, value, field))
         return anonymizer.anonymize(text=value, analyzer_results=results, operators=operators).text
 
     document = _map_values(content, fmt, protect)
@@ -756,7 +815,7 @@ try
     while (true)
     {
         Console.WriteLine();
-        Console.Write("Use default: Anonymize the first JSON file in docs/input with mask? [Y/n]: ");
+        Console.Write("Use default: Anonymize the first JSON file in docs/input? [Y/n]: ");
         string? answer = Console.ReadLine()?.Trim().ToLowerInvariant();
         if (answer is null) break;
 
@@ -791,7 +850,7 @@ try
                 case "default":
                     string firstJson = InputFiles("json")[0];
                     Console.WriteLine($"Using the first JSON file in docs/input: {Path.GetFileName(firstJson)}");
-                    Anonymize(new Input(File.ReadAllText(firstJson), "json", firstJson), "mask");
+                    AnonymizeDefault(new Input(File.ReadAllText(firstJson), "json", firstJson));
                     break;
                 case "1": Analyze(ReadInput()); break;
                 case "2": Anonymize(ReadInput(), ReadOperator()); break;
@@ -920,6 +979,16 @@ void Anonymize(Input input, string op)
     string result = PythonHost.Call("anonymize", input.Content, input.Format, op);
     Console.WriteLine(result);
     Save(input, $"anonymize-{op}", result);
+    End();
+}
+
+// Default mode: names -> [PASSENGER_NAME], emails -> xxxx@domain, phones and cards -> last 4 digits.
+void AnonymizeDefault(Input input)
+{
+    Begin("Anonymize (default rules)", input);
+    string result = PythonHost.Call("anonymize_default", input.Content, input.Format);
+    Console.WriteLine(result);
+    Save(input, "anonymize-default", result);
     End();
 }
 
