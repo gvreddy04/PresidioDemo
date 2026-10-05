@@ -13,8 +13,9 @@ The menu has four demos:
 | 3. Custom recognizers | Two `PatternRecognizer`s added for `PNR_LOCATOR` and `PASSENGER_ID` |
 | 4. Reversible tokenization | A custom operator swaps values for tokens such as `<PERSON_0>`, keeps the PNR unchanged, then restores the original from the mapping |
 | 5. Run all | Runs every demo on the built-in sample text |
+| 6. Anonymize with mask | The default (press Enter): option 2 with the `mask` operator, no operator question |
 
-Options 1 to 4 can read **user input** (text, JSON or XML typed or pasted into the console) or a
+Options 1 to 4 and 6 can read **user input** (text, JSON or XML typed or pasted into the console) or a
 **local file** (JSON or XML placed in `docs/input`). See [Using the app](#using-the-app).
 All sample data is fictional.
 
@@ -109,8 +110,23 @@ Things to know:
 
 ## Using the app
 
-Start the app (`dotnet run`, or `Ctrl+F5` in Visual Studio) and pick a demo from **1** to **4**.
-The app then asks where the input comes from:
+Start the app (`dotnet run`, or `Ctrl+F5` in Visual Studio). The main menu looks like this:
+
+```
+1. Analyze (built-in recognizers)
+2. Anonymize (replace / redact / mask / hash)
+3. Custom recognizers (PNR + passenger ID)
+4. Reversible tokenization
+5. Run all with sample text
+6. Anonymize with mask (default)
+0. Exit
+Choose (Enter = 6):
+```
+
+**Option 6 is the default:** press Enter at the main menu to anonymize with the `mask` operator
+straight away. It works like option 2, without the operator question.
+
+For options **1**, **2**, **3**, **4** and **6**, the app then asks where the input comes from:
 
 ```
 Input source:
@@ -134,13 +150,27 @@ list. Two samples are already there:
 For option **2** (Anonymize), the app finally asks for the operator: `replace`, `redact`, `mask` or
 `hash` (Enter = `replace`).
 
+**How results are shown:** every demo prints the input and the output in separate blocks, so it's
+easy to compare them:
+
+```
+===== INPUT [json, booking-sample.json] ================================
+...the input...
+===== OUTPUT: Anonymize (mask) =========================================
+...the result...
+========================================================================
+```
+
+The label after `INPUT` shows the format and, for local files, the file name. Option 4 splits its
+output further into `----- Tokenized`, `----- Mapping` and `----- Restored` sections.
+
 **Where results go:** every result is printed in the console. Results from a local file are also
 saved to `docs/output` as `<file name>.<demo>.<extension>`:
 
 | Demo | Saved file for `booking-sample.json` |
 |---|---|
 | 1. Analyze | `booking-sample.analyze.json` (list of findings) |
-| 2. Anonymize | `booking-sample.anonymize-mask.json` (the operator is in the name) |
+| 2. Anonymize / 6. Anonymize with mask | `booking-sample.anonymize-mask.json` (the operator is in the name) |
 | 3. Custom recognizers | `booking-sample.custom-analyze.json` (list of findings) |
 | 4. Reversible tokenization | `booking-sample.tokenized.json` |
 
@@ -155,27 +185,28 @@ name gets the same token everywhere in it.
 Keys: `1` → `1` (User input) → `1` (Text) → type the text → Enter on an empty line.
 
 ```
+===== INPUT [text] =====================================================
 Please call Kevin Price at 646-555-0110 or email kevin.price@example.com
-
---- Analyze [text] ---
+===== OUTPUT: Analyze ==================================================
 -              PERSON           0.85  Kevin Price
 -              PHONE_NUMBER     0.40  646-555-0110
 -              EMAIL_ADDRESS    1.00  kevin.price@example.com
 -              URL              0.50  kevin.pr
 -              URL              0.50  example.com
+========================================================================
 ```
 
 The first column is the field name; it shows `-` for plain text.
 
-### Example 2 – Mask JSON you paste
+### Example 2 – Mask JSON you paste (default option)
 
-Keys: `2` → `1` (User input) → `2` (JSON) → paste → Enter on an empty line → `mask`.
+Keys: Enter (option 6) → `1` (User input) → `2` (JSON) → paste → Enter on an empty line.
 
 ```
+===== INPUT [json] =====================================================
 {"pnr": "Q8WN3B",
  "passenger": {"passengerId": "PAX-5001", "name": "Laura Bennett", "email": "laura.bennett@example.com"}}
-
---- Anonymize (mask) [json] ---
+===== OUTPUT: Anonymize (mask) =========================================
 {
   "pnr": "******",
   "passenger": {
@@ -184,6 +215,7 @@ Keys: `2` → `1` (User input) → `2` (JSON) → paste → Enter on an empty li
     "email": "*************************"
   }
 }
+========================================================================
 ```
 
 The built-in model mistakes the PNR for a person's name and masks it, and it doesn't know
@@ -194,7 +226,13 @@ passenger IDs. Options 3 and 4 add the custom recognizers that fix both.
 Keys: `3` → `2` (Local file) → Enter → `1` (JSON) → `1` (`booking-sample.json`).
 
 ```
---- Analyze with custom recognizers [json, booking-sample.json] ---
+===== INPUT [json, booking-sample.json] ================================
+{
+  "pnr": "R4TZ8N",
+  "messageType": "booking",
+  ...
+}
+===== OUTPUT: Analyze with custom recognizers ==========================
 pnr            PNR_LOCATOR      0.75  R4TZ8N
 passengerId    PASSENGER_ID     0.90  PAX-3001
 name           PERSON           0.85  Sarah Mitchell
@@ -203,6 +241,7 @@ phone          PHONE_NUMBER     0.75  312-555-0182
 ...
 cardNumber     CREDIT_CARD      1.00  4111 1111 1111 1111
 Saved: docs/output/booking-sample.custom-analyze.json
+========================================================================
 ```
 
 ### Example 4 – Tokenize the XML sample file
@@ -210,8 +249,14 @@ Saved: docs/output/booking-sample.custom-analyze.json
 Keys: `4` → `2` (Local file) → Enter → `2` (XML) → `1` (`booking-sample.xml`).
 
 ```
---- Reversible tokenization (PNR kept) [xml, booking-sample.xml] ---
-Tokenized:
+===== INPUT [xml, booking-sample.xml] ==================================
+<?xml version="1.0" encoding="utf-8"?>
+<booking pnr="M2VK9D" messageType="booking">
+  ...
+  <remarks>Ryan Cooper requests a window seat. Contact Jessica Hayes at 415-555-0123.</remarks>
+</booking>
+===== OUTPUT: Reversible tokenization (PNR kept) =======================
+----- Tokenized --------------------------------------------------------
 <booking pnr="M2VK9D" messageType="booking">
   <passenger id="&lt;PASSENGER_ID_0&gt;">
     <name>&lt;PERSON_0&gt;</name>
@@ -221,16 +266,19 @@ Tokenized:
   ...
   <remarks>&lt;PERSON_1&gt; requests a window seat. Contact &lt;PERSON_0&gt; at &lt;PHONE_NUMBER_0&gt;.</remarks>
 </booking>
-Mapping:
+----- Mapping ----------------------------------------------------------
   <PASSENGER_ID_0>     = PAX-4001
+  <PASSENGER_ID_1>     = PAX-4002
   <PERSON_0>           = Jessica Hayes
+  <PERSON_1>           = Ryan Cooper
   ...
-Restored:
+----- Restored ---------------------------------------------------------
 <booking pnr="M2VK9D" messageType="booking">
   <passenger id="PAX-4001">
     <name>Jessica Hayes</name>
   ...
 Saved: docs/output/booking-sample.tokenized.xml
+========================================================================
 ```
 
 The PNR stays unchanged, and Jessica Hayes is `<PERSON_0>` both in her `<name>` element and in the
@@ -669,11 +717,13 @@ try
         Console.WriteLine("3. Custom recognizers (PNR + passenger ID)");
         Console.WriteLine("4. Reversible tokenization");
         Console.WriteLine("5. Run all with sample text");
+        Console.WriteLine("6. Anonymize with mask (default)");
         Console.WriteLine("0. Exit");
-        Console.Write("Choose: ");
+        Console.Write("Choose (Enter = 6): ");
 
         string? choice = Console.ReadLine()?.Trim();
         if (choice is null or "0") break;
+        if (choice.Length == 0) choice = "6";
 
         try
         {
@@ -690,6 +740,7 @@ try
                     AnalyzeCustom(sample);
                     Tokenize(sample);
                     break;
+                case "6": Anonymize(ReadInput(), "mask"); break;
                 default: Console.WriteLine("Unknown option."); break;
             }
         }
@@ -778,43 +829,49 @@ string ReadOperator()
 
 void Analyze(Input input)
 {
-    Header("Analyze", input);
+    Begin("Analyze", input);
     string findings = PythonHost.Call("analyze", input.Content, input.Format);
     PrintEntities(findings);
     Save(input, "analyze", findings, "json");
+    End();
 }
 
 void AnalyzeCustom(Input input)
 {
-    Header("Analyze with custom recognizers", input);
+    Begin("Analyze with custom recognizers", input);
     string findings = PythonHost.Call("analyze_custom", input.Content, input.Format);
     PrintEntities(findings);
     Save(input, "custom-analyze", findings, "json");
+    End();
 }
 
 void Anonymize(Input input, string op)
 {
-    Header($"Anonymize ({op})", input);
+    Begin($"Anonymize ({op})", input);
     string result = PythonHost.Call("anonymize", input.Content, input.Format, op);
     Console.WriteLine(result);
     Save(input, $"anonymize-{op}", result);
+    End();
 }
 
 void Tokenize(Input input)
 {
-    Header("Reversible tokenization (PNR kept)", input);
+    Begin("Reversible tokenization (PNR kept)", input);
     string tokenized = PythonHost.Call("tokenize", input.Content, input.Format);
 
     using var doc = JsonDocument.Parse(tokenized);
     string? protectedText = doc.RootElement.GetProperty("text").GetString();
-    Console.WriteLine($"Tokenized:\n{protectedText}");
-    Console.WriteLine("Mapping:");
+    Console.WriteLine(Rule("Tokenized", '-'));
+    Console.WriteLine(protectedText);
+    Console.WriteLine(Rule("Mapping", '-'));
     foreach (var entity in doc.RootElement.GetProperty("mapping").EnumerateObject())
         foreach (var pair in entity.Value.EnumerateObject())
             Console.WriteLine($"  {pair.Value.GetString(),-20} = {pair.Name}");
 
-    Console.WriteLine($"Restored:\n{PythonHost.Call("detokenize", tokenized, input.Format)}");
+    Console.WriteLine(Rule("Restored", '-'));
+    Console.WriteLine(PythonHost.Call("detokenize", tokenized, input.Format));
     Save(input, "tokenized", protectedText ?? "");
+    End();
 }
 
 void PrintEntities(string json)
@@ -828,11 +885,20 @@ void PrintEntities(string json)
     }
 }
 
-void Header(string title, Input input)
+// Prints the input between separator lines, then opens the output section.
+void Begin(string title, Input input)
 {
     string source = input.FilePath is null ? "" : $", {Path.GetFileName(input.FilePath)}";
-    Console.WriteLine($"\n--- {title} [{input.Format}{source}] ---");
+    Console.WriteLine();
+    Console.WriteLine(Rule($"INPUT [{input.Format}{source}]", '='));
+    Console.WriteLine(input.Content.TrimEnd());
+    Console.WriteLine(Rule($"OUTPUT: {title}", '='));
 }
+
+void End() => Console.WriteLine(new string('=', 72));
+
+// "===== LABEL =====...", padded to 72 characters.
+string Rule(string label, char c) => $"{new string(c, 5)} {label} ".PadRight(72, c);
 
 // Results are saved only for local-file input, as docs/output/<file>.<demo>.<ext>.
 void Save(Input input, string suffix, string content, string? extension = null)

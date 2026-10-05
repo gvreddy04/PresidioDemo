@@ -35,11 +35,13 @@ try
         Console.WriteLine("3. Custom recognizers (PNR + passenger ID)");
         Console.WriteLine("4. Reversible tokenization");
         Console.WriteLine("5. Run all with sample text");
+        Console.WriteLine("6. Anonymize with mask (default)");
         Console.WriteLine("0. Exit");
-        Console.Write("Choose: ");
+        Console.Write("Choose (Enter = 6): ");
 
         string? choice = Console.ReadLine()?.Trim();
         if (choice is null or "0") break;
+        if (choice.Length == 0) choice = "6";
 
         try
         {
@@ -56,6 +58,7 @@ try
                     AnalyzeCustom(sample);
                     Tokenize(sample);
                     break;
+                case "6": Anonymize(ReadInput(), "mask"); break;
                 default: Console.WriteLine("Unknown option."); break;
             }
         }
@@ -144,43 +147,49 @@ string ReadOperator()
 
 void Analyze(Input input)
 {
-    Header("Analyze", input);
+    Begin("Analyze", input);
     string findings = PythonHost.Call("analyze", input.Content, input.Format);
     PrintEntities(findings);
     Save(input, "analyze", findings, "json");
+    End();
 }
 
 void AnalyzeCustom(Input input)
 {
-    Header("Analyze with custom recognizers", input);
+    Begin("Analyze with custom recognizers", input);
     string findings = PythonHost.Call("analyze_custom", input.Content, input.Format);
     PrintEntities(findings);
     Save(input, "custom-analyze", findings, "json");
+    End();
 }
 
 void Anonymize(Input input, string op)
 {
-    Header($"Anonymize ({op})", input);
+    Begin($"Anonymize ({op})", input);
     string result = PythonHost.Call("anonymize", input.Content, input.Format, op);
     Console.WriteLine(result);
     Save(input, $"anonymize-{op}", result);
+    End();
 }
 
 void Tokenize(Input input)
 {
-    Header("Reversible tokenization (PNR kept)", input);
+    Begin("Reversible tokenization (PNR kept)", input);
     string tokenized = PythonHost.Call("tokenize", input.Content, input.Format);
 
     using var doc = JsonDocument.Parse(tokenized);
     string? protectedText = doc.RootElement.GetProperty("text").GetString();
-    Console.WriteLine($"Tokenized:\n{protectedText}");
-    Console.WriteLine("Mapping:");
+    Console.WriteLine(Rule("Tokenized", '-'));
+    Console.WriteLine(protectedText);
+    Console.WriteLine(Rule("Mapping", '-'));
     foreach (var entity in doc.RootElement.GetProperty("mapping").EnumerateObject())
         foreach (var pair in entity.Value.EnumerateObject())
             Console.WriteLine($"  {pair.Value.GetString(),-20} = {pair.Name}");
 
-    Console.WriteLine($"Restored:\n{PythonHost.Call("detokenize", tokenized, input.Format)}");
+    Console.WriteLine(Rule("Restored", '-'));
+    Console.WriteLine(PythonHost.Call("detokenize", tokenized, input.Format));
     Save(input, "tokenized", protectedText ?? "");
+    End();
 }
 
 void PrintEntities(string json)
@@ -194,11 +203,20 @@ void PrintEntities(string json)
     }
 }
 
-void Header(string title, Input input)
+// Prints the input between separator lines, then opens the output section.
+void Begin(string title, Input input)
 {
     string source = input.FilePath is null ? "" : $", {Path.GetFileName(input.FilePath)}";
-    Console.WriteLine($"\n--- {title} [{input.Format}{source}] ---");
+    Console.WriteLine();
+    Console.WriteLine(Rule($"INPUT [{input.Format}{source}]", '='));
+    Console.WriteLine(input.Content.TrimEnd());
+    Console.WriteLine(Rule($"OUTPUT: {title}", '='));
 }
+
+void End() => Console.WriteLine(new string('=', 72));
+
+// "===== LABEL =====...", padded to 72 characters.
+string Rule(string label, char c) => $"{new string(c, 5)} {label} ".PadRight(72, c);
 
 // Results are saved only for local-file input, as docs/output/<file>.<demo>.<ext>.
 void Save(Input input, string suffix, string content, string? extension = null)
