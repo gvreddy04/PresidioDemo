@@ -7,9 +7,12 @@ public static class PythonHost
 {
     private static PyObject? _module;
 
+    /// <summary>The folder that contains .venv, python/ and docs/.</summary>
+    public static string ProjectDir { get; private set; } = "";
+
     public static void Start()
     {
-        string projectDir = FindProjectDir();
+        string projectDir = ProjectDir = FindProjectDir();
         string venvDir = Path.Combine(projectDir, ".venv");
 
         // pyvenv.cfg records the base Python install ("home") and its version.

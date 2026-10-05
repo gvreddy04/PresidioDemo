@@ -1,11 +1,14 @@
+using System.Text;
 using System.Text.Json;
 using PresidioDemo;
 
-const string Sample =
+const string SampleText =
     "Booking PNR K7QX2M for passengers Emily Carter (PAX-1001) and Michael Brooks (PAX-1002). " +
     "Contact Emily at emily.carter@example.com or 212-555-0147. " +
     "Michael can be reached at michael.brooks@example.com. " +
     "Card on file: 4111 1111 1111 1111.";
+
+string[] operators = ["replace", "redact", "mask", "hash"];
 
 Console.WriteLine("Loading Presidio and spaCy en_core_web_lg (takes a few seconds)...");
 try
@@ -18,6 +21,9 @@ catch (Exception ex)
     Environment.ExitCode = 1;
     return;
 }
+
+string inputDir = Path.Combine(PythonHost.ProjectDir, "docs", "input");
+string outputDir = Path.Combine(PythonHost.ProjectDir, "docs", "output");
 
 try
 {
@@ -39,15 +45,16 @@ try
         {
             switch (choice)
             {
-                case "1": Analyze(ReadText()); break;
-                case "2": Anonymize(ReadText(), ReadOperator()); break;
-                case "3": AnalyzeCustom(ReadText()); break;
-                case "4": Tokenize(ReadText()); break;
+                case "1": Analyze(ReadInput()); break;
+                case "2": Anonymize(ReadInput(), ReadOperator()); break;
+                case "3": AnalyzeCustom(ReadInput()); break;
+                case "4": Tokenize(ReadInput()); break;
                 case "5":
-                    Analyze(Sample);
-                    foreach (var op in new[] { "replace", "redact", "mask", "hash" }) Anonymize(Sample, op);
-                    AnalyzeCustom(Sample);
-                    Tokenize(Sample);
+                    var sample = new Input(SampleText, "text", null);
+                    Analyze(sample);
+                    foreach (var op in operators) Anonymize(sample, op);
+                    AnalyzeCustom(sample);
+                    Tokenize(sample);
                     break;
                 default: Console.WriteLine("Unknown option."); break;
             }
@@ -63,57 +70,144 @@ finally
     PythonHost.Stop();
 }
 
-string ReadText()
+string Ask(string prompt)
 {
-    Console.Write("Text (Enter = sample): ");
-    string? text = Console.ReadLine();
-    return string.IsNullOrWhiteSpace(text) ? Sample : text;
+    Console.Write(prompt);
+    return Console.ReadLine()?.Trim() ?? "";
+}
+
+Input ReadInput()
+{
+    Console.WriteLine("\nInput source:");
+    Console.WriteLine("  1. User input");
+    Console.WriteLine("  2. Local file (docs/input)");
+    return Ask("Choose (Enter = 1): ") == "2" ? ReadLocalFile() : ReadUserInput();
+}
+
+Input ReadUserInput()
+{
+    Console.WriteLine("\nInput format:");
+    Console.WriteLine("  1. Text");
+    Console.WriteLine("  2. JSON");
+    Console.WriteLine("  3. XML");
+    string format = Ask("Choose (Enter = 1): ") switch { "2" => "json", "3" => "xml", _ => "text" };
+
+    Console.WriteLine($"Type or paste the {format.ToUpperInvariant()} input, then press Enter on an empty line.");
+    Console.WriteLine("Press Enter straight away to use the sample.");
+    var lines = new StringBuilder();
+    string? line;
+    while (!string.IsNullOrEmpty(line = Console.ReadLine()))
+        lines.AppendLine(line);
+
+    string content = lines.ToString().Trim();
+    if (content.Length == 0)
+        content = format == "text"
+            ? SampleText
+            : File.ReadAllText(Path.Combine(inputDir, $"booking-sample.{format}"));
+
+    return new Input(content, format, null);
+}
+
+Input ReadLocalFile()
+{
+    Directory.CreateDirectory(inputDir);
+    Console.WriteLine($"\nPlace your file in: {inputDir}");
+    Ask("Press Enter when the file is there...");
+
+    Console.WriteLine("File format:");
+    Console.WriteLine("  1. JSON");
+    Console.WriteLine("  2. XML");
+    string format = Ask("Choose (Enter = 1): ") == "2" ? "xml" : "json";
+
+    string[] files = Directory.GetFiles(inputDir, $"*.{format}").Order().ToArray();
+    if (files.Length == 0)
+        throw new FileNotFoundException($"No .{format} files found in {inputDir}");
+
+    for (int i = 0; i < files.Length; i++)
+        Console.WriteLine($"  {i + 1}. {Path.GetFileName(files[i])}");
+
+    string pick = Ask("Choose a file (Enter = 1): ");
+    int index = 0;
+    if (pick.Length > 0 && !(int.TryParse(pick, out index) && index >= 1 && index <= files.Length))
+        throw new ArgumentException($"Invalid file number: {pick}");
+
+    string path = files[Math.Max(index - 1, 0)];
+    return new Input(File.ReadAllText(path), format, path);
 }
 
 string ReadOperator()
 {
-    Console.Write("Operator [replace|redact|mask|hash] (Enter = replace): ");
-    string? op = Console.ReadLine()?.Trim().ToLowerInvariant();
-    return string.IsNullOrEmpty(op) ? "replace" : op;
+    string op = Ask("Operator [replace|redact|mask|hash] (Enter = replace): ").ToLowerInvariant();
+    if (op.Length == 0) return "replace";
+    return operators.Contains(op) ? op : throw new ArgumentException($"Unknown operator: {op}");
 }
 
-void Analyze(string text)
+void Analyze(Input input)
 {
-    Console.WriteLine("\n--- Analyze ---");
-    PrintEntities(PythonHost.Call("analyze", text));
+    Header("Analyze", input);
+    string findings = PythonHost.Call("analyze", input.Content, input.Format);
+    PrintEntities(findings);
+    Save(input, "analyze", findings, "json");
 }
 
-void AnalyzeCustom(string text)
+void AnalyzeCustom(Input input)
 {
-    Console.WriteLine("\n--- Analyze with custom recognizers ---");
-    PrintEntities(PythonHost.Call("analyze_custom", text));
+    Header("Analyze with custom recognizers", input);
+    string findings = PythonHost.Call("analyze_custom", input.Content, input.Format);
+    PrintEntities(findings);
+    Save(input, "custom-analyze", findings, "json");
 }
 
-void Anonymize(string text, string op)
+void Anonymize(Input input, string op)
 {
-    Console.WriteLine($"\n--- Anonymize ({op}) ---");
-    Console.WriteLine(PythonHost.Call("anonymize", text, op));
+    Header($"Anonymize ({op})", input);
+    string result = PythonHost.Call("anonymize", input.Content, input.Format, op);
+    Console.WriteLine(result);
+    Save(input, $"anonymize-{op}", result);
 }
 
-void Tokenize(string text)
+void Tokenize(Input input)
 {
-    Console.WriteLine("\n--- Reversible tokenization (PNR kept) ---");
-    string tokenized = PythonHost.Call("tokenize", text);
+    Header("Reversible tokenization (PNR kept)", input);
+    string tokenized = PythonHost.Call("tokenize", input.Content, input.Format);
 
     using var doc = JsonDocument.Parse(tokenized);
-    Console.WriteLine($"Tokenized: {doc.RootElement.GetProperty("text").GetString()}");
+    string? protectedText = doc.RootElement.GetProperty("text").GetString();
+    Console.WriteLine($"Tokenized:\n{protectedText}");
     Console.WriteLine("Mapping:");
     foreach (var entity in doc.RootElement.GetProperty("mapping").EnumerateObject())
         foreach (var pair in entity.Value.EnumerateObject())
             Console.WriteLine($"  {pair.Value.GetString(),-20} = {pair.Name}");
 
-    Console.WriteLine($"Restored : {PythonHost.Call("detokenize", tokenized)}");
+    Console.WriteLine($"Restored:\n{PythonHost.Call("detokenize", tokenized, input.Format)}");
+    Save(input, "tokenized", protectedText ?? "");
 }
 
 void PrintEntities(string json)
 {
     foreach (var e in JsonDocument.Parse(json).RootElement.EnumerateArray())
-        Console.WriteLine($"{e.GetProperty("entity_type").GetString(),-16} " +
+    {
+        string field = e.GetProperty("field").GetString() is { Length: > 0 } f ? f : "-";
+        Console.WriteLine($"{field,-14} {e.GetProperty("entity_type").GetString(),-16} " +
                           $"{e.GetProperty("score").GetDouble():0.00}  " +
                           $"{e.GetProperty("text").GetString()}");
+    }
 }
+
+void Header(string title, Input input)
+{
+    string source = input.FilePath is null ? "" : $", {Path.GetFileName(input.FilePath)}";
+    Console.WriteLine($"\n--- {title} [{input.Format}{source}] ---");
+}
+
+// Results are saved only for local-file input, as docs/output/<file>.<demo>.<ext>.
+void Save(Input input, string suffix, string content, string? extension = null)
+{
+    if (input.FilePath is null) return;
+    Directory.CreateDirectory(outputDir);
+    string name = $"{Path.GetFileNameWithoutExtension(input.FilePath)}.{suffix}.{extension ?? input.Format}";
+    File.WriteAllText(Path.Combine(outputDir, name), content);
+    Console.WriteLine($"Saved: docs/output/{name}");
+}
+
+record Input(string Content, string Format, string? FilePath);

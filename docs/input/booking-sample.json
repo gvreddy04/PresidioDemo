@@ -1,0 +1,22 @@
+{
+  "pnr": "R4TZ8N",
+  "messageType": "booking",
+  "passengers": [
+    {
+      "passengerId": "PAX-3001",
+      "name": "Sarah Mitchell",
+      "email": "sarah.mitchell@example.com",
+      "phone": "312-555-0182"
+    },
+    {
+      "passengerId": "PAX-3002",
+      "name": "David Turner",
+      "email": "david.turner@example.com",
+      "phone": "312-555-0164"
+    }
+  ],
+  "remarks": "Sarah Mitchell requests an aisle seat. Call 312-555-0182 if the flight changes.",
+  "payment": {
+    "cardNumber": "4111 1111 1111 1111"
+  }
+}

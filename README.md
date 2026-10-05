@@ -4,7 +4,7 @@ A small console app that runs [Microsoft Presidio](https://presidio.dataprivacys
 from C#. Python is embedded in the .NET process with [Python.NET](https://pythonnet.github.io/),
 so there is no HTTP service and no network call during PII processing.
 
-The menu has four demos, all using fictional airline-style sample text:
+The menu has four demos:
 
 | Option | What it shows |
 |---|---|
@@ -12,9 +12,11 @@ The menu has four demos, all using fictional airline-style sample text:
 | 2. Anonymize | The same entities transformed with `replace`, `redact`, `mask` or `hash` |
 | 3. Custom recognizers | Two `PatternRecognizer`s added for `PNR_LOCATOR` and `PASSENGER_ID` |
 | 4. Reversible tokenization | A custom operator swaps values for tokens such as `<PERSON_0>`, keeps the PNR unchanged, then restores the original from the mapping |
-| 5. Run all | Runs every demo on the sample text |
+| 5. Run all | Runs every demo on the built-in sample text |
 
-For options 1 to 4 you can press Enter to use the sample text or type your own.
+Options 1 to 4 can read **user input** (text, JSON or XML typed or pasted into the console) or a
+**local file** (JSON or XML placed in `docs/input`). See [Using the app](#using-the-app).
+All sample data is fictional.
 
 ## How it fits together
 
@@ -105,6 +107,145 @@ Things to know:
 - The app finds `.venv` by searching upward from its build output folder, so it works the same from
   the terminal, Visual Studio or VS Code.
 
+## Using the app
+
+Start the app (`dotnet run`, or `Ctrl+F5` in Visual Studio) and pick a demo from **1** to **4**.
+The app then asks where the input comes from:
+
+```
+Input source:
+  1. User input
+  2. Local file (docs/input)
+```
+
+**1. User input:** choose the format (**1** Text, **2** JSON, **3** XML), then type or paste the
+input and press **Enter on an empty line** to finish. Press Enter straight away to use the sample
+for that format.
+
+**2. Local file:** the app shows the full path of the `docs/input` folder and waits. Copy your file
+there, press Enter, choose the format (**1** JSON, **2** XML), then pick a file from the numbered
+list. Two samples are already there:
+
+| File | Contents |
+|---|---|
+| `docs/input/booking-sample.json` | PNR `R4TZ8N` with passengers Sarah Mitchell and David Turner |
+| `docs/input/booking-sample.xml` | PNR `M2VK9D` with passengers Jessica Hayes and Ryan Cooper |
+
+For option **2** (Anonymize), the app finally asks for the operator: `replace`, `redact`, `mask` or
+`hash` (Enter = `replace`).
+
+**Where results go:** every result is printed in the console. Results from a local file are also
+saved to `docs/output` as `<file name>.<demo>.<extension>`:
+
+| Demo | Saved file for `booking-sample.json` |
+|---|---|
+| 1. Analyze | `booking-sample.analyze.json` (list of findings) |
+| 2. Anonymize | `booking-sample.anonymize-mask.json` (the operator is in the name) |
+| 3. Custom recognizers | `booking-sample.custom-analyze.json` (list of findings) |
+| 4. Reversible tokenization | `booking-sample.tokenized.json` |
+
+**JSON and XML are processed value by value.** Presidio checks each JSON string value and each
+XML element text and attribute separately, and the field name (for example `email` or `pnr`) is
+passed to Presidio as a context hint. Keys, tags and nesting are never changed, so the output is
+still valid JSON or XML. In option 4, one token mapping covers the whole document, so the same
+name gets the same token everywhere in it.
+
+### Example 1 – Analyze text you type
+
+Keys: `1` → `1` (User input) → `1` (Text) → type the text → Enter on an empty line.
+
+```
+Please call Kevin Price at 646-555-0110 or email kevin.price@example.com
+
+--- Analyze [text] ---
+-              PERSON           0.85  Kevin Price
+-              PHONE_NUMBER     0.40  646-555-0110
+-              EMAIL_ADDRESS    1.00  kevin.price@example.com
+-              URL              0.50  kevin.pr
+-              URL              0.50  example.com
+```
+
+The first column is the field name; it shows `-` for plain text.
+
+### Example 2 – Mask JSON you paste
+
+Keys: `2` → `1` (User input) → `2` (JSON) → paste → Enter on an empty line → `mask`.
+
+```
+{"pnr": "Q8WN3B",
+ "passenger": {"passengerId": "PAX-5001", "name": "Laura Bennett", "email": "laura.bennett@example.com"}}
+
+--- Anonymize (mask) [json] ---
+{
+  "pnr": "******",
+  "passenger": {
+    "passengerId": "PAX-5001",
+    "name": "*************",
+    "email": "*************************"
+  }
+}
+```
+
+The built-in model mistakes the PNR for a person's name and masks it, and it doesn't know
+passenger IDs. Options 3 and 4 add the custom recognizers that fix both.
+
+### Example 3 – Custom recognizers on the JSON sample file
+
+Keys: `3` → `2` (Local file) → Enter → `1` (JSON) → `1` (`booking-sample.json`).
+
+```
+--- Analyze with custom recognizers [json, booking-sample.json] ---
+pnr            PNR_LOCATOR      0.75  R4TZ8N
+passengerId    PASSENGER_ID     0.90  PAX-3001
+name           PERSON           0.85  Sarah Mitchell
+email          EMAIL_ADDRESS    1.00  sarah.mitchell@example.com
+phone          PHONE_NUMBER     0.75  312-555-0182
+...
+cardNumber     CREDIT_CARD      1.00  4111 1111 1111 1111
+Saved: docs/output/booking-sample.custom-analyze.json
+```
+
+### Example 4 – Tokenize the XML sample file
+
+Keys: `4` → `2` (Local file) → Enter → `2` (XML) → `1` (`booking-sample.xml`).
+
+```
+--- Reversible tokenization (PNR kept) [xml, booking-sample.xml] ---
+Tokenized:
+<booking pnr="M2VK9D" messageType="booking">
+  <passenger id="&lt;PASSENGER_ID_0&gt;">
+    <name>&lt;PERSON_0&gt;</name>
+    <email>&lt;EMAIL_ADDRESS_0&gt;</email>
+    <phone>&lt;PHONE_NUMBER_0&gt;</phone>
+  </passenger>
+  ...
+  <remarks>&lt;PERSON_1&gt; requests a window seat. Contact &lt;PERSON_0&gt; at &lt;PHONE_NUMBER_0&gt;.</remarks>
+</booking>
+Mapping:
+  <PASSENGER_ID_0>     = PAX-4001
+  <PERSON_0>           = Jessica Hayes
+  ...
+Restored:
+<booking pnr="M2VK9D" messageType="booking">
+  <passenger id="PAX-4001">
+    <name>Jessica Hayes</name>
+  ...
+Saved: docs/output/booking-sample.tokenized.xml
+```
+
+The PNR stays unchanged, and Jessica Hayes is `<PERSON_0>` both in her `<name>` element and in the
+remarks. In XML, `<` and `>` inside a value are written as `&lt;` and `&gt;`; that is what keeps
+the output valid XML.
+
+### Use your own file
+
+1. Copy a `.json` or `.xml` file into `docs/input` (you can do this while the app waits at
+   "Press Enter when the file is there...").
+2. Choose a demo, then **2** (Local file), the format, and your file's number.
+3. Open the result in `docs/output`.
+
+`docs/output` is in `.gitignore`, so generated results are never committed.
+
 ---
 
 ## Build it from scratch, step by step
@@ -186,8 +327,8 @@ In Visual Studio, double-click the project name in **Solution Explorer** to open
 </Project>
 ```
 
-Then tell git to ignore the venv and build output. The file name starts with a dot and has no
-extension.
+Then tell git to ignore the venv, the build output, the Python cache and the generated results. The file name starts
+with a dot and has no extension.
 
 **File:** `.gitignore` (new file)
 
@@ -195,6 +336,8 @@ extension.
 .venv/
 bin/
 obj/
+__pycache__/
+docs/output/
 ```
 
 ### Step 4 – Create the `.venv` virtual environment and install the packages
@@ -229,10 +372,15 @@ created once when C# imports the module. The file name matters: C# imports it as
 
 ```python
 """Presidio demo functions called from .NET through Python.NET.
-Inputs and outputs are plain strings (JSON) to keep the C# side simple."""
+Inputs and outputs are plain strings (JSON) to keep the C# side simple.
+
+Every function takes `fmt`: "text", "json" or "xml". For JSON and XML, Presidio runs on each
+value separately (JSON string values, XML element text and attributes), so keys, tags and
+nesting are never changed and the output stays valid JSON/XML."""
 
 import json
 import re
+import xml.etree.ElementTree as ET
 
 from presidio_analyzer import AnalyzerEngine, Pattern, PatternRecognizer
 from presidio_anonymizer import AnonymizerEngine
@@ -257,19 +405,59 @@ custom_analyzer.registry.add_recognizer(PatternRecognizer(
 ))
 
 
-def _entities(text, results):
-    return json.dumps([
-        {"entity_type": r.entity_type, "score": round(r.score, 2), "text": text[r.start:r.end]}
-        for r in sorted(results, key=lambda r: r.start)
-    ])
+def _map_values(content, fmt, fn):
+    """Calls fn(value, field) for every text value and returns the rebuilt document.
+    `field` is the JSON key, XML tag or XML attribute name (None for plain text)."""
+    if fmt == "text":
+        return fn(content, None)
+
+    if fmt == "json":
+        def walk(node, key):
+            if isinstance(node, dict):
+                return {k: walk(v, k) for k, v in node.items()}
+            if isinstance(node, list):
+                return [walk(v, key) for v in node]
+            if isinstance(node, str):
+                return fn(node, key)
+            return node  # numbers, booleans and null are left as they are
+        return json.dumps(walk(json.loads(content), None), indent=2, ensure_ascii=False)
+
+    if fmt == "xml":
+        root = ET.fromstring(content)
+        for element in root.iter():
+            if element.text and element.text.strip():
+                element.text = fn(element.text, element.tag)
+            for name, value in element.attrib.items():
+                element.attrib[name] = fn(value, name)
+        return ET.tostring(root, encoding="unicode")
+
+    raise ValueError(f"Unknown format: {fmt}")
 
 
-def analyze(text):
-    return _entities(text, analyzer.analyze(text=text, language="en"))
+def _analyze_value(engine, value, field):
+    # The field name (for example "email" or "pnr") is passed as context to help detection.
+    return engine.analyze(text=value, language="en", context=[field] if field else None)
 
 
-def analyze_custom(text):
-    return _entities(text, custom_analyzer.analyze(text=text, language="en"))
+def _find(engine, content, fmt):
+    found = []
+
+    def collect(value, field):
+        for r in sorted(_analyze_value(engine, value, field), key=lambda r: r.start):
+            found.append({"field": field or "", "entity_type": r.entity_type,
+                          "score": round(r.score, 2), "text": value[r.start:r.end]})
+        return value
+
+    _map_values(content, fmt, collect)
+    return json.dumps(found, indent=2)
+
+
+def analyze(content, fmt):
+    return _find(analyzer, content, fmt)
+
+
+def analyze_custom(content, fmt):
+    return _find(custom_analyzer, content, fmt)
 
 
 OPERATORS = {
@@ -280,11 +468,13 @@ OPERATORS = {
 }
 
 
-def anonymize(text, mode):
-    results = analyzer.analyze(text=text, language="en")
-    result = anonymizer.anonymize(text=text, analyzer_results=results,
-                                  operators={"DEFAULT": OPERATORS[mode]})
-    return result.text
+def anonymize(content, fmt, mode):
+    def protect(value, field):
+        results = _analyze_value(analyzer, value, field)
+        return anonymizer.anonymize(text=value, analyzer_results=results,
+                                    operators={"DEFAULT": OPERATORS[mode]}).text
+
+    return _map_values(content, fmt, protect)
 
 
 class TokenOperator(Operator):
@@ -310,26 +500,39 @@ class TokenOperator(Operator):
 anonymizer.add_anonymizer(TokenOperator)
 
 
-def tokenize(text):
-    """Returns {"text": tokenized text, "mapping": {entity: {original: token}}}.
+def tokenize(content, fmt):
+    """Returns {"text": tokenized document, "mapping": {entity: {original: token}}}.
+    One mapping is shared by the whole document, so a repeated value gets the same token.
     The PNR is detected but kept visible and unchanged."""
     mapping = {}
-    results = custom_analyzer.analyze(text=text, language="en")
-    result = anonymizer.anonymize(text=text, analyzer_results=results, operators={
+    operators = {
         "DEFAULT": OperatorConfig("token", {"mapping": mapping}),
         "PNR_LOCATOR": OperatorConfig("keep"),
-    })
-    return json.dumps({"text": result.text, "mapping": mapping})
+    }
+
+    def protect(value, field):
+        results = _analyze_value(custom_analyzer, value, field)
+        # spaCy sometimes also labels a PNR as PERSON with a higher score; the PNR must win.
+        pnrs = [r for r in results if r.entity_type == "PNR_LOCATOR"]
+        results = [r for r in results if r.entity_type == "PNR_LOCATOR"
+                   or not any(r.start < p.end and p.start < r.end for p in pnrs)]
+        return anonymizer.anonymize(text=value, analyzer_results=results, operators=operators).text
+
+    document = _map_values(content, fmt, protect)
+    return json.dumps({"text": document, "mapping": mapping})
 
 
-def detokenize(tokenized_json):
+def detokenize(tokenized_json, fmt):
     """Restores originals from the mapping. Demo only; a real system uses a token vault."""
     data = json.loads(tokenized_json)
-    text = data["text"]
-    for per_type in data["mapping"].values():
-        for original, token in per_type.items():
-            text = text.replace(token, original)
-    return text
+
+    def restore(value, field):
+        for per_type in data["mapping"].values():
+            for original, token in per_type.items():
+                value = value.replace(token, original)
+        return value
+
+    return _map_values(data["text"], fmt, restore)
 ```
 
 ### Step 6 – Add the Python.NET bridge
@@ -355,9 +558,12 @@ public static class PythonHost
 {
     private static PyObject? _module;
 
+    /// <summary>The folder that contains .venv, python/ and docs/.</summary>
+    public static string ProjectDir { get; private set; } = "";
+
     public static void Start()
     {
-        string projectDir = FindProjectDir();
+        string projectDir = ProjectDir = FindProjectDir();
         string venvDir = Path.Combine(projectDir, ".venv");
 
         // pyvenv.cfg records the base Python install ("home") and its version.
@@ -426,14 +632,17 @@ Replace everything in the `Program.cs` that step 1 created.
 **File:** `Program.cs` (replace the existing file)
 
 ```csharp
+using System.Text;
 using System.Text.Json;
 using PresidioDemo;
 
-const string Sample =
+const string SampleText =
     "Booking PNR K7QX2M for passengers Emily Carter (PAX-1001) and Michael Brooks (PAX-1002). " +
     "Contact Emily at emily.carter@example.com or 212-555-0147. " +
     "Michael can be reached at michael.brooks@example.com. " +
     "Card on file: 4111 1111 1111 1111.";
+
+string[] operators = ["replace", "redact", "mask", "hash"];
 
 Console.WriteLine("Loading Presidio and spaCy en_core_web_lg (takes a few seconds)...");
 try
@@ -446,6 +655,9 @@ catch (Exception ex)
     Environment.ExitCode = 1;
     return;
 }
+
+string inputDir = Path.Combine(PythonHost.ProjectDir, "docs", "input");
+string outputDir = Path.Combine(PythonHost.ProjectDir, "docs", "output");
 
 try
 {
@@ -467,15 +679,16 @@ try
         {
             switch (choice)
             {
-                case "1": Analyze(ReadText()); break;
-                case "2": Anonymize(ReadText(), ReadOperator()); break;
-                case "3": AnalyzeCustom(ReadText()); break;
-                case "4": Tokenize(ReadText()); break;
+                case "1": Analyze(ReadInput()); break;
+                case "2": Anonymize(ReadInput(), ReadOperator()); break;
+                case "3": AnalyzeCustom(ReadInput()); break;
+                case "4": Tokenize(ReadInput()); break;
                 case "5":
-                    Analyze(Sample);
-                    foreach (var op in new[] { "replace", "redact", "mask", "hash" }) Anonymize(Sample, op);
-                    AnalyzeCustom(Sample);
-                    Tokenize(Sample);
+                    var sample = new Input(SampleText, "text", null);
+                    Analyze(sample);
+                    foreach (var op in operators) Anonymize(sample, op);
+                    AnalyzeCustom(sample);
+                    Tokenize(sample);
                     break;
                 default: Console.WriteLine("Unknown option."); break;
             }
@@ -491,63 +704,202 @@ finally
     PythonHost.Stop();
 }
 
-string ReadText()
+string Ask(string prompt)
 {
-    Console.Write("Text (Enter = sample): ");
-    string? text = Console.ReadLine();
-    return string.IsNullOrWhiteSpace(text) ? Sample : text;
+    Console.Write(prompt);
+    return Console.ReadLine()?.Trim() ?? "";
+}
+
+Input ReadInput()
+{
+    Console.WriteLine("\nInput source:");
+    Console.WriteLine("  1. User input");
+    Console.WriteLine("  2. Local file (docs/input)");
+    return Ask("Choose (Enter = 1): ") == "2" ? ReadLocalFile() : ReadUserInput();
+}
+
+Input ReadUserInput()
+{
+    Console.WriteLine("\nInput format:");
+    Console.WriteLine("  1. Text");
+    Console.WriteLine("  2. JSON");
+    Console.WriteLine("  3. XML");
+    string format = Ask("Choose (Enter = 1): ") switch { "2" => "json", "3" => "xml", _ => "text" };
+
+    Console.WriteLine($"Type or paste the {format.ToUpperInvariant()} input, then press Enter on an empty line.");
+    Console.WriteLine("Press Enter straight away to use the sample.");
+    var lines = new StringBuilder();
+    string? line;
+    while (!string.IsNullOrEmpty(line = Console.ReadLine()))
+        lines.AppendLine(line);
+
+    string content = lines.ToString().Trim();
+    if (content.Length == 0)
+        content = format == "text"
+            ? SampleText
+            : File.ReadAllText(Path.Combine(inputDir, $"booking-sample.{format}"));
+
+    return new Input(content, format, null);
+}
+
+Input ReadLocalFile()
+{
+    Directory.CreateDirectory(inputDir);
+    Console.WriteLine($"\nPlace your file in: {inputDir}");
+    Ask("Press Enter when the file is there...");
+
+    Console.WriteLine("File format:");
+    Console.WriteLine("  1. JSON");
+    Console.WriteLine("  2. XML");
+    string format = Ask("Choose (Enter = 1): ") == "2" ? "xml" : "json";
+
+    string[] files = Directory.GetFiles(inputDir, $"*.{format}").Order().ToArray();
+    if (files.Length == 0)
+        throw new FileNotFoundException($"No .{format} files found in {inputDir}");
+
+    for (int i = 0; i < files.Length; i++)
+        Console.WriteLine($"  {i + 1}. {Path.GetFileName(files[i])}");
+
+    string pick = Ask("Choose a file (Enter = 1): ");
+    int index = 0;
+    if (pick.Length > 0 && !(int.TryParse(pick, out index) && index >= 1 && index <= files.Length))
+        throw new ArgumentException($"Invalid file number: {pick}");
+
+    string path = files[Math.Max(index - 1, 0)];
+    return new Input(File.ReadAllText(path), format, path);
 }
 
 string ReadOperator()
 {
-    Console.Write("Operator [replace|redact|mask|hash] (Enter = replace): ");
-    string? op = Console.ReadLine()?.Trim().ToLowerInvariant();
-    return string.IsNullOrEmpty(op) ? "replace" : op;
+    string op = Ask("Operator [replace|redact|mask|hash] (Enter = replace): ").ToLowerInvariant();
+    if (op.Length == 0) return "replace";
+    return operators.Contains(op) ? op : throw new ArgumentException($"Unknown operator: {op}");
 }
 
-void Analyze(string text)
+void Analyze(Input input)
 {
-    Console.WriteLine("\n--- Analyze ---");
-    PrintEntities(PythonHost.Call("analyze", text));
+    Header("Analyze", input);
+    string findings = PythonHost.Call("analyze", input.Content, input.Format);
+    PrintEntities(findings);
+    Save(input, "analyze", findings, "json");
 }
 
-void AnalyzeCustom(string text)
+void AnalyzeCustom(Input input)
 {
-    Console.WriteLine("\n--- Analyze with custom recognizers ---");
-    PrintEntities(PythonHost.Call("analyze_custom", text));
+    Header("Analyze with custom recognizers", input);
+    string findings = PythonHost.Call("analyze_custom", input.Content, input.Format);
+    PrintEntities(findings);
+    Save(input, "custom-analyze", findings, "json");
 }
 
-void Anonymize(string text, string op)
+void Anonymize(Input input, string op)
 {
-    Console.WriteLine($"\n--- Anonymize ({op}) ---");
-    Console.WriteLine(PythonHost.Call("anonymize", text, op));
+    Header($"Anonymize ({op})", input);
+    string result = PythonHost.Call("anonymize", input.Content, input.Format, op);
+    Console.WriteLine(result);
+    Save(input, $"anonymize-{op}", result);
 }
 
-void Tokenize(string text)
+void Tokenize(Input input)
 {
-    Console.WriteLine("\n--- Reversible tokenization (PNR kept) ---");
-    string tokenized = PythonHost.Call("tokenize", text);
+    Header("Reversible tokenization (PNR kept)", input);
+    string tokenized = PythonHost.Call("tokenize", input.Content, input.Format);
 
     using var doc = JsonDocument.Parse(tokenized);
-    Console.WriteLine($"Tokenized: {doc.RootElement.GetProperty("text").GetString()}");
+    string? protectedText = doc.RootElement.GetProperty("text").GetString();
+    Console.WriteLine($"Tokenized:\n{protectedText}");
     Console.WriteLine("Mapping:");
     foreach (var entity in doc.RootElement.GetProperty("mapping").EnumerateObject())
         foreach (var pair in entity.Value.EnumerateObject())
             Console.WriteLine($"  {pair.Value.GetString(),-20} = {pair.Name}");
 
-    Console.WriteLine($"Restored : {PythonHost.Call("detokenize", tokenized)}");
+    Console.WriteLine($"Restored:\n{PythonHost.Call("detokenize", tokenized, input.Format)}");
+    Save(input, "tokenized", protectedText ?? "");
 }
 
 void PrintEntities(string json)
 {
     foreach (var e in JsonDocument.Parse(json).RootElement.EnumerateArray())
-        Console.WriteLine($"{e.GetProperty("entity_type").GetString(),-16} " +
+    {
+        string field = e.GetProperty("field").GetString() is { Length: > 0 } f ? f : "-";
+        Console.WriteLine($"{field,-14} {e.GetProperty("entity_type").GetString(),-16} " +
                           $"{e.GetProperty("score").GetDouble():0.00}  " +
                           $"{e.GetProperty("text").GetString()}");
+    }
+}
+
+void Header(string title, Input input)
+{
+    string source = input.FilePath is null ? "" : $", {Path.GetFileName(input.FilePath)}";
+    Console.WriteLine($"\n--- {title} [{input.Format}{source}] ---");
+}
+
+// Results are saved only for local-file input, as docs/output/<file>.<demo>.<ext>.
+void Save(Input input, string suffix, string content, string? extension = null)
+{
+    if (input.FilePath is null) return;
+    Directory.CreateDirectory(outputDir);
+    string name = $"{Path.GetFileNameWithoutExtension(input.FilePath)}.{suffix}.{extension ?? input.Format}";
+    File.WriteAllText(Path.Combine(outputDir, name), content);
+    Console.WriteLine($"Saved: docs/output/{name}");
+}
+
+record Input(string Content, string Format, string? FilePath);
+```
+
+### Step 8 – Add the sample input files
+
+Create the folders `docs` and `docs/input`, then add the two samples. The app lists every `.json`
+or `.xml` file in `docs/input`, and uses these two files when you press Enter for a JSON or XML
+sample. The `docs/output` folder is created automatically the first time a result is saved.
+
+**File:** `docs/input/booking-sample.json` (new folders and file)
+
+```json
+{
+  "pnr": "R4TZ8N",
+  "messageType": "booking",
+  "passengers": [
+    {
+      "passengerId": "PAX-3001",
+      "name": "Sarah Mitchell",
+      "email": "sarah.mitchell@example.com",
+      "phone": "312-555-0182"
+    },
+    {
+      "passengerId": "PAX-3002",
+      "name": "David Turner",
+      "email": "david.turner@example.com",
+      "phone": "312-555-0164"
+    }
+  ],
+  "remarks": "Sarah Mitchell requests an aisle seat. Call 312-555-0182 if the flight changes.",
+  "payment": {
+    "cardNumber": "4111 1111 1111 1111"
+  }
 }
 ```
 
-### Step 8 – Build and run
+**File:** `docs/input/booking-sample.xml` (new file)
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<booking pnr="M2VK9D" messageType="booking">
+  <passenger id="PAX-4001">
+    <name>Jessica Hayes</name>
+    <email>jessica.hayes@example.com</email>
+    <phone>415-555-0123</phone>
+  </passenger>
+  <passenger id="PAX-4002">
+    <name>Ryan Cooper</name>
+    <email>ryan.cooper@example.com</email>
+    <phone>415-555-0198</phone>
+  </passenger>
+  <remarks>Ryan Cooper requests a window seat. Contact Jessica Hayes at 415-555-0123.</remarks>
+</booking>
+```
+
+### Step 9 – Build and run
 
 **Using the terminal:**
 
@@ -564,32 +916,23 @@ The final folder looks like this:
 
 ```
 PresidioDemo/
-├── .venv/                  Python 3.12 virtual environment (not in git)
+├── .venv/                       Python 3.12 virtual environment (not in git)
+├── docs/
+│   ├── input/
+│   │   ├── booking-sample.json  JSON sample
+│   │   └── booking-sample.xml   XML sample
+│   └── output/                  Saved results (created when needed, not in git)
 ├── python/
-│   └── presidio_demo.py    Presidio logic
-├── PythonHost.cs           Python.NET bridge
-├── Program.cs              Console menu
+│   └── presidio_demo.py         Presidio logic
+├── PythonHost.cs                Python.NET bridge
+├── Program.cs                   Console menu and input handling
 ├── PresidioDemo.csproj
-├── requirements.txt        Pinned Python packages and spaCy model
-├── .gitignore              Ignores .venv, bin and obj
+├── requirements.txt             Pinned Python packages and spaCy model
+├── .gitignore                   Ignores .venv, bin, obj, Python cache, docs/output
 └── README.md
 ```
 
 ---
-
-## Sample output (option 4)
-
-```
-Tokenized: Booking PNR K7QX2M for passengers <PERSON_2> (<PASSENGER_ID_1>) and <PERSON_1> (<PASSENGER_ID_0>). ...
-Mapping:
-  <PERSON_2>           = Emily Carter
-  <PASSENGER_ID_1>     = PAX-1001
-  ...
-Restored : Booking PNR K7QX2M for passengers Emily Carter (PAX-1001) and Michael Brooks (PAX-1002). ...
-```
-
-Token numbers can look reversed because Presidio replaces entities from the end of the text
-backwards.
 
 ## Things worth knowing for the demo
 
@@ -597,6 +940,18 @@ backwards.
   in the sample, while "Michael" is. This is how spaCy behaves, not a bug in the app.
 - **URL hits inside emails** (`emily.car`, `example.com`) appear in the analyze list. The anonymizer
   resolves the overlap in favour of the higher-scoring `EMAIL_ADDRESS`, so the output is clean.
+- **Short values on their own are harder for the model.** In the JSON and XML samples, spaCy labels
+  the bare value `PAX-3002` as a PERSON and `PAX-4002` as a LOCATION. The built-in demos
+  (options 1 and 2) therefore treat one passenger ID differently from the other. With the custom
+  recognizers (options 3 and 4), the higher-scoring `PASSENGER_ID` wins.
+- **The PNR always stays unchanged in option 4,** even when spaCy also labels it as a name.
+- **Token numbers can look reversed** in plain text, because Presidio replaces entities from the end
+  of the text backwards.
+- **`hash` output changes between runs,** because Presidio adds a random salt to each hash.
+- **Only text values are checked.** JSON numbers and booleans, XML comments and the XML declaration
+  are not analyzed, and the saved XML leaves out the `<?xml ...?>` declaration and comments.
+- **Pasted input ends at the first empty line.** Remove blank lines from JSON or XML before pasting,
+  or use a local file instead.
 - **The token mapping is in memory only.** It shows the concept; a real system would store
   mappings in a secured token database.
 - **Piping input from PowerShell** (`"5" | dotnet run`) can add an invisible byte-order mark that
@@ -613,6 +968,10 @@ backwards.
 | `py` is not recognized | Open a new terminal after installing Python, or reinstall Python 3.12 with the "py launcher" option. |
 | Download of `en_core_web_lg` times out or is blocked | Your network blocks GitHub downloads. Ask IT for access to `github.com`, or set `HTTPS_PROXY` before running pip. |
 | Install fails building spaCy or numpy wheels | You are on a Python version without prebuilt wheels. Use 3.12. |
+| `Error: No .json files found in ...` (or `.xml`) | Put the file in the `docs/input` folder the app shows, with a `.json` or `.xml` extension, and pick the matching format. |
+| `Error: Expecting ',' delimiter...` or a similar JSON message | The JSON is invalid. Check it, or check that a pasted JSON didn't stop at a blank line. |
+| `Error: mismatched tag...` or `not well-formed` | The XML is invalid. Check that every tag is closed. |
+| `Error: Invalid file number` / `Unknown operator` | Enter one of the numbers or operator names shown in the prompt. |
 
 ## References
 
