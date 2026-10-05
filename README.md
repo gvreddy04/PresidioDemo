@@ -13,9 +13,11 @@ The menu has four demos:
 | 3. Custom recognizers | Two `PatternRecognizer`s added for `PNR_LOCATOR` and `PASSENGER_ID` |
 | 4. Reversible tokenization | A custom operator swaps values for tokens such as `<PERSON_0>`, keeps the PNR unchanged, then restores the original from the mapping |
 | 5. Run all | Runs every demo on the built-in sample text |
-| 6. Anonymize with mask | The default (press Enter): option 2 with the `mask` operator, no operator question |
 
-Options 1 to 4 and 6 can read **user input** (text, JSON or XML typed or pasted into the console) or a
+When the app starts, its first question is whether to use the **default**: anonymize the first
+JSON file in `docs/input` with `mask`. Press Enter (or `y`) to run it, or `n` to open the menu above.
+
+Options 1 to 4 can read **user input** (text, JSON or XML typed or pasted into the console) or a
 **local file** (JSON or XML placed in `docs/input`). See [Using the app](#using-the-app).
 All sample data is fictional.
 
@@ -104,13 +106,23 @@ Things to know:
 - The terminal commands call the venv's `python.exe` directly, so you don't need to activate the
   venv (activation can be blocked by the PowerShell execution policy).
 - The first install takes several minutes, mostly for the spaCy model.
-- Startup takes a few seconds while spaCy loads the model. Then choose `5` to see every demo.
+- Startup takes a few seconds while spaCy loads the model. Then answer `n` and choose `5` to see
+  every demo.
 - The app finds `.venv` by searching upward from its build output folder, so it works the same from
   the terminal, Visual Studio or VS Code.
 
 ## Using the app
 
-Start the app (`dotnet run`, or `Ctrl+F5` in Visual Studio). The main menu looks like this:
+Start the app (`dotnet run`, or `Ctrl+F5` in Visual Studio). The first question is always:
+
+```
+Use default: Anonymize the first JSON file in docs/input with mask? [Y/n]:
+```
+
+- **Enter or `y`:** runs the default with no further questions. It takes the first `.json` file in
+  `docs/input` in alphabetical order (`booking-sample.json` unless you add others), masks it, prints
+  the result and saves it to `docs/output`.
+- **`n`:** shows the full menu:
 
 ```
 1. Analyze (built-in recognizers)
@@ -118,15 +130,13 @@ Start the app (`dotnet run`, or `Ctrl+F5` in Visual Studio). The main menu looks
 3. Custom recognizers (PNR + passenger ID)
 4. Reversible tokenization
 5. Run all with sample text
-6. Anonymize with mask (default)
 0. Exit
-Choose (Enter = 6):
+Choose:
 ```
 
-**Option 6 is the default:** press Enter at the main menu to anonymize with the `mask` operator
-straight away. It works like option 2, without the operator question.
+After each run the app asks the default question again. To exit, answer `n`, then `0`.
 
-For options **1**, **2**, **3**, **4** and **6**, the app then asks where the input comes from:
+For options **1** to **4**, the app then asks where the input comes from:
 
 ```
 Input source:
@@ -138,9 +148,9 @@ Input source:
 input and press **Enter on an empty line** to finish. Press Enter straight away to use the sample
 for that format.
 
-**2. Local file:** the app shows the full path of the `docs/input` folder and waits. Copy your file
-there, press Enter, choose the format (**1** JSON, **2** XML), then pick a file from the numbered
-list. Two samples are already there:
+**2. Local file:** put your file in `docs/input` first. The app shows the folder's full path, asks
+for the format (**1** JSON, **2** XML), then lists the matching files by number (Enter = 1).
+Two samples are already there:
 
 | File | Contents |
 |---|---|
@@ -170,7 +180,7 @@ saved to `docs/output` as `<file name>.<demo>.<extension>`:
 | Demo | Saved file for `booking-sample.json` |
 |---|---|
 | 1. Analyze | `booking-sample.analyze.json` (list of findings) |
-| 2. Anonymize / 6. Anonymize with mask | `booking-sample.anonymize-mask.json` (the operator is in the name) |
+| Default / 2. Anonymize | `booking-sample.anonymize-mask.json` (the operator is in the name) |
 | 3. Custom recognizers | `booking-sample.custom-analyze.json` (list of findings) |
 | 4. Reversible tokenization | `booking-sample.tokenized.json` |
 
@@ -182,7 +192,7 @@ name gets the same token everywhere in it.
 
 ### Example 1 – Analyze text you type
 
-Keys: `1` → `1` (User input) → `1` (Text) → type the text → Enter on an empty line.
+Keys: `n` → `1` (Analyze) → `1` (User input) → `1` (Text) → type the text → Enter on an empty line.
 
 ```
 ===== INPUT [text] =====================================================
@@ -198,9 +208,43 @@ Please call Kevin Price at 646-555-0110 or email kevin.price@example.com
 
 The first column is the field name; it shows `-` for plain text.
 
-### Example 2 – Mask JSON you paste (default option)
+### Example 2 – The default: mask the first JSON file
 
-Keys: Enter (option 6) → `1` (User input) → `2` (JSON) → paste → Enter on an empty line.
+Keys: Enter.
+
+```
+Using the first JSON file in docs/input: booking-sample.json
+
+===== INPUT [json, booking-sample.json] ================================
+{
+  "pnr": "R4TZ8N",
+  ...
+}
+===== OUTPUT: Anonymize (mask) =========================================
+{
+  "pnr": "R4TZ8N",
+  "messageType": "booking",
+  "passengers": [
+    {
+      "passengerId": "PAX-3001",
+      "name": "**************",
+      "email": "**************************",
+      "phone": "************"
+    },
+    ...
+  ],
+  "remarks": "************** requests an aisle seat. Call ************ if the flight changes.",
+  "payment": {
+    "cardNumber": "*******************"
+  }
+}
+Saved: docs/output/booking-sample.anonymize-mask.json
+========================================================================
+```
+
+### Example 3 – Mask JSON you paste
+
+Keys: `n` → `2` (Anonymize) → `1` (User input) → `2` (JSON) → paste → Enter on an empty line → `mask`.
 
 ```
 ===== INPUT [json] =====================================================
@@ -221,9 +265,9 @@ Keys: Enter (option 6) → `1` (User input) → `2` (JSON) → paste → Enter o
 The built-in model mistakes the PNR for a person's name and masks it, and it doesn't know
 passenger IDs. Options 3 and 4 add the custom recognizers that fix both.
 
-### Example 3 – Custom recognizers on the JSON sample file
+### Example 4 – Custom recognizers on the JSON sample file
 
-Keys: `3` → `2` (Local file) → Enter → `1` (JSON) → `1` (`booking-sample.json`).
+Keys: `n` → `3` (Custom recognizers) → `2` (Local file) → `1` (JSON) → `1` (`booking-sample.json`).
 
 ```
 ===== INPUT [json, booking-sample.json] ================================
@@ -244,9 +288,9 @@ Saved: docs/output/booking-sample.custom-analyze.json
 ========================================================================
 ```
 
-### Example 4 – Tokenize the XML sample file
+### Example 5 – Tokenize the XML sample file
 
-Keys: `4` → `2` (Local file) → Enter → `2` (XML) → `1` (`booking-sample.xml`).
+Keys: `n` → `4` (Reversible tokenization) → `2` (Local file) → `2` (XML) → `1` (`booking-sample.xml`).
 
 ```
 ===== INPUT [xml, booking-sample.xml] ==================================
@@ -287,9 +331,9 @@ the output valid XML.
 
 ### Use your own file
 
-1. Copy a `.json` or `.xml` file into `docs/input` (you can do this while the app waits at
-   "Press Enter when the file is there...").
-2. Choose a demo, then **2** (Local file), the format, and your file's number.
+1. Copy a `.json` or `.xml` file into `docs/input`.
+2. Either press Enter for the default (it masks the first JSON file by name), or answer `n`, pick a
+   demo, then **2** (Local file), the format, and your file's number.
 3. Open the result in `docs/output`.
 
 `docs/output` is in `.gitignore`, so generated results are never committed.
@@ -712,23 +756,43 @@ try
     while (true)
     {
         Console.WriteLine();
-        Console.WriteLine("1. Analyze (built-in recognizers)");
-        Console.WriteLine("2. Anonymize (replace / redact / mask / hash)");
-        Console.WriteLine("3. Custom recognizers (PNR + passenger ID)");
-        Console.WriteLine("4. Reversible tokenization");
-        Console.WriteLine("5. Run all with sample text");
-        Console.WriteLine("6. Anonymize with mask (default)");
-        Console.WriteLine("0. Exit");
-        Console.Write("Choose (Enter = 6): ");
+        Console.Write("Use default: Anonymize the first JSON file in docs/input with mask? [Y/n]: ");
+        string? answer = Console.ReadLine()?.Trim().ToLowerInvariant();
+        if (answer is null) break;
 
-        string? choice = Console.ReadLine()?.Trim();
-        if (choice is null or "0") break;
-        if (choice.Length == 0) choice = "6";
+        string? choice;
+        if (answer is "" or "y" or "yes")
+        {
+            choice = "default";
+        }
+        else if (answer is "n" or "no")
+        {
+            Console.WriteLine("1. Analyze (built-in recognizers)");
+            Console.WriteLine("2. Anonymize (replace / redact / mask / hash)");
+            Console.WriteLine("3. Custom recognizers (PNR + passenger ID)");
+            Console.WriteLine("4. Reversible tokenization");
+            Console.WriteLine("5. Run all with sample text");
+            Console.WriteLine("0. Exit");
+            Console.Write("Choose: ");
+
+            choice = Console.ReadLine()?.Trim();
+            if (choice is null or "0") break;
+        }
+        else
+        {
+            Console.WriteLine("Please answer y or n.");
+            continue;
+        }
 
         try
         {
             switch (choice)
             {
+                case "default":
+                    string firstJson = InputFiles("json")[0];
+                    Console.WriteLine($"Using the first JSON file in docs/input: {Path.GetFileName(firstJson)}");
+                    Anonymize(new Input(File.ReadAllText(firstJson), "json", firstJson), "mask");
+                    break;
                 case "1": Analyze(ReadInput()); break;
                 case "2": Anonymize(ReadInput(), ReadOperator()); break;
                 case "3": AnalyzeCustom(ReadInput()); break;
@@ -740,7 +804,6 @@ try
                     AnalyzeCustom(sample);
                     Tokenize(sample);
                     break;
-                case "6": Anonymize(ReadInput(), "mask"); break;
                 default: Console.WriteLine("Unknown option."); break;
             }
         }
@@ -793,21 +856,27 @@ Input ReadUserInput()
     return new Input(content, format, null);
 }
 
+// .json or .xml files in docs/input, sorted by name.
+string[] InputFiles(string format)
+{
+    string[] files = Directory.Exists(inputDir)
+        ? Directory.GetFiles(inputDir, $"*.{format}").Order().ToArray()
+        : [];
+    return files.Length > 0
+        ? files
+        : throw new FileNotFoundException($"No .{format} files found in {inputDir}");
+}
+
 Input ReadLocalFile()
 {
     Directory.CreateDirectory(inputDir);
-    Console.WriteLine($"\nPlace your file in: {inputDir}");
-    Ask("Press Enter when the file is there...");
-
+    Console.WriteLine($"\nInput folder: {inputDir}");
     Console.WriteLine("File format:");
     Console.WriteLine("  1. JSON");
     Console.WriteLine("  2. XML");
     string format = Ask("Choose (Enter = 1): ") == "2" ? "xml" : "json";
 
-    string[] files = Directory.GetFiles(inputDir, $"*.{format}").Order().ToArray();
-    if (files.Length == 0)
-        throw new FileNotFoundException($"No .{format} files found in {inputDir}");
-
+    string[] files = InputFiles(format);
     for (int i = 0; i < files.Length; i++)
         Console.WriteLine($"  {i + 1}. {Path.GetFileName(files[i])}");
 
@@ -1020,8 +1089,8 @@ PresidioDemo/
   or use a local file instead.
 - **The token mapping is in memory only.** It shows the concept; a real system would store
   mappings in a secured token database.
-- **Piping input from PowerShell** (`"5" | dotnet run`) can add an invisible byte-order mark that
-  makes the first menu choice show "Unknown option". Typing interactively works normally.
+- **Piping input from PowerShell** (`"n" | dotnet run`) can add an invisible byte-order mark that
+  makes the first answer show "Please answer y or n.". Typing interactively works normally.
 
 ## Troubleshooting
 

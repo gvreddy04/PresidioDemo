@@ -30,23 +30,43 @@ try
     while (true)
     {
         Console.WriteLine();
-        Console.WriteLine("1. Analyze (built-in recognizers)");
-        Console.WriteLine("2. Anonymize (replace / redact / mask / hash)");
-        Console.WriteLine("3. Custom recognizers (PNR + passenger ID)");
-        Console.WriteLine("4. Reversible tokenization");
-        Console.WriteLine("5. Run all with sample text");
-        Console.WriteLine("6. Anonymize with mask (default)");
-        Console.WriteLine("0. Exit");
-        Console.Write("Choose (Enter = 6): ");
+        Console.Write("Use default: Anonymize the first JSON file in docs/input with mask? [Y/n]: ");
+        string? answer = Console.ReadLine()?.Trim().ToLowerInvariant();
+        if (answer is null) break;
 
-        string? choice = Console.ReadLine()?.Trim();
-        if (choice is null or "0") break;
-        if (choice.Length == 0) choice = "6";
+        string? choice;
+        if (answer is "" or "y" or "yes")
+        {
+            choice = "default";
+        }
+        else if (answer is "n" or "no")
+        {
+            Console.WriteLine("1. Analyze (built-in recognizers)");
+            Console.WriteLine("2. Anonymize (replace / redact / mask / hash)");
+            Console.WriteLine("3. Custom recognizers (PNR + passenger ID)");
+            Console.WriteLine("4. Reversible tokenization");
+            Console.WriteLine("5. Run all with sample text");
+            Console.WriteLine("0. Exit");
+            Console.Write("Choose: ");
+
+            choice = Console.ReadLine()?.Trim();
+            if (choice is null or "0") break;
+        }
+        else
+        {
+            Console.WriteLine("Please answer y or n.");
+            continue;
+        }
 
         try
         {
             switch (choice)
             {
+                case "default":
+                    string firstJson = InputFiles("json")[0];
+                    Console.WriteLine($"Using the first JSON file in docs/input: {Path.GetFileName(firstJson)}");
+                    Anonymize(new Input(File.ReadAllText(firstJson), "json", firstJson), "mask");
+                    break;
                 case "1": Analyze(ReadInput()); break;
                 case "2": Anonymize(ReadInput(), ReadOperator()); break;
                 case "3": AnalyzeCustom(ReadInput()); break;
@@ -58,7 +78,6 @@ try
                     AnalyzeCustom(sample);
                     Tokenize(sample);
                     break;
-                case "6": Anonymize(ReadInput(), "mask"); break;
                 default: Console.WriteLine("Unknown option."); break;
             }
         }
@@ -111,21 +130,27 @@ Input ReadUserInput()
     return new Input(content, format, null);
 }
 
+// .json or .xml files in docs/input, sorted by name.
+string[] InputFiles(string format)
+{
+    string[] files = Directory.Exists(inputDir)
+        ? Directory.GetFiles(inputDir, $"*.{format}").Order().ToArray()
+        : [];
+    return files.Length > 0
+        ? files
+        : throw new FileNotFoundException($"No .{format} files found in {inputDir}");
+}
+
 Input ReadLocalFile()
 {
     Directory.CreateDirectory(inputDir);
-    Console.WriteLine($"\nPlace your file in: {inputDir}");
-    Ask("Press Enter when the file is there...");
-
+    Console.WriteLine($"\nInput folder: {inputDir}");
     Console.WriteLine("File format:");
     Console.WriteLine("  1. JSON");
     Console.WriteLine("  2. XML");
     string format = Ask("Choose (Enter = 1): ") == "2" ? "xml" : "json";
 
-    string[] files = Directory.GetFiles(inputDir, $"*.{format}").Order().ToArray();
-    if (files.Length == 0)
-        throw new FileNotFoundException($"No .{format} files found in {inputDir}");
-
+    string[] files = InputFiles(format);
     for (int i = 0; i < files.Length; i++)
         Console.WriteLine($"  {i + 1}. {Path.GetFileName(files[i])}");
 
