@@ -1,0 +1,842 @@
+[
+  {
+    "id": "user_numeric_4",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Martin Luther King 4\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Martin Luther King 4"
+      }
+    ],
+    "check_operators": true
+  },
+  {
+    "id": "user_roman_IV",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Martin Luther King IV\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Martin Luther King IV"
+      }
+    ],
+    "check_operators": true
+  },
+  {
+    "id": "json_suffix_1",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter 1\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter 1"
+      }
+    ]
+  },
+  {
+    "id": "json_suffix_2",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter 2\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter 2"
+      }
+    ]
+  },
+  {
+    "id": "json_suffix_4",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter 4\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter 4"
+      }
+    ]
+  },
+  {
+    "id": "json_suffix_10",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter 10\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter 10"
+      }
+    ]
+  },
+  {
+    "id": "json_suffix_I",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter I\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter I"
+      }
+    ]
+  },
+  {
+    "id": "json_suffix_II",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter II\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter II"
+      }
+    ]
+  },
+  {
+    "id": "json_suffix_III",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter III\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter III"
+      }
+    ]
+  },
+  {
+    "id": "json_suffix_IV",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter IV\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter IV"
+      }
+    ]
+  },
+  {
+    "id": "json_suffix_V",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter V\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter V"
+      }
+    ]
+  },
+  {
+    "id": "json_suffix_VI",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter VI\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter VI"
+      }
+    ]
+  },
+  {
+    "id": "json_suffix_VII",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter VII\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter VII"
+      }
+    ]
+  },
+  {
+    "id": "json_suffix_VIII",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter VIII\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter VIII"
+      }
+    ]
+  },
+  {
+    "id": "json_suffix_IX",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter IX\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter IX"
+      }
+    ]
+  },
+  {
+    "id": "json_suffix_X",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter X\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter X"
+      }
+    ]
+  },
+  {
+    "id": "json_suffix_iv",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter iv\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter iv"
+      }
+    ]
+  },
+  {
+    "id": "json_ordinary",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter"
+      }
+    ]
+  },
+  {
+    "id": "json_uppercase",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"EMILY CARTER IV\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "EMILY CARTER IV"
+      }
+    ],
+    "check_operators": true
+  },
+  {
+    "id": "json_lowercase",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"emily carter iv\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "emily carter iv"
+      }
+    ]
+  },
+  {
+    "id": "json_initials",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily J. Carter IV\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily J. Carter IV"
+      }
+    ]
+  },
+  {
+    "id": "json_hyphen",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter-Brooks 4\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter-Brooks 4"
+      }
+    ]
+  },
+  {
+    "id": "json_apostrophe",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily O'Connor IV\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily O'Connor IV"
+      }
+    ]
+  },
+  {
+    "id": "json_curly_apostrophe",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily O’Connor 4\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily O’Connor 4"
+      }
+    ]
+  },
+  {
+    "id": "json_repeated_spaces",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily  Carter   4\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily  Carter   4"
+      }
+    ]
+  },
+  {
+    "id": "json_tab",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter\\tIV\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter\tIV"
+      }
+    ]
+  },
+  {
+    "id": "json_nonbreaking_space",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter IV\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter IV"
+      }
+    ]
+  },
+  {
+    "id": "json_unicode_roman",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter Ⅳ\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter Ⅳ"
+      }
+    ]
+  },
+  {
+    "id": "json_invalid_roman_field",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter IIV\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter IIV"
+      }
+    ]
+  },
+  {
+    "id": "json_leading_zero_field",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter 004\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter 004"
+      }
+    ]
+  },
+  {
+    "id": "json_large_numeric_field",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"Emily Carter 999\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"name\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter 999"
+      }
+    ]
+  },
+  {
+    "id": "json_alias_fullName",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"fullName\": \"Emily Carter 4\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"fullName\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "fullName",
+        "text": "Emily Carter 4"
+      }
+    ]
+  },
+  {
+    "id": "json_alias_passengerName",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"passengerName\": \"Emily Carter 4\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"passengerName\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "passengerName",
+        "text": "Emily Carter 4"
+      }
+    ]
+  },
+  {
+    "id": "json_alias_givenName",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"givenName\": \"Emily 4\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"givenName\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "givenName",
+        "text": "Emily 4"
+      }
+    ]
+  },
+  {
+    "id": "json_alias_surname",
+    "category": "trusted JSON passenger name",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"surname\": \"Carter IV\", \"email\": \"emily.carter@example.com\"}}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passenger\": {\"passengerId\": \"PAX-3001\", \"surname\": \"[PASSENGER_NAME]\", \"email\": \"xxxx@example.com\"}}",
+    "expected_person": [
+      {
+        "field": "surname",
+        "text": "Carter IV"
+      }
+    ]
+  },
+  {
+    "id": "xml_element_numeric",
+    "category": "XML element",
+    "format": "xml",
+    "input": "<booking pnr=\"R4TZ8N\"><passenger id=\"PAX-3001\"><name>Emily Carter 4</name></passenger></booking>",
+    "expected_default": "<booking pnr=\"R4TZ8N\"><passenger id=\"PAX-3001\"><name>[PASSENGER_NAME]</name></passenger></booking>",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter 4"
+      }
+    ]
+  },
+  {
+    "id": "xml_element_roman",
+    "category": "XML element",
+    "format": "xml",
+    "input": "<booking pnr=\"R4TZ8N\"><passenger id=\"PAX-3001\"><name>Emily Carter IV</name></passenger></booking>",
+    "expected_default": "<booking pnr=\"R4TZ8N\"><passenger id=\"PAX-3001\"><name>[PASSENGER_NAME]</name></passenger></booking>",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter IV"
+      }
+    ]
+  },
+  {
+    "id": "xml_element_uppercase",
+    "category": "XML element",
+    "format": "xml",
+    "input": "<booking pnr=\"R4TZ8N\"><passenger id=\"PAX-3001\"><name>EMILY CARTER IV</name></passenger></booking>",
+    "expected_default": "<booking pnr=\"R4TZ8N\"><passenger id=\"PAX-3001\"><name>[PASSENGER_NAME]</name></passenger></booking>",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "EMILY CARTER IV"
+      }
+    ]
+  },
+  {
+    "id": "xml_attribute_numeric",
+    "category": "XML attribute",
+    "format": "xml",
+    "input": "<booking pnr=\"R4TZ8N\"><passenger name=\"Emily Carter 4\" id=\"PAX-3001\" /></booking>",
+    "expected_default": "<booking pnr=\"R4TZ8N\"><passenger name=\"[PASSENGER_NAME]\" id=\"PAX-3001\" /></booking>",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter 4"
+      }
+    ]
+  },
+  {
+    "id": "xml_namespace",
+    "category": "XML namespace",
+    "format": "xml",
+    "input": "<b:booking xmlns:b=\"urn:booking\" pnr=\"R4TZ8N\"><b:passenger><b:name>Emily Carter 4</b:name></b:passenger></b:booking>",
+    "expected_default": "<b:booking xmlns:b=\"urn:booking\" pnr=\"R4TZ8N\"><b:passenger><b:name>[PASSENGER_NAME]</b:name></b:passenger></b:booking>",
+    "expected_person": [
+      {
+        "field": "{urn:booking}name",
+        "text": "Emily Carter 4"
+      }
+    ]
+  },
+  {
+    "id": "text_user_numeric",
+    "category": "explicit passenger label in text",
+    "format": "text",
+    "input": "Passenger Martin Luther King 4 requests an aisle seat.",
+    "expected_default": "Passenger [PASSENGER_NAME] requests an aisle seat.",
+    "expected_person": [
+      {
+        "field": "",
+        "text": "Martin Luther King 4"
+      }
+    ]
+  },
+  {
+    "id": "text_user_roman",
+    "category": "explicit passenger label in text",
+    "format": "text",
+    "input": "Passenger Martin Luther King IV requests an aisle seat.",
+    "expected_default": "Passenger [PASSENGER_NAME] requests an aisle seat.",
+    "expected_person": [
+      {
+        "field": "",
+        "text": "Martin Luther King IV"
+      }
+    ]
+  },
+  {
+    "id": "text_numeric",
+    "category": "explicit passenger label in text",
+    "format": "text",
+    "input": "Passenger Emily Carter 4 requests an aisle seat.",
+    "expected_default": "Passenger [PASSENGER_NAME] requests an aisle seat.",
+    "expected_person": [
+      {
+        "field": "",
+        "text": "Emily Carter 4"
+      }
+    ]
+  },
+  {
+    "id": "text_roman",
+    "category": "explicit passenger label in text",
+    "format": "text",
+    "input": "Passenger Emily Carter IV requests an aisle seat.",
+    "expected_default": "Passenger [PASSENGER_NAME] requests an aisle seat.",
+    "expected_person": [
+      {
+        "field": "",
+        "text": "Emily Carter IV"
+      }
+    ]
+  },
+  {
+    "id": "text_uppercase",
+    "category": "explicit passenger label in text",
+    "format": "text",
+    "input": "Passenger EMILY CARTER IV requests an aisle seat.",
+    "expected_default": "Passenger [PASSENGER_NAME] requests an aisle seat.",
+    "expected_person": [
+      {
+        "field": "",
+        "text": "EMILY CARTER IV"
+      }
+    ]
+  },
+  {
+    "id": "text_lowercase_roman",
+    "category": "explicit passenger label in text",
+    "format": "text",
+    "input": "Passenger Emily Carter iv requests an aisle seat.",
+    "expected_default": "Passenger [PASSENGER_NAME] requests an aisle seat.",
+    "expected_person": [
+      {
+        "field": "",
+        "text": "Emily Carter iv"
+      }
+    ]
+  },
+  {
+    "id": "text_two_people",
+    "category": "two names in text",
+    "format": "text",
+    "input": "Passengers Emily Carter 4 and Michael Brooks IV request aisle seats.",
+    "expected_default": "Passengers [PASSENGER_NAME] and [PASSENGER_NAME] request aisle seats.",
+    "expected_person": [
+      {
+        "field": "",
+        "text": "Emily Carter 4"
+      },
+      {
+        "field": "",
+        "text": "Michael Brooks IV"
+      }
+    ]
+  },
+  {
+    "id": "negative_seat",
+    "category": "no passenger name",
+    "format": "text",
+    "input": "Seat 4A",
+    "expected_default": "Seat 4A",
+    "expected_person": []
+  },
+  {
+    "id": "negative_gate",
+    "category": "no passenger name",
+    "format": "text",
+    "input": "Gate IV",
+    "expected_default": "Gate IV",
+    "expected_person": []
+  },
+  {
+    "id": "negative_terminal",
+    "category": "no passenger name",
+    "format": "text",
+    "input": "Terminal IV",
+    "expected_default": "Terminal IV",
+    "expected_person": []
+  },
+  {
+    "id": "negative_flight",
+    "category": "no passenger name",
+    "format": "text",
+    "input": "Flight 4",
+    "expected_default": "Flight 4",
+    "expected_person": []
+  },
+  {
+    "id": "negative_group",
+    "category": "no passenger name",
+    "format": "text",
+    "input": "Boarding group IV",
+    "expected_default": "Boarding group IV",
+    "expected_person": []
+  },
+  {
+    "id": "negative_medical",
+    "category": "no passenger name",
+    "format": "text",
+    "input": "IV infusion",
+    "expected_default": "IV infusion",
+    "expected_person": []
+  },
+  {
+    "id": "negative_version",
+    "category": "no passenger name",
+    "format": "text",
+    "input": "Version IV",
+    "expected_default": "Version IV",
+    "expected_person": []
+  },
+  {
+    "id": "negative_pnr",
+    "category": "no passenger name",
+    "format": "text",
+    "input": "PNR R4TZ8N",
+    "expected_default": "PNR R4TZ8N",
+    "expected_person": []
+  },
+  {
+    "id": "negative_source_id",
+    "category": "no passenger name",
+    "format": "text",
+    "input": "PAX-3001",
+    "expected_default": "PAX-3001",
+    "expected_person": []
+  },
+  {
+    "id": "boundary_bags",
+    "category": "preserve adjacent operational data",
+    "format": "text",
+    "input": "Emily Carter has 4 bags.",
+    "expected_default": "[PASSENGER_NAME] has 4 bags.",
+    "expected_person": [
+      {
+        "field": "",
+        "text": "Emily Carter"
+      }
+    ]
+  },
+  {
+    "id": "boundary_adjacent_count",
+    "category": "preserve adjacent operational data",
+    "format": "text",
+    "input": "Emily Carter 4 bags checked.",
+    "expected_default": "[PASSENGER_NAME] 4 bags checked.",
+    "expected_person": [
+      {
+        "field": "",
+        "text": "Emily Carter"
+      }
+    ]
+  },
+  {
+    "id": "boundary_gate_after_name",
+    "category": "preserve adjacent operational data",
+    "format": "text",
+    "input": "Emily Carter, gate IV.",
+    "expected_default": "[PASSENGER_NAME], gate IV.",
+    "expected_person": [
+      {
+        "field": "",
+        "text": "Emily Carter"
+      }
+    ]
+  },
+  {
+    "id": "boundary_seat_after_name",
+    "category": "preserve adjacent operational data",
+    "format": "text",
+    "input": "Emily Carter seat 4A.",
+    "expected_default": "[PASSENGER_NAME] seat 4A.",
+    "expected_person": [
+      {
+        "field": "",
+        "text": "Emily Carter"
+      }
+    ]
+  },
+  {
+    "id": "json_nonpassenger_name",
+    "category": "untrusted name key",
+    "format": "json",
+    "input": "{\"product\": {\"name\": \"Version IV\"}}",
+    "expected_default": "{\"product\": {\"name\": \"Version IV\"}}",
+    "expected_person": []
+  },
+  {
+    "id": "json_empty_null",
+    "category": "empty and null",
+    "format": "json",
+    "input": "{\"passengers\": [{\"name\": \"\"}, {\"name\": null}]}",
+    "expected_default": "{\"passengers\": [{\"name\": \"\"}, {\"name\": null}]}",
+    "expected_person": []
+  },
+  {
+    "id": "json_array",
+    "category": "name array",
+    "format": "json",
+    "input": "{\"passenger\": {\"name\": [\"Emily Carter 4\", \"Michael Brooks IV\"]}}",
+    "expected_default": "{\"passenger\": {\"name\": [\"[PASSENGER_NAME]\", \"[PASSENGER_NAME]\"]}}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter 4"
+      },
+      {
+        "field": "name",
+        "text": "Michael Brooks IV"
+      }
+    ]
+  },
+  {
+    "id": "json_repeat_token",
+    "category": "complete name token mapping",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passengers\": [{\"name\": \"Emily Carter 4\"}, {\"name\": \"Michael Brooks IV\"}], \"remarks\": \"Emily Carter 4 requests an aisle seat.\"}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passengers\": [{\"name\": \"[PASSENGER_NAME]\"}, {\"name\": \"[PASSENGER_NAME]\"}], \"remarks\": \"[PASSENGER_NAME] requests an aisle seat.\"}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter 4"
+      },
+      {
+        "field": "name",
+        "text": "Michael Brooks IV"
+      },
+      {
+        "field": "remarks",
+        "text": "Emily Carter 4"
+      }
+    ],
+    "expected_tokenized": "{\"pnr\": \"R4TZ8N\", \"passengers\": [{\"name\": \"<PERSON_0>\"}, {\"name\": \"<PERSON_1>\"}], \"remarks\": \"<PERSON_0> requests an aisle seat.\"}",
+    "expected_mapping_names": [
+      "Emily Carter 4",
+      "Michael Brooks IV"
+    ]
+  },
+  {
+    "id": "json_distinct_suffix_tokens",
+    "category": "distinct original values in demo mapping",
+    "format": "json",
+    "input": "{\"pnr\": \"R4TZ8N\", \"passengers\": [{\"name\": \"Emily Carter 4\"}, {\"name\": \"Emily Carter IV\"}]}",
+    "expected_default": "{\"pnr\": \"R4TZ8N\", \"passengers\": [{\"name\": \"[PASSENGER_NAME]\"}, {\"name\": \"[PASSENGER_NAME]\"}]}",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter 4"
+      },
+      {
+        "field": "name",
+        "text": "Emily Carter IV"
+      }
+    ],
+    "expected_tokenized": "{\"pnr\": \"R4TZ8N\", \"passengers\": [{\"name\": \"<PERSON_0>\"}, {\"name\": \"<PERSON_1>\"}]}",
+    "expected_mapping_names": [
+      "Emily Carter 4",
+      "Emily Carter IV"
+    ]
+  },
+  {
+    "id": "xml_token_roundtrip",
+    "category": "XML complete token and recovery",
+    "format": "xml",
+    "input": "<booking pnr=\"R4TZ8N\"><passenger><name>Emily Carter 4</name></passenger></booking>",
+    "expected_default": "<booking pnr=\"R4TZ8N\"><passenger><name>[PASSENGER_NAME]</name></passenger></booking>",
+    "expected_person": [
+      {
+        "field": "name",
+        "text": "Emily Carter 4"
+      }
+    ],
+    "expected_tokenized": "<booking pnr=\"R4TZ8N\"><passenger><name>&lt;PERSON_0&gt;</name></passenger></booking>",
+    "expected_mapping_names": [
+      "Emily Carter 4"
+    ]
+  }
+]

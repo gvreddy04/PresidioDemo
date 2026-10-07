@@ -23,6 +23,20 @@ Options 1 to 4 can read **user input** (text, JSON or XML typed or pasted into t
 **local file** (JSON or XML placed in `docs/input`). See [Using the app](#using-the-app).
 All sample data is fictional.
 
+## Passenger names with numeric or Roman suffixes
+
+The [passenger-name review and implementation plan](topics/passenger-name-with-numerical-number/v1/passenger-name-review-v1.html)
+contains the measured detection gaps and 66 executable acceptance cases for the proposed fix.
+The application is currently unchanged; the acceptance suite deliberately fails where complete
+name detection or protection is missing. Run it from this project directory:
+
+```powershell
+.\.venv\Scripts\python.exe topics/passenger-name-with-numerical-number/v1/test_passenger_names.py
+```
+
+The review covers numeric/Roman suffixes, JSON/XML name fields, free text, PNR collisions,
+operational-value boundaries, protection operators and complete-name token recovery.
+
 ## How it fits together
 
 ```
