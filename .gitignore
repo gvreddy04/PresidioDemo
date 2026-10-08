@@ -12,3 +12,5 @@ docs/failed-feeds/
 docs/.processing/
 docs/.feed-listener.lock
 .test-runs/
+
+docs/.demo-token-vault/
