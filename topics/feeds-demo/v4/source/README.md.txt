@@ -11,8 +11,7 @@
 
 There is no JSON feed support and no tokenization. The listener accepts IBM MQ
 hexadecimal diagnostic dumps (`.txt`) and raw binary payloads (`.bin`). The five
-routes remain ETKT, PNR, PNR Linking, Seats and ACI. Local folders simulate MQ. Each feed has its own strategy, codec registration and
-field policy; one active delivery per feed allows independent progress.
+routes remain ETKT, PNR, PNR Linking, Seats and ACI. Local folders simulate MQ.
 
 **The producer-specific binary codec is not configured.** This revision removes
 the JSON path and provides the binary codec integration contract. It does not
@@ -79,86 +78,19 @@ preserve/update the diagnostic representation if rebuilding a TXT input, or writ
 raw payload bytes for a BIN input. An actual MQ adapter must handle MQMD separately
 and use native broker clients. No live broker is configured here.
 
-## Feed strategies and field configuration
+## Local anonymization
 
-`FeedWorkflowRouter` selects `EtktWorkflow`, `PnrWorkflow`, `PnrLinkingWorkflow`,
-`SeatsWorkflow` or `AciWorkflow`. Each strategy receives its own `IBinaryFeedCodec`
-and `FeedPolicy`. All strategies share the six-step safety sequence, while their
-producer layouts and field rules can differ. Register the confirmed codec for each
-feed through `FeedWorkflowRouter.Create`'s codec factory; the default still rejects
-all feeds with `UnconfiguredBinaryFeedCodec`.
+.NET passes extracted text values and field names directly to Python.NET.
+There is no JSON document conversion in the Presidio bridge. Presidio replaces
+known sensitive fields in full, even when statistical detection misses them.
+Names become `[PASSENGER_NAME]`, emails become `[EMAIL_ADDRESS]`, and personal
+passenger IDs become `[PASSENGER_ID]`. These are irreversible shared replacement
+labels with no token vault or recovery map. Other free-text fields are analyzed
+locally; detection of unknown free text remains model-dependent.
 
-Edit `config/feed-policies.xml` to control each feed. It is a **starter policy**, not
-an assertion about actual airline fields. Align each rule name with the canonical
-field name returned by its producer codec. Multiple passengers can have the same
-field name; distinct within-message field locations keep their values separate.
-Policies are exact names, compared without case sensitivity; there are no wildcard
-or name-guessing fallbacks. An unconfigured field rejects the entire message.
-
-For each field, configure identification separately from the action:
-
-| Identification | Behavior | Typical use |
-| --- | --- | --- |
-| `None` | Bypass Presidio; requires `Keep` | PNR, flight, seat |
-| `Known` | Full-field entity span with score 1; skips NLP detection | Name, email, passport, passenger ID |
-| `Analyze` | Local detection restricted to `entities` and `threshold` | Remarks and other free text |
-
-| Action | Settings | Result |
-| --- | --- | --- |
-| `Keep` | `identification="None"` | Original value |
-| `Replace` | Explicit `replacement` | Replacement of the whole known field or each detected span |
-| `Mask` | `maskCharacter`, positive `maskCharacters`, `fromEnd` | Mask selected characters in the known field or detected spans |
-| `Redact` | No operator settings | Remove the known value or detected spans |
-
-```xml
-<field name="pnr" identification="None" action="Keep" />
-<field name="name" identification="Known" entity="PERSON"
-       action="Replace" replacement="[PASSENGER_NAME]" />
-<field name="phone" identification="Known" entity="PHONE_NUMBER"
-       action="Mask" maskCharacter="*" maskCharacters="6" fromEnd="true" />
-<field name="passport" identification="Known" entity="PASSPORT_NUMBER" action="Redact" />
-<field name="remarks" identification="Analyze" entities="PERSON,EMAIL_ADDRESS,PHONE_NUMBER"
-       threshold="0.5" action="Replace" replacement="[PERSONAL_DETAIL]" />
-```
-
-Known sensitive fields are normally configured with full replacement or redaction.
-Masking can leave part of a value visible. An `Analyze` field with no detections
-remains unchanged; statistical detection is not a substitute for `Known` when the
-field is known to contain personal data. PNR, linked/old/new PNR rules must use
-`Keep`; configuration cannot override that requirement. Known personal fields whose
-action leaves the original value unchanged are rejected before rebuilding.
-
-Configuration is validated once at startup before inputs are claimed. Missing feed
-policies, duplicate field rules, unsupported actions, invalid parameters and XML
-external entities are rejected. Changes take effect on restart. A custom file can
-be selected alongside the docs root:
-
-```powershell
-dotnet run -- --docs-root D:/Bala_Support/binary-feed-sandbox/docs --policy-file config/feed-policies.xml
-```
-
-XML is used only for configuration; XML/JSON feed inputs remain unsupported. There
-is no JSON conversion, tokenization, token vault or recovery mapping. Names and
-emails use fictional labels, and source IDs use `[PASSENGER_ID]` by default.
-Replacement labels are shared irreversible values rather than unique tokens.
-
-## Performance and local execution
-
-Kept fields do not enter Python. Known fields call the Presidio anonymizer without
-running detection; only `Analyze` fields invoke the analyzer. .NET passes ordinary
-strings and policy arguments directly through Python.NET into embedded CPython.
-The runtime, model and engines initialize once and are reused without remote calls
-or model downloads. PNR stays unchanged; binary data remains under the codec.
-
-The listener allows **one active delivery per feed**, up to five active deliveries
-in total. A slow parse, rebuild or output copy in one feed does not hold the whole
-listener scan. Files waiting for a busy feed remain on disk. The shared Presidio
-engines are protected by a gate released between fields; Python operations are
-serialized. A long individual NLP call can delay other Python calls. This is not
-parallel NLP inference; sustained heavy detection may require separate worker
-processes after measurements. Per-feed logs show field counts, kept/known/analyzed
-counts, protection time (including gate wait), and parse/rebuild time without values.
-Shutdown drains workers before disposing transport or embedded Python.
+PNR fields remain visible and unchanged. Non-text binary data stays under the
+codec's control rather than passing through a text serializer. Replacement values
+can have different encoded lengths, so a confirmed binary serializer is required.
 
 ## Delivery and failures
 
@@ -193,12 +125,10 @@ dotnet run --project tests/FeedPipelineChecks
 
 Listener checks verify ignored JSON inputs, binary routing, full-dump recovery,
 partial/malformed dumps, retained failures, text reports, quarantine retries and
-restart behavior. The pipeline checks also verify XML policy rejection, configured field actions,
-feed isolation and worker draining. They use a clearly labeled test-only
+restart behavior. The separate pipeline checks use a clearly labeled test-only
 binary codec to exercise actual embedded Presidio, rebuilding, publishing and
 successful-delivery deletion; that fixture codec is not registered by the app and
 is not an airline schema.
 
 Prior revisions are unchanged under `topics/feeds-demo/v1/`, `v2/` and `v3/`.
-Previous binary-only source and verification remain under `topics/feeds-demo/v4/`.
-The configurable feed strategies revision is under `topics/feeds-demo/v5/`.
+This revision's source and verification record are under `topics/feeds-demo/v4/`.

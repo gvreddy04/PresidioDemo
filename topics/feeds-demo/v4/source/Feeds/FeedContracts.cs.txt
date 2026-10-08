@@ -28,7 +28,7 @@ public interface IFeedTransport : IDisposable
     string OutputRoot { get; }
     string FailedRoot { get; }
     void Initialize();
-    IReadOnlyList<FeedDelivery> ClaimReadyDeliveries(IReadOnlySet<FeedType>? busyFeeds = null);
+    IReadOnlyList<FeedDelivery> ClaimReadyDeliveries();
     Task<byte[]> ReadAsync(FeedDelivery delivery, CancellationToken cancellationToken);
     Task<string> PublishAsync(FeedMessage message, CancellationToken cancellationToken);
     Task<string> RejectAsync(FeedMessage message, string reason, CancellationToken cancellationToken);

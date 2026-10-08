@@ -1,0 +1,38 @@
+namespace PresidioDemo.Feeds;
+
+// A confirmed producer-specific codec is required for each binary feed.
+public abstract class ProtectedFeedWorkflow(IFeedProtector protector, IBinaryFeedCodec codec) : IFeedWorkflow
+{
+    public abstract FeedType Feed { get; }
+    public ValueTask<FeedWorkflowResult> ProcessAsync(FeedMessage message, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var parsed = codec.Parse(message);
+        Console.WriteLine($"{FeedCatalog.Get(Feed).FolderName,-12} PARSED     Entire binary feed parsed by its producer codec");
+        var protectedFields = protector.Protect(parsed.Fields);
+        Console.WriteLine($"{FeedCatalog.Get(Feed).FolderName,-12} PROTECTED  Local Presidio anonymization complete");
+        byte[] content = codec.Rebuild(parsed, protectedFields);
+        codec.Validate(parsed, content);
+        Console.WriteLine($"{FeedCatalog.Get(Feed).FolderName,-12} SERIALIZED Original feed format rebuilt and validated");
+        cancellationToken.ThrowIfCancellationRequested();
+        return ValueTask.FromResult(new FeedWorkflowResult(content));
+    }
+}
+
+public sealed class EtktWorkflow(IFeedProtector protector, IBinaryFeedCodec codec) : ProtectedFeedWorkflow(protector, codec) { public override FeedType Feed => FeedType.ETKT; }
+public sealed class PnrWorkflow(IFeedProtector protector, IBinaryFeedCodec codec) : ProtectedFeedWorkflow(protector, codec) { public override FeedType Feed => FeedType.PNR; }
+public sealed class PnrLinkingWorkflow(IFeedProtector protector, IBinaryFeedCodec codec) : ProtectedFeedWorkflow(protector, codec) { public override FeedType Feed => FeedType.PnrLinking; }
+public sealed class SeatsWorkflow(IFeedProtector protector, IBinaryFeedCodec codec) : ProtectedFeedWorkflow(protector, codec) { public override FeedType Feed => FeedType.Seats; }
+public sealed class AciWorkflow(IFeedProtector protector, IBinaryFeedCodec codec) : ProtectedFeedWorkflow(protector, codec) { public override FeedType Feed => FeedType.ACI; }
+
+public sealed class FeedWorkflowRouter
+{
+    private readonly IReadOnlyDictionary<FeedType, IFeedWorkflow> _workflows;
+    public FeedWorkflowRouter(IEnumerable<IFeedWorkflow> workflows)
+    {
+        _workflows = workflows.ToDictionary(workflow => workflow.Feed);
+        foreach (var feed in FeedCatalog.All)
+            if (!_workflows.ContainsKey(feed.Type)) throw new ArgumentException($"No workflow registered for {feed.FolderName}.", nameof(workflows));
+    }
+    public IFeedWorkflow Get(FeedType type) => _workflows[type];
+}

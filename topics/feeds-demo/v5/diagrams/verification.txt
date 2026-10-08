@@ -1,0 +1,1 @@
+SVG XML and local links validated. Both diagram previews rendered and visually inspected. All previous artifact versions preserved. Per-feed policy and scheduling agree with the current implementation; shared Presidio calls are serialized. Producer codecs, live MQ and AWS deployment remain pending.

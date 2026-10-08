@@ -26,14 +26,12 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
                 Directory.CreateDirectory(Path.Combine(root, feed.FolderName));
     }
 
-    public IReadOnlyList<FeedDelivery> ClaimReadyDeliveries(IReadOnlySet<FeedType>? busyFeeds = null)
+    public IReadOnlyList<FeedDelivery> ClaimReadyDeliveries()
     {
         List<FeedDelivery> deliveries = [];
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var feed in FeedCatalog.All)
         {
-            // A worker may delete or reject paths in this feed. Scan it only while idle.
-            if (busyFeeds?.Contains(feed.Type) == true) continue;
             string workRoot = Path.Combine(ProcessingRoot, feed.FolderName);
             // Restart recovery keeps the persisted delivery ID, including after publish.
             foreach (string directory in Directory.EnumerateDirectories(workRoot).Order())

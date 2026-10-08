@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 
 namespace PresidioDemo.Feeds;
 
@@ -26,14 +26,12 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
                 Directory.CreateDirectory(Path.Combine(root, feed.FolderName));
     }
 
-    public IReadOnlyList<FeedDelivery> ClaimReadyDeliveries(IReadOnlySet<FeedType>? busyFeeds = null)
+    public IReadOnlyList<FeedDelivery> ClaimReadyDeliveries()
     {
         List<FeedDelivery> deliveries = [];
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var feed in FeedCatalog.All)
         {
-            // A worker may delete or reject paths in this feed. Scan it only while idle.
-            if (busyFeeds?.Contains(feed.Type) == true) continue;
             string workRoot = Path.Combine(ProcessingRoot, feed.FolderName);
             // Restart recovery keeps the persisted delivery ID, including after publish.
             foreach (string directory in Directory.EnumerateDirectories(workRoot).Order())
@@ -45,7 +43,7 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
                         var delivery = new FeedDelivery(feed.Type, messageId, Path.GetFileName(workingPath), workingPath);
                         // Rejected input remains retained. A complete failure outcome prevents automatic retry.
                         string failed = Destination(FailedRoot, delivery);
-                        if (!File.Exists(FailureMarker(delivery)) && (!File.Exists(failed) || !File.Exists(Path.ChangeExtension(failed, ".error.txt"))))
+                        if (!File.Exists(failed) || !File.Exists(Path.ChangeExtension(failed, ".error.json")))
                             deliveries.Add(delivery);
                     }
                 if (!Directory.EnumerateFileSystemEntries(directory).Any()) Directory.Delete(directory);
@@ -98,7 +96,7 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
 
     public async Task<string> PublishAsync(FeedMessage message, CancellationToken cancellationToken)
     {
-        if (File.Exists(FailureMarker(message.Delivery)) || File.Exists(Destination(FailedRoot, message.Delivery)))
+        if (File.Exists(Destination(FailedRoot, message.Delivery)))
             throw new IOException("Delivery was already moved to the failed feed.");
         string output = Destination(OutputRoot, message.Delivery);
         await WriteOnceAsync(output, message.Content, cancellationToken);
@@ -109,15 +107,16 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
     {
         string failed = Destination(FailedRoot, message.Delivery);
         await WriteOnceAsync(failed, message.Content, cancellationToken);
-        string errorPath = Path.ChangeExtension(failed, ".error.txt");
-        byte[] report = Encoding.UTF8.GetBytes(
-            $"messageId: {message.Delivery.MessageId}\n" +
-            $"feed: {FeedCatalog.Get(message.Delivery.Feed).FolderName}\n" +
-            $"sourceFile: {message.Delivery.OriginalName}\n" +
-            $"error: {reason}\n");
+        string errorPath = Path.ChangeExtension(failed, ".error.json");
+        var report = JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            messageId = message.Delivery.MessageId,
+            feed = FeedCatalog.Get(message.Delivery.Feed).FolderName,
+            sourceFile = message.Delivery.OriginalName,
+            error = reason
+        }, new JsonSerializerOptions { WriteIndented = true });
         // A recovered rejection already has a stable report; don't replace it.
         if (!File.Exists(errorPath)) await WriteOnceAsync(errorPath, report, cancellationToken);
-        await WriteOnceAsync(FailureMarker(message.Delivery), Encoding.UTF8.GetBytes("Rejected input retained."), cancellationToken);
         return failed;
     }
 
@@ -127,9 +126,6 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
         string directory = Path.GetDirectoryName(delivery.WorkingPath)!;
         if (!Directory.EnumerateFileSystemEntries(directory).Any()) Directory.Delete(directory);
     }
-
-    private static string FailureMarker(FeedDelivery delivery) =>
-        Path.Combine(Path.GetDirectoryName(delivery.WorkingPath)!, ".failure-retained");
 
     private string Destination(string root, FeedDelivery delivery) => Path.Combine(root,
         FeedCatalog.Get(delivery.Feed).FolderName,
@@ -159,7 +155,7 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
     }
 
     private static bool IsFeedFile(string path) =>
-        new[] { ".txt", ".bin" }.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
+        new[] { ".json", ".txt", ".bin" }.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
 
     public void Dispose() => _instanceLock?.Dispose();
 }

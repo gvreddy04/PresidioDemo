@@ -1,12 +1,10 @@
-using System.Collections.Concurrent;
-
 namespace PresidioDemo.Feeds;
 
 public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRouter router) : IDisposable
 {
     private readonly SemaphoreSlim _wake = new(0, 1);
     private readonly List<FileSystemWatcher> _watchers = [];
-    private readonly ConcurrentDictionary<string, DateTime> _retryAfter = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, DateTime> _retryAfter = new(StringComparer.OrdinalIgnoreCase);
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
@@ -30,36 +28,22 @@ public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRou
             watcher.EnableRaisingEvents = true;
         }
 
-        var running = new Dictionary<FeedType, Task>();
         try
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                // Each feed gets one independent worker, bounding memory and active work.
-                // .NET parsing/rebuilding and I/O can overlap across feeds; shared Python calls cannot.
-                foreach (var completed in running.Where(pair => pair.Value.IsCompleted).ToArray())
-                {
-                    await completed.Value;
-                    running.Remove(completed.Key);
-                }
-                foreach (var delivery in transport.ClaimReadyDeliveries(running.Keys.ToHashSet()))
+                // Notifications are hints. Scans recover startup files and missed/duplicate events.
+                foreach (var delivery in transport.ClaimReadyDeliveries())
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (running.ContainsKey(delivery.Feed)) continue; // Retained on disk until this feed is idle.
-                    if (_retryAfter.TryGetValue(delivery.WorkingPath, out var after) && DateTime.UtcNow < after) continue;
-                    running.Add(delivery.Feed, Task.Run(() => ProcessAsync(delivery, cancellationToken)));
+                    if (_retryAfter.TryGetValue(delivery.WorkingPath, out var after) && DateTime.UtcNow < after)
+                        continue;
+                    await ProcessAsync(delivery, cancellationToken);
                 }
                 await _wake.WaitAsync(TimeSpan.FromMilliseconds(500), cancellationToken);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
-        finally
-        {
-            foreach (var watcher in _watchers) watcher.EnableRaisingEvents = false;
-            // Drain all workers before disposing transport or shutting down embedded Python.
-            try { await Task.WhenAll(running.Values); }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
-        }
     }
 
     private async Task ProcessAsync(FeedDelivery delivery, CancellationToken cancellationToken)
@@ -95,7 +79,7 @@ public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRou
             {
                 destination = await transport.RejectAsync(message, reason, cancellationToken);
                 Log(delivery.Feed, "FAILED", $"{Path.GetFileName(destination)} | {reason}");
-                _retryAfter.TryRemove(delivery.WorkingPath, out _);
+                _retryAfter.Remove(delivery.WorkingPath);
                 Log(delivery.Feed, "RETAINED", "Input retained in processing; no successful output delivery.");
                 return;
             }
@@ -112,7 +96,7 @@ public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRou
         try
         {
             transport.Acknowledge(delivery);
-            _retryAfter.TryRemove(delivery.WorkingPath, out _);
+            _retryAfter.Remove(delivery.WorkingPath);
             Log(delivery.Feed, "CONSUMED", "Input deleted");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
