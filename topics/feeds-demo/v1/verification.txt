@@ -1,0 +1,13 @@
+PASS all five workflows, startup backlog, byte preservation and acknowledgment
+PASS same filename creates distinct outgoing messages
+PASS invalid JSON preserved in failed feed with error report
+PASS non-JSON files and nested folders are ignored
+PASS temporary-file rename and uppercase JSON extension
+PASS UTF-8 BOM accepted and preserved
+PASS locked input stays pending until the producer releases it
+PASS output-write failure preserves the input in the failed feed
+PASS unavailable failed folder retains the payload and retries successfully
+PASS a second listener cannot consume the same queue folders
+PASS graceful shutdown
+PASS restart recovery reuses committed outputs and preserves rejected outcomes
+PASS all end-to-end checks completed

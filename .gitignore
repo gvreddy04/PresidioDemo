@@ -3,3 +3,12 @@ bin/
 obj/
 __pycache__/
 docs/output/
+
+# Runtime deliveries and state (keep tracked folder placeholders).
+docs/solace-feeds/*/*
+!docs/solace-feeds/*/.gitkeep
+docs/output-feeds/
+docs/failed-feeds/
+docs/.processing/
+docs/.feed-listener.lock
+.test-runs/

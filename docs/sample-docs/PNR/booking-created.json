@@ -1,0 +1,11 @@
+{
+  "tenant": "demo-airline",
+  "messageId": "PNR-DEMO-001",
+  "feedType": "PNR",
+  "pnr": "K7QX2M",
+  "passengers": [
+    { "sourcePassengerId": "PAX-1001", "name": "Emily Carter", "email": "emily.carter@example.com", "phone": "212-555-0147" },
+    { "sourcePassengerId": "PAX-1002", "name": "Michael Brooks", "email": "michael.brooks@example.com", "phone": "212-555-0182" }
+  ],
+  "segments": [{ "flight": "DEMO101", "origin": "JFK", "destination": "LAX" }]
+}
