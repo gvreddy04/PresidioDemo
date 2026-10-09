@@ -1,0 +1,57 @@
+{
+  "RunId": "571443033b3540f4af6103126bfe2f05",
+  "ReportFile": "D:\\Bala_Support\\Projects\\PresidioDemo\\docs\\batch-runs\\feed-batch-571443033b3540f4af6103126bfe2f05.json",
+  "Items": [
+    {
+      "SourceFile": "D:\\Bala_Support\\Feeds\\ACI.txt",
+      "Feed": "ACI",
+      "SourceSha256": "f038c05e590ade818748f6547c2a624d8d662a52c54d3596ad93649eafce022d",
+      "SourceBytes": 2604,
+      "Status": "Rejected",
+      "OutputFile": null,
+      "RetainedFile": "D:\\Bala_Support\\Projects\\PresidioDemo\\docs\\.processing\\ACI\\6a0d398b4df642bab51eb521aad10520\\ACI.run-571443033b3540f4af6103126bfe2f05-0.txt",
+      "ErrorReport": "D:\\Bala_Support\\Projects\\PresidioDemo\\docs\\failed-feeds\\ACI\\ACI.run-571443033b3540f4af6103126bfe2f05-0.6a0d398b4df642bab51eb521aad10520.error.txt"
+    },
+    {
+      "SourceFile": "D:\\Bala_Support\\Feeds\\PNR_LINKING.txt",
+      "Feed": "PNR-Linking",
+      "SourceSha256": "efa2103ffe74b92474b610c00a46eba64e0643dcc459c502166413eff855acb0",
+      "SourceBytes": 3975,
+      "Status": "Rejected",
+      "OutputFile": null,
+      "RetainedFile": "D:\\Bala_Support\\Projects\\PresidioDemo\\docs\\.processing\\PNR-Linking\\ccfb263ebd374611b77e3b2b9b8bdf30\\PNR-Linking.run-571443033b3540f4af6103126bfe2f05-1.txt",
+      "ErrorReport": "D:\\Bala_Support\\Projects\\PresidioDemo\\docs\\failed-feeds\\PNR-Linking\\PNR-Linking.run-571443033b3540f4af6103126bfe2f05-1.ccfb263ebd374611b77e3b2b9b8bdf30.error.txt"
+    },
+    {
+      "SourceFile": "D:\\Bala_Support\\Feeds\\PNR.txt",
+      "Feed": "PNR",
+      "SourceSha256": "5c8fc06ba95fb17048fe0e003cce8ce3ca622b2abf55b49b0d537b54e20a62b6",
+      "SourceBytes": 3974,
+      "Status": "Rejected",
+      "OutputFile": null,
+      "RetainedFile": "D:\\Bala_Support\\Projects\\PresidioDemo\\docs\\.processing\\PNR\\393f4b311b504872a50bb88b01ca3e63\\PNR.run-571443033b3540f4af6103126bfe2f05-2.txt",
+      "ErrorReport": "D:\\Bala_Support\\Projects\\PresidioDemo\\docs\\failed-feeds\\PNR\\PNR.run-571443033b3540f4af6103126bfe2f05-2.393f4b311b504872a50bb88b01ca3e63.error.txt"
+    },
+    {
+      "SourceFile": "D:\\Bala_Support\\Feeds\\SEATS.txt",
+      "Feed": "Seats",
+      "SourceSha256": "3f7fd3eb9d48c5b646c3ae73c7b982f419c2c86476370bf9c8ffbddc2a19fccf",
+      "SourceBytes": 3629,
+      "Status": "Published",
+      "OutputFile": "D:\\Bala_Support\\Projects\\PresidioDemo\\docs\\output-feeds\\Seats\\Seats.run-571443033b3540f4af6103126bfe2f05-3.3ecdff561f4841188f1d09b4aa26b490.txt",
+      "RetainedFile": null,
+      "ErrorReport": null
+    },
+    {
+      "SourceFile": "D:\\Bala_Support\\Feeds\\TKT.txt",
+      "Feed": "ETKT",
+      "SourceSha256": "6a0f5f65a53ff39fee57fdf8dbb870a28dc4fe136296ba4c151c277e99b78cfa",
+      "SourceBytes": 2136,
+      "Status": "Rejected",
+      "OutputFile": null,
+      "RetainedFile": "D:\\Bala_Support\\Projects\\PresidioDemo\\docs\\.processing\\ETKT\\fc497d96c5424106a8b871a90ee31127\\ETKT.run-571443033b3540f4af6103126bfe2f05-4.txt",
+      "ErrorReport": "D:\\Bala_Support\\Projects\\PresidioDemo\\docs\\failed-feeds\\ETKT\\ETKT.run-571443033b3540f4af6103126bfe2f05-4.fc497d96c5424106a8b871a90ee31127.error.txt"
+    }
+  ],
+  "AllPublished": false
+}

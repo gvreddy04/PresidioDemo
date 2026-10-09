@@ -33,8 +33,8 @@ static void ExpectInvalid(Action action, string label)
 }
 static void CheckPolicies(string root, string workspace)
 {
-    var policies = FeedPolicyConfiguration.Load(Path.Combine(root, "config", "feed-policies.xml"));
-    Check(policies.Count == 5 && policies[FeedType.Seats].Fields.Count < policies[FeedType.ACI].Fields.Count, "Feed policies are not distinct.");
+    var policies = FeedPolicyConfiguration.Load(Path.Combine(root, "src", "config", "feed-policies.xml"));
+    Check(policies.Count == 5 && policies[FeedType.Seats].Get("/OrderChangeNotif/Old/Customers/*/FirstName").Identification == FieldIdentification.Known, "Feed policies are not distinct.");
     Check(policies[FeedType.PnrLinking].Get("linkedPnr").Action == FieldAction.Keep, "Linked PNR must be kept.");
     ExpectInvalid(() => policies[FeedType.Seats].Get("unconfiguredField"), "unknown fields fail closed");
     ExpectInvalid(() => new FeedPolicy(FeedType.ACI, [new("pnr", FieldIdentification.Known, FieldAction.Redact, "PNR")]), "PNR protection override rejected");
@@ -102,32 +102,68 @@ static async Task CheckScheduling(string workspace, PresidioFeedProtector protec
         Check(!running.IsCompleted, "Listener returned before draining active workers.");
         release.Set();
         await running;
-        Check(Directory.EnumerateFiles(Path.Combine(workspace, "scheduling", ".processing", "ACI"), "slow.bin", SearchOption.AllDirectories).Any(), "Cancelled input was discarded.");
+        Check(Directory.EnumerateFiles(Path.Combine(new FeedWorkspacePaths(Path.Combine(workspace, "scheduling")).ProcessingRoot, "ACI"), "slow.bin", SearchOption.AllDirectories).Any(), "Cancelled input was discarded.");
         Check(!Directory.EnumerateFiles(Path.Combine(transport.OutputRoot, "ACI"), "slow.*.bin").Any(), "Cancelled processing was published.");
         Console.WriteLine("PASS shutdown drains active work before Python disposal and retains interrupted input");
     }
     finally { cancellation.Cancel(); release.Set(); await running; }
 }
 
+static void CheckWorkspacePaths(string workspace)
+{
+    string docs = Path.Combine(workspace, "layout", "docs");
+    var paths = new FeedWorkspacePaths(docs);
+    Check(!paths.RuntimeRoot.StartsWith(paths.DocsRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase), "Runtime state leaked into docs.");
+    Check(new FeedWorkspacePaths(docs + Path.DirectorySeparatorChar).RuntimeRoot == paths.RuntimeRoot, "Trailing separator changed lock scope.");
+    using (var owner = new FolderFeedTransport(docs))
+    {
+        owner.Initialize();
+        Check(Directory.EnumerateDirectories(docs).Select(Path.GetFileName).ToHashSet().SetEquals(new[] { "input-feeds", "output-feeds", "failed-feeds" }), "Transport recreated obsolete exchange folders.");
+        foreach (string root in new[] { owner.InputRoot, owner.OutputRoot, owner.FailedRoot })
+            Check(Directory.EnumerateDirectories(root).Select(Path.GetFileName).ToHashSet().SetEquals(FeedCatalog.All.Select(feed => feed.FolderName)), "Route folders differ between exchange roots.");
+        Check(File.Exists(paths.LockFile) && Directory.Exists(paths.ProcessingRoot), "Recovery paths were not initialized.");
+        using var duplicate = new FolderFeedTransport(docs + Path.DirectorySeparatorChar);
+        try { duplicate.Initialize(); throw new Exception("Duplicate consumer acquired the lock."); }
+        catch (IOException) { }
+        using var independent = new FolderFeedTransport(Path.Combine(workspace, "layout", "other-docs"));
+        independent.Initialize();
+        Check(new FeedWorkspacePaths(Path.Combine(workspace, "layout", "other-docs")).RuntimeRoot != paths.RuntimeRoot, "Different docs roots share recovery state.");
+    }
+    using (var reopened = new FolderFeedTransport(docs)) reopened.Initialize();
+    string legacy = Path.Combine(workspace, "legacy-docs");
+    Directory.CreateDirectory(Path.Combine(legacy, ".processing", "ACI"));
+    string retained = Path.Combine(legacy, ".processing", "ACI", "retained.bin");
+    File.WriteAllBytes(retained, [1, 2, 3]);
+    using var blocked = new FolderFeedTransport(legacy);
+    ExpectInvalid(blocked.Initialize, "legacy working deliveries cannot be silently abandoned");
+    Check(File.ReadAllBytes(retained).AsSpan().SequenceEqual(new byte[] { 1, 2, 3 }), "Legacy retained bytes changed.");
+    Console.WriteLine("PASS exchange folders stay clean; runtime paths isolate workspaces and enforce exclusive ownership across restarts");
+}
+
 bool started = false;
 try
 {
+    CheckWorkspacePaths(docsRoot);
     CheckPolicies(projectRoot, docsRoot);
+    JsonCodecChecks.Run(projectRoot);
+    ReferenceLayoutChecks.Run(projectRoot, docsRoot);
+    XdrCodecChecks.Run(projectRoot, docsRoot);
     PythonHost.Start();
     started = true;
     var protector = new PresidioFeedProtector();
     await CheckProtection(protector);
+    await XdrCodecChecks.CheckProtection(protector);
     var codec = new TestOnlyCodec();
     byte[] input = codec.CreateFixture();
     var metadata = new FeedDelivery(FeedType.ACI, Guid.NewGuid(), "fixture.bin", "test-only");
     var parsed = codec.Parse(new(metadata, input));
-    byte[] unchanged = codec.Rebuild(parsed, parsed.Fields.ToDictionary(field => field.Id, field => field.Value));
+    byte[] unchanged = codec.Serialize(parsed, parsed.Fields.ToDictionary(field => field.Id, field => field.Value));
     Check(input.AsSpan().SequenceEqual(unchanged), "Unchanged fixture failed its exact-byte round trip.");
     Console.WriteLine("PASS test-only binary fixture round trips without edits");
 
     using var transport = new FolderFeedTransport(docsRoot);
     transport.Initialize();
-    var policies = FeedPolicyConfiguration.Load(Path.Combine(projectRoot, "config", "feed-policies.xml"));
+    var policies = FeedPolicyConfiguration.Load(Path.Combine(projectRoot, "src", "config", "feed-policies.xml"));
     await CheckScheduling(docsRoot, protector, input, policies);
     var router = FeedWorkflowRouter.Create(protector, policies, _ => new TestOnlyCodec());
     using var listener = new FolderFeedListener(transport, router);
@@ -139,7 +175,7 @@ try
         await File.WriteAllBytesAsync(inbox, input);
         string outputDirectory = Path.Combine(transport.OutputRoot, "ACI");
         await Wait(() => Directory.EnumerateFiles(outputDirectory, "fixture.*.bin").Any() && !File.Exists(inbox) &&
-            !Directory.EnumerateFiles(Path.Combine(docsRoot, ".processing", "ACI"), "fixture.bin", SearchOption.AllDirectories).Any());
+            !Directory.EnumerateFiles(Path.Combine(new FeedWorkspacePaths(docsRoot).ProcessingRoot, "ACI"), "fixture.bin", SearchOption.AllDirectories).Any());
         byte[] output = await File.ReadAllBytesAsync(Directory.EnumerateFiles(outputDirectory, "fixture.*.bin").Single());
         var rebuilt = codec.Parse(new(metadata, output));
         var values = rebuilt.Fields.Select(field => field.Value).ToArray();
@@ -156,7 +192,7 @@ try
         "RULE"u8.CopyTo(unknown);
         await File.WriteAllBytesAsync(Path.Combine(transport.InputRoot, "ACI", "unknown.bin"), unknown);
         await Wait(() => Directory.EnumerateFiles(Path.Combine(transport.FailedRoot, "ACI"), "unknown.*.error.txt").Any());
-        Check(Directory.EnumerateFiles(Path.Combine(docsRoot, ".processing", "ACI"), "unknown.bin", SearchOption.AllDirectories).Any(), "Unknown-field input was deleted.");
+        Check(Directory.EnumerateFiles(Path.Combine(new FeedWorkspacePaths(docsRoot).ProcessingRoot, "ACI"), "unknown.bin", SearchOption.AllDirectories).Any(), "Unknown-field input was deleted.");
         Check(!Directory.EnumerateFiles(outputDirectory, "unknown.*").Any(), "Unknown-field input was published.");
         Console.WriteLine("PASS unconfigured field rejects entire delivery without output or input deletion");
 
@@ -165,7 +201,7 @@ try
         await File.WriteAllBytesAsync(malformed, extra);
         string failureDirectory = Path.Combine(transport.FailedRoot, "ACI");
         await Wait(() => Directory.EnumerateFiles(failureDirectory, "trailing.*.error.txt").Any());
-        Check(Directory.EnumerateFiles(Path.Combine(docsRoot, ".processing", "ACI"), "trailing.bin", SearchOption.AllDirectories).Any(), "Failed input was deleted.");
+        Check(Directory.EnumerateFiles(Path.Combine(new FeedWorkspacePaths(docsRoot).ProcessingRoot, "ACI"), "trailing.bin", SearchOption.AllDirectories).Any(), "Failed input was deleted.");
         Check(!Directory.EnumerateFiles(outputDirectory, "trailing.*").Any(), "Partial parse was published.");
         Console.WriteLine("PASS entire-file parsing rejects trailing bytes and retains the failed input");
     }
@@ -177,15 +213,18 @@ finally
     // Delete only the explicitly verified, newly-created test workspace.
     if (Directory.Exists(docsRoot) && Path.GetFullPath(docsRoot).StartsWith(testRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
         Directory.Delete(docsRoot, recursive: true);
+    string runtime = new FeedWorkspacePaths(docsRoot).RuntimeRoot;
+    if (Directory.Exists(runtime) && Path.GetFullPath(runtime).StartsWith(testRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        Directory.Delete(runtime, recursive: true);
 }
 
-sealed class TestOnlyCodec : IBinaryFeedCodec
+sealed class TestOnlyCodec : IFeedCodec
 {
     private static readonly string[] Names = ["pnr", "name", "email", "sourcePassengerId", "name", "email", "sourcePassengerId"];
     public byte[] CreateFixture() => Write(["K7QX2M", "Emily Carter", "emily.carter@example.com", "PAX-1001", "Michael Brooks", "michael.brooks@example.com", "PAX-1002"]);
     public ParsedFeed Parse(FeedMessage message)
     {
-        byte[] bytes = BinaryFeedInput.ReadPayload(message);
+        byte[] bytes = FeedPayloadReader.ReadPayload(message);
         if (bytes.Length < 4 || !(bytes.AsSpan(0, 4).SequenceEqual("TEST"u8) || bytes.AsSpan(0, 4).SequenceEqual("RULE"u8))) throw new InvalidDataException("Invalid test-only fixture.");
         int offset = 4;
         List<FeedField> fields = [];
@@ -202,7 +241,7 @@ sealed class TestOnlyCodec : IBinaryFeedCodec
         if (offset != bytes.Length) throw new InvalidDataException("Test-only fixture has trailing bytes.");
         return new(fields.AsReadOnly(), "TEST");
     }
-    public byte[] Rebuild(ParsedFeed original, IReadOnlyDictionary<string, string> fields) =>
+    public byte[] Serialize(ParsedFeed original, IReadOnlyDictionary<string, string> fields) =>
         Write(original.Fields.Select(field => fields[field.Id]).ToArray());
     public void Validate(ParsedFeed original, ReadOnlyMemory<byte> rebuilt)
     {
@@ -226,10 +265,10 @@ sealed class TestOnlyCodec : IBinaryFeedCodec
         return stream.ToArray();
     }
 }
-sealed class BlockingTestCodec(ManualResetEventSlim started, ManualResetEventSlim release) : IBinaryFeedCodec
+sealed class BlockingTestCodec(ManualResetEventSlim started, ManualResetEventSlim release) : IFeedCodec
 {
     private readonly TestOnlyCodec _inner = new();
     public ParsedFeed Parse(FeedMessage message) { started.Set(); release.Wait(); return _inner.Parse(message); }
-    public byte[] Rebuild(ParsedFeed original, IReadOnlyDictionary<string, string> fields) => _inner.Rebuild(original, fields);
+    public byte[] Serialize(ParsedFeed original, IReadOnlyDictionary<string, string> fields) => _inner.Serialize(original, fields);
     public void Validate(ParsedFeed original, ReadOnlyMemory<byte> rebuilt) => _inner.Validate(original, rebuilt);
 }

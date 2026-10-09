@@ -1,16 +1,18 @@
 .venv/
+src/.venv/
 bin/
 obj/
 __pycache__/
-docs/output/
-
-# Runtime deliveries and state (keep tracked folder placeholders).
-docs/solace-feeds/*/*
-!docs/solace-feeds/*/.gitkeep
-docs/output-feeds/
-docs/failed-feeds/
-docs/.processing/
-docs/.feed-listener.lock
+.vs/
 .test-runs/
+.runtime/
 
-docs/.demo-token-vault/
+# Runtime feeds: retain all five route folders without tracking customer data.
+/docs/input-feeds/*/*
+!/docs/input-feeds/*/.gitkeep
+/docs/output-feeds/*/*
+!/docs/output-feeds/*/.gitkeep
+/docs/failed-feeds/*/*
+!/docs/failed-feeds/*/.gitkeep
+
+topics/feeds-demo/v9/actual-run/

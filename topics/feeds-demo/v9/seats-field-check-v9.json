@@ -1,0 +1,209 @@
+{
+  "source_sha256": "3f7fd3eb9d48c5b646c3ae73c7b982f419c2c86476370bf9c8ffbddc2a19fccf",
+  "output_sha256": "efd7f0525989065f4bbc44fba0992f204bbaaa9c6128717a78303c9e2b801fe3",
+  "scalar_values": 59,
+  "unique_paths": 39,
+  "actions": {
+    "Keep": 30,
+    "Replace": 29
+  },
+  "mq_metadata_unchanged": true,
+  "json_structure_types_and_order_unchanged": true,
+  "field_results": {
+    "/OrderChangeNotif/EventVersion": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/EventTime": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/EventName": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/EventType": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/OrderId": {
+      "identification": "Known",
+      "action": "Replace",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/OrderCreateDateTime": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/OrderVersion": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/PaxId": {
+      "identification": "Known",
+      "action": "Replace",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/SeqInPNR": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/FirstName": {
+      "identification": "Known",
+      "action": "Replace",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/LastName": {
+      "identification": "Known",
+      "action": "Replace",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/BookedAsName": {
+      "identification": "Known",
+      "action": "Replace",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/UARecloc": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/UAReclocCreateDate": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/ChgReasonCode": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/ServiceItemId": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/OrderItemId": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/ServiceType": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/CreateDateTime": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/LastUpdateDateTime": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/BookingClass": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/Cabin": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/SeatNumber": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/Attributes/*": {
+      "identification": "Known",
+      "action": "Replace",
+      "occurrences": 10
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/IATAAttributes/*": {
+      "identification": "Known",
+      "action": "Replace",
+      "occurrences": 7
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/TTYAttributes/*": {
+      "identification": "Known",
+      "action": "Replace",
+      "occurrences": 6
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/OccStatus": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/FlightSegRefId": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/FlightLegRefId": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/FlightLegOffPoint": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/FlightLegDepartureTime": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/FlightLegArrivalTime": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/Source": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/Old/Customers/*/ServiceItems/*/ActionType": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/EventDetail/ClientId": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/EventDetail/EmpId": {
+      "identification": "Known",
+      "action": "Replace",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/EventDetail/LEID": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/EventDetail/AAA": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    },
+    "/OrderChangeNotif/EventDetail/AgentSine": {
+      "identification": "None",
+      "action": "Keep",
+      "occurrences": 1
+    }
+  }
+}

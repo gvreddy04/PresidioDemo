@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Producer field definitions are unavailable. Do not invent a layout from a binary sample. -->
+<!-- Set configured=true and add explicit producer field types only when that contract is available. -->
+<xdrLayouts>
+  <feed type="ACI" configured="false" />
+  <feed type="PNR" configured="false" />
+  <feed type="ETKT" configured="false" />
+</xdrLayouts>

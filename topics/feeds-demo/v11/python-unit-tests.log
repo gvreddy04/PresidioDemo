@@ -1,0 +1,21 @@
+test_actual_mq_export_preserves_all_bytes_except_configured_masks (test_aci_feed.AciFeedTests.test_actual_mq_export_preserves_all_bytes_except_configured_masks) ... ok
+test_changed_unclassified_binary_region_is_retained (test_aci_feed.AciFeedTests.test_changed_unclassified_binary_region_is_retained) ... ok
+test_configuration_can_keep_an_ambiguous_field_without_changing_other_actions (test_aci_feed.AciFeedTests.test_configuration_can_keep_an_ambiguous_field_without_changing_other_actions) ... ok
+test_raw_payload_and_different_values_use_the_same_field_configuration (test_aci_feed.AciFeedTests.test_raw_payload_and_different_values_use_the_same_field_configuration) ... ok
+test_actual_supplied_files_report_every_outcome_and_preserve_sources (test_all_feed_batch.AllFeedBatchTests.test_actual_supplied_files_report_every_outcome_and_preserve_sources) ... ok
+test_all_five_routes_publish_with_explicit_test_only_layouts_and_complete_json (test_all_feed_batch.AllFeedBatchTests.test_all_five_routes_publish_with_explicit_test_only_layouts_and_complete_json) ... ok
+test_invalid_mode_and_input (test_presidio_rules.PresidioRuleTests.test_invalid_mode_and_input) ... ok
+test_keep_and_empty_values (test_presidio_rules.PresidioRuleTests.test_keep_and_empty_values) ... ok
+test_known_name_is_protected_without_nlp_guessing (test_presidio_rules.PresidioRuleTests.test_known_name_is_protected_without_nlp_guessing) ... ok
+test_mask_and_redact (test_presidio_rules.PresidioRuleTests.test_mask_and_redact) ... ok
+test_selected_free_text_detection (test_presidio_rules.PresidioRuleTests.test_selected_free_text_detection) ... ok
+test_samples_are_flat_finalized_txt_files_with_unchanged_bytes (test_project_layout.ProjectLayoutTests.test_samples_are_flat_finalized_txt_files_with_unchanged_bytes) ... ok
+test_three_exchange_roots_have_exactly_the_five_route_folders (test_project_layout.ProjectLayoutTests.test_three_exchange_roots_have_exactly_the_five_route_folders) ... ok
+test_finalized_export_every_field (test_seats_feed.SeatsFeedTests.test_finalized_export_every_field) ... ok
+test_two_passenger_fixture_every_field (test_seats_feed.SeatsFeedTests.test_two_passenger_fixture_every_field) ... ok
+test_unknown_sensitive_path_retains_entire_feed (test_seats_feed.SeatsFeedTests.test_unknown_sensitive_path_retains_entire_feed) ... ok
+
+----------------------------------------------------------------------
+Ran 16 tests in 39.009s
+
+OK

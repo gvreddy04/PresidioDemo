@@ -1,0 +1,19 @@
+{
+  "build": {
+    "exit_code": 0,
+    "warnings": 0,
+    "errors": 0
+  },
+  "python_tests_passed": 16,
+  "listener_checks_passed": 13,
+  "dotnet_checks_passed": 99,
+  "actual_aci_published": true,
+  "actual_aci_input_acknowledged": true,
+  "configured_text_fields": 23,
+  "mask_fields": 6,
+  "keep_fields": 17,
+  "nlp_analyzed_fields": 0,
+  "payload_bytes": 888,
+  "source_unchanged": true,
+  "general_aci_schema_available": false
+}

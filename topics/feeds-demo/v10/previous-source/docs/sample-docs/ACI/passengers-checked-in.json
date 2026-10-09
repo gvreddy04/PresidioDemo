@@ -1,0 +1,11 @@
+{
+  "tenant": "demo-airline",
+  "messageId": "ACI-DEMO-001",
+  "feedType": "ACI",
+  "pnr": "K7QX2M",
+  "flight": "DEMO101",
+  "checkIns": [
+    { "sourcePassengerId": "PAX-1001", "name": "Emily Carter", "email": "emily.carter@example.com", "status": "CHECKED_IN", "seat": "12A" },
+    { "sourcePassengerId": "PAX-1002", "name": "Michael Brooks", "email": "michael.brooks@example.com", "status": "CHECKED_IN", "seat": "12B" }
+  ]
+}

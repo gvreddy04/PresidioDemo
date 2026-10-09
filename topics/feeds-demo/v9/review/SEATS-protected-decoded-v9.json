@@ -1,0 +1,84 @@
+{
+  "OrderChangeNotif": {
+    "EventVersion": "1.0",
+    "EventTime": "2026-10-08T09:57:13.483 PM",
+    "EventName": "Seat",
+    "EventType": "PNRUpdate",
+    "OrderId": "[ORDER_ID]",
+    "OrderCreateDateTime": "2026-10-08T09:51:39.652 AM",
+    "OrderVersion": 4,
+    "Old": {
+      "Customers": [
+        {
+          "PaxId": "[PASSENGER_ID]",
+          "SeqInPNR": "1.1",
+          "FirstName": "[PASSENGER_NAME]",
+          "LastName": "[PASSENGER_NAME]",
+          "BookedAsName": "[PASSENGER_NAME]",
+          "UARecloc": "F9YVCW",
+          "UAReclocCreateDate": "2026-10-08",
+          "ServiceItems": [
+            {
+              "ChgReasonCode": "unk",
+              "ServiceItemId": "serviceItem2-1",
+              "OrderItemId": "orderItem2",
+              "ServiceType": "seat",
+              "CreateDateTime": "2026-10-08T09:51:41.335 AM",
+              "LastUpdateDateTime": "2026-10-08T09:57:13.474 PM",
+              "BookingClass": "Y",
+              "Cabin": "Y",
+              "SeatNumber": "25C",
+              "Attributes": [
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]"
+              ],
+              "IATAAttributes": [
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]"
+              ],
+              "TTYAttributes": [
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]",
+                "[PROTECTED_ATTRIBUTE]"
+              ],
+              "OccStatus": "HELD",
+              "FlightSegRefId": "UA2314|FLLIAH|2026-10-10",
+              "FlightLegRefId": "UA2314|FLL|2026-10-10",
+              "FlightLegOffPoint": "IAH",
+              "FlightLegDepartureTime": "2026-10-10T11:00:00.000Z",
+              "FlightLegArrivalTime": "2026-10-10T13:50:00.000Z",
+              "Source": "104",
+              "ActionType": "Delete"
+            }
+          ]
+        }
+      ]
+    },
+    "New": {
+      "Customers": []
+    },
+    "EventDetail": {
+      "ClientId": "PssPNR_UAL_5B8C349E-0BED-478D-8287-C2DB238DD821",
+      "EmpId": "[EMPLOYEE_ID]",
+      "LEID": "D6FD00",
+      "AAA": "RVI",
+      "AgentSine": "UA"
+    }
+  }
+}

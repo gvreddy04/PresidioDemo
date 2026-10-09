@@ -1,0 +1,38 @@
+[
+  {
+    "suite": "python-unit-tests",
+    "exit_code": 0,
+    "elapsed_seconds": 42.48,
+    "command": [
+      "D:\\Bala_Support\\Projects\\PresidioDemo\\src\\.venv\\Scripts\\python.exe",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests/unit-tests",
+      "-p",
+      "test_*.py",
+      "-v"
+    ]
+  },
+  {
+    "suite": "listener-integration",
+    "exit_code": 0,
+    "elapsed_seconds": 36.01,
+    "command": [
+      "D:\\Bala_Support\\Projects\\PresidioDemo\\src\\.venv\\Scripts\\python.exe",
+      "tests/unit-tests/test_feed_listener.py"
+    ]
+  },
+  {
+    "suite": "dotnet-pipeline-checks",
+    "exit_code": 0,
+    "elapsed_seconds": 17.06,
+    "command": [
+      "dotnet",
+      "run",
+      "--project",
+      "tests/FeedPipelineChecks"
+    ]
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "build": {
+    "exit_code": 0,
+    "warnings": 0,
+    "errors": 0
+  },
+  "python_unit_tests": 12,
+  "listener_pass_checks": 12,
+  "dotnet_pass_checks": 65,
+  "all_suites_passed": true,
+  "finalized_samples_unchanged": true,
+  "preserved_files_verified": 78,
+  "migrated_delivery_report_paths_valid": true
+}

@@ -1,0 +1,4 @@
+# Preserve exact MQ export bytes and immutable verification artifacts.
+/docs/sample-docs/*.txt -text
+/tests/unit-tests/fixtures/*.txt -text
+/topics/feeds-demo/**/*.txt -text

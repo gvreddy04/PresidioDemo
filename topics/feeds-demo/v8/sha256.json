@@ -1,0 +1,13 @@
+{
+  "previous-docs/README.md": "d80d0dcdfec6c7193c78d226bcc582fc7a8df8ef863f4ab84c40ddd0e04a3b97",
+  "seats-completion-v8.md": "3594ead578a2351092a7aab848a20930ad05b93b83a419976b0290de2edf8f8b",
+  "seats-fictional-two-passenger-protected-v8.txt": "840f426a14188eb1be70941ce0d82ffbc6883be5cd4c41692c936c1b50b19a1f",
+  "seats-field-verification-v8.json": "91c3f2fca320ec20df91bba2e13dccd43e4896ae9c1b7359c96b3d189543ae77",
+  "seats-finalized-protected-v8.txt": "efd7f0525989065f4bbc44fba0992f204bbaaa9c6128717a78303c9e2b801fe3",
+  "source/README.md": "db98a1acd072a3ee5dd1eb3cc392e054b9dd145a54b5047885fc4aa174efea3d",
+  "source/src/config/feed-policies.xml": "d8e8ecd8bd58994c661cb8d15b4220afe3d8b922e7f959badff822a1b548d0fe",
+  "source/src/feeds/FeedProtection.cs": "e6107943d753af7e1c8d40e0bf9e93678088e1a20c04f11297fc6a25a5c74b03",
+  "source/src/feeds/JsonFeedCodec.cs": "04d9099d8af45391e402909cae9e57e38e2737984f2a9e04764a9edb6e22eafa",
+  "source/src/python/presidio_demo.py": "ae69ddcd69adb4973c176d3d846f2f7ec844fb5eb0013fb7eadd2645e5032b9a",
+  "source/tests/unit-tests/test_seats_feed.py": "d6b03232f1dea03b3bcd7105e253a2e8b530335b692854206e0637090998ac13"
+}

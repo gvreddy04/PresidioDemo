@@ -1,0 +1,18 @@
+.venv/
+src/.venv/
+bin/
+obj/
+__pycache__/
+.vs/
+.test-runs/
+.runtime/
+
+# Runtime feeds: retain all five route folders without tracking customer data.
+/docs/input-feeds/*/*
+!/docs/input-feeds/*/.gitkeep
+/docs/output-feeds/*/*
+!/docs/output-feeds/*/.gitkeep
+/docs/failed-feeds/*/*
+!/docs/failed-feeds/*/.gitkeep
+
+topics/feeds-demo/v9/actual-run/
