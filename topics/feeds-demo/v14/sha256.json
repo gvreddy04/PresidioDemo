@@ -1,0 +1,26 @@
+[
+  {
+    "file": "feed-implementation-reference-v14.md",
+    "sha256": "7c0efe240aa03a880228c07320aa605ef1033b36531d4dadf8a6f38998479a74"
+  },
+  {
+    "file": "presidio-feed-workflow-v3.excalidraw",
+    "sha256": "21a1d23ecda843a83e104699e59cd93584b58bcc4ed1aaa9cabe120c7f3889af"
+  },
+  {
+    "file": "presidio-feed-workflow-v3.svg",
+    "sha256": "4018b2f48ea27ea9871b752d62d4ef486a49c7190035ce80c43c1497f546a8f2"
+  },
+  {
+    "file": "previous-source\\README.md",
+    "sha256": "c9bc078c48e894b77042fad2f8a957d8d4aba6e2b535ed85b580770531984478"
+  },
+  {
+    "file": "source\\README.md",
+    "sha256": "01ce7be05a27e670d5e48515bc8b1c93b553a5fd138810ec5aa92730253eb6c0"
+  },
+  {
+    "file": "validation.json",
+    "sha256": "c37b4280e1b4314de83cb49eecfede033f0a7c2ea3841a84423c76f5a420d35d"
+  }
+]
