@@ -8,7 +8,8 @@ class ProjectLayoutTests(unittest.TestCase):
     def test_three_exchange_roots_have_exactly_the_five_route_folders(self):
         docs = PROJECT / "docs"
         self.assertEqual({p.name for p in docs.iterdir() if p.is_dir()},
-                         {"sample-docs", "input-feeds", "output-feeds", "failed-feeds"})
+                         {"sample-docs", "input-feeds", "output-feeds", "failed-feeds", "feed-logs"})
+        self.assertTrue((docs / "feed-logs" / ".gitkeep").is_file())
         for root in ["input-feeds", "output-feeds", "failed-feeds"]:
             self.assertEqual({p.name for p in (docs / root).iterdir()}, set(FEEDS))
             for feed in FEEDS:

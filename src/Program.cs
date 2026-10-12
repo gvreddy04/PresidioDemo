@@ -80,6 +80,7 @@ try
     Console.WriteLine($"Input:   {transport.InputRoot}");
     Console.WriteLine($"Output:  {transport.OutputRoot}");
     Console.WriteLine($"Failed:  {transport.FailedRoot}");
+    Console.WriteLine($"Logs:    {transport.LogsRoot}");
     foreach (var feed in FeedCatalog.All)
     {
         Console.WriteLine($"Listening: {feed.FolderName,-12} -> {router.Get(feed.Type).GetType().Name}");

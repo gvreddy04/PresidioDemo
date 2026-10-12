@@ -22,7 +22,8 @@ public abstract class ProtectedFeedWorkflow(IFeedProtector protector, IFeedCodec
         codec.Validate(parsed, content);
         Console.WriteLine($"{FeedCatalog.Get(Feed).FolderName,-12} SERIALIZED Original format rebuilt and validated | {timer.ElapsedMilliseconds} ms");
         cancellationToken.ThrowIfCancellationRequested();
-        return new FeedWorkflowResult(content);
+        var loggedFields = parsed.Fields.Select(field => field with { Value = protectedFields[field.Id] }).ToArray();
+        return new FeedWorkflowResult(content, parsed.Fields, loggedFields);
     }
 }
 

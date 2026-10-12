@@ -113,7 +113,12 @@ A batch succeeds only when every input is published and acknowledged. The suppli
 - `tests/unit-tests/`: Python tests; `tests/FeedPipelineChecks/`: .NET checks.
 - `docs/sample-docs/`: finalized reference TXT files.
 - `docs/input-feeds/`, `output-feeds/`, `failed-feeds/`: one subfolder per feed.
+- `docs/feed-logs/`: one text file per transaction, named `<feed>.<message-id>.txt`.
 - `.runtime/docs/`: retained processing input, listener lock and batch reports.
+
+Each transaction log has separate `BEFORE ANONYMIZATION` and `AFTER ANONYMIZATION` headings with divider lines. Successful transactions include parsed field values and complete input/output data; MQ exports also include the decoded payload. Binary data is shown as a hex dump with a readable character column. Rejected transactions retain the original data and explain why no validated anonymized output is available. Retries reuse the same log file. If a log cannot be saved, input remains pending and is retried before publication or rejection.
+
+These logs contain original personal data and are excluded from Git. They are written under the selected `--docs-root` when a custom folder is used.
 
 Edit [field policies](src/config/feed-policies.xml) to Keep, Mask, Replace or Redact fields. `Known` protects the entire value; `Analyze` uses local NLP. Reviewed binary profiles are in [reference layouts](src/config/reference-layouts.xml); general producer definitions belong in [XDR layouts](src/config/xdr-layouts.xml). Restart after configuration changes.
 

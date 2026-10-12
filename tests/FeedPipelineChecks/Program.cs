@@ -118,7 +118,7 @@ static void CheckWorkspacePaths(string workspace)
     using (var owner = new FolderFeedTransport(docs))
     {
         owner.Initialize();
-        Check(Directory.EnumerateDirectories(docs).Select(Path.GetFileName).ToHashSet().SetEquals(new[] { "input-feeds", "output-feeds", "failed-feeds" }), "Transport recreated obsolete exchange folders.");
+        Check(Directory.EnumerateDirectories(docs).Select(Path.GetFileName).ToHashSet().SetEquals(new[] { "input-feeds", "output-feeds", "failed-feeds", "feed-logs" }), "Transport recreated obsolete exchange folders.");
         foreach (string root in new[] { owner.InputRoot, owner.OutputRoot, owner.FailedRoot })
             Check(Directory.EnumerateDirectories(root).Select(Path.GetFileName).ToHashSet().SetEquals(FeedCatalog.All.Select(feed => feed.FolderName)), "Route folders differ between exchange roots.");
         Check(File.Exists(paths.LockFile) && Directory.Exists(paths.ProcessingRoot), "Recovery paths were not initialized.");
@@ -144,6 +144,7 @@ bool started = false;
 try
 {
     CheckWorkspacePaths(docsRoot);
+    await FeedTransactionLogChecks.RunAsync(docsRoot);
     CheckPolicies(projectRoot, docsRoot);
     JsonCodecChecks.Run(projectRoot);
     ReferenceLayoutChecks.Run(projectRoot, docsRoot);

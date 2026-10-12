@@ -20,16 +20,19 @@ public static class FeedCatalog
 
 public sealed record FeedDelivery(FeedType Feed, Guid MessageId, string OriginalName, string WorkingPath);
 public sealed record FeedMessage(FeedDelivery Delivery, ReadOnlyMemory<byte> Content);
-public sealed record FeedWorkflowResult(ReadOnlyMemory<byte> Content);
+public sealed record FeedWorkflowResult(ReadOnlyMemory<byte> Content,
+    IReadOnlyList<FeedField>? OriginalFields = null, IReadOnlyList<FeedField>? ProtectedFields = null);
 
 public interface IFeedTransport : IDisposable
 {
     string InputRoot { get; }
     string OutputRoot { get; }
     string FailedRoot { get; }
+    string LogsRoot { get; }
     void Initialize();
     IReadOnlyList<FeedDelivery> ClaimReadyDeliveries(IReadOnlySet<FeedType>? busyFeeds = null);
     Task<byte[]> ReadAsync(FeedDelivery delivery, CancellationToken cancellationToken);
+    Task<string> WriteTransactionLogAsync(FeedMessage original, FeedWorkflowResult? result, string? reason, CancellationToken cancellationToken);
     Task<string> PublishAsync(FeedMessage message, CancellationToken cancellationToken);
     Task<string> RejectAsync(FeedMessage message, string reason, CancellationToken cancellationToken);
     void Acknowledge(FeedDelivery delivery);

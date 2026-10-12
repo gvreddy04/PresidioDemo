@@ -15,4 +15,8 @@ __pycache__/
 /docs/failed-feeds/*/*
 !/docs/failed-feeds/*/.gitkeep
 
+# Transaction logs include original data; keep only the folder placeholder in Git.
+/docs/feed-logs/*
+!/docs/feed-logs/.gitkeep
+
 topics/feeds-demo/v9/actual-run/

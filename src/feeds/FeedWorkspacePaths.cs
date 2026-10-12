@@ -16,6 +16,7 @@ public sealed class FeedWorkspacePaths
     public string InputRoot => Path.Combine(DocsRoot, "input-feeds");
     public string OutputRoot => Path.Combine(DocsRoot, "output-feeds");
     public string FailedRoot => Path.Combine(DocsRoot, "failed-feeds");
+    public string LogsRoot => Path.Combine(DocsRoot, "feed-logs");
     public string ProcessingRoot => Path.Combine(RuntimeRoot, "processing");
     public string ReportsRoot => Path.Combine(RuntimeRoot, "reports");
     public string LockFile => Path.Combine(RuntimeRoot, "listener.lock");

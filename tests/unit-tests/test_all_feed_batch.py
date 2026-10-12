@@ -26,6 +26,38 @@ class AllFeedBatchTests(unittest.TestCase):
         self.assertEqual(len(reports), 1, process.stdout + process.stderr)
         return process, json.loads(reports[0].read_text(encoding="utf-8"))
 
+    def verify_transaction_logs(self, docs, report):
+        logs = list((docs / "feed-logs").glob("*.txt"))
+        self.assertEqual(len(logs), len(report["Items"]))
+        self.assertFalse(list((docs / "feed-logs").glob("*.pending")))
+        for item in report["Items"]:
+            if item["Status"] == "Published":
+                transaction = Path(item["OutputFile"]).stem.split(".")[-1]
+            else:
+                transaction = Path(item["RetainedFile"]).parent.name
+            log = docs / "feed-logs" / (item["Feed"] + "." + transaction + ".txt")
+            text = log.read_text(encoding="utf-8")
+            self.assertEqual(text.count("BEFORE ANONYMIZATION"), 1)
+            self.assertEqual(text.count("AFTER ANONYMIZATION"), 1)
+            before, after = text.split("AFTER ANONYMIZATION")
+            self.assertIn("Complete feed data", before)
+            if item["Status"] == "Published":
+                self.assertIn("Parsed fields", before)
+                self.assertIn("Parsed fields", after)
+                self.assertIn("Complete feed data", after)
+            else:
+                self.assertIn("No validated anonymized output was produced.", after)
+                self.assertIn("Reason:", after)
+            source = Path(item["SourceFile"])
+            if source.suffix == ".txt":
+                self.assertIn(source.read_text(encoding="utf-8"), before)
+            if source.name in ("ACI.bin", "PNR.bin", "TKT.bin"):
+                self.assertIn("Emily Carter", before)
+                self.assertIn("Michael Brooks", before)
+                self.assertNotIn("Emily Carter", after)
+                self.assertNotIn("emily.carter@example.com", after)
+                self.assertIn("[PASSENGER_NAME]", after)
+
     def test_actual_supplied_files_report_every_outcome_and_preserve_sources(self):
         with tempfile.TemporaryDirectory(prefix="actual-batch-", dir=PROJECT / ".test-runs") as temp:
             root = Path(temp)
@@ -36,6 +68,7 @@ class AllFeedBatchTests(unittest.TestCase):
             self.assertEqual(process.returncode, 2, process.stdout + process.stderr)
             self.assertFalse(report["AllPublished"])
             self.assertEqual(len(report["Items"]), 5)
+            self.verify_transaction_logs(root / "docs", report)
             statuses = {item["Feed"]: item["Status"] for item in report["Items"]}
             self.assertEqual(statuses, {"Seats": "Published", "ACI": "Published", "ETKT": "Published", "PNR": "Rejected", "PNR-Linking": "Rejected"})
             for item in report["Items"]:
@@ -95,6 +128,7 @@ class AllFeedBatchTests(unittest.TestCase):
             self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
             self.assertTrue(report['AllPublished'])
             self.assertEqual(len(report['Items']), 5)
+            self.verify_transaction_logs(root / 'docs', report)
             for item in report['Items']:
                 self.assertEqual(item['Status'], 'Published')
                 self.assertEqual(Path(item['SourceFile']).read_bytes(), before[Path(item['SourceFile']).name])

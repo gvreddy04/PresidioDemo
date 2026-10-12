@@ -79,32 +79,54 @@ public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRou
         var workflow = router.Get(delivery.Feed);
         Log(delivery.Feed, "RECEIVED", $"{delivery.OriginalName} | message {delivery.MessageId:N}");
         Log(delivery.Feed, "WORKFLOW", workflow.GetType().Name);
-        string destination;
+        FeedWorkflowResult? result = null;
+        string? reason = null;
         try
         {
-            var result = await workflow.ProcessAsync(message, cancellationToken);
+            result = await workflow.ProcessAsync(message, cancellationToken);
             Log(delivery.Feed, "VALIDATED", "Protected feed format");
-            destination = await transport.PublishAsync(message with { Content = result.Content }, cancellationToken);
-            Log(delivery.Feed, "PUBLISHED", Path.GetFileName(destination));
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            string reason = ex is InvalidDataException ? ex.Message : "Feed processing or output delivery failed.";
-            try
-            {
-                destination = await transport.RejectAsync(message, reason, cancellationToken);
-                Log(delivery.Feed, "FAILED", $"{Path.GetFileName(destination)} | {reason}");
-                _retryAfter.TryRemove(delivery.WorkingPath, out _);
-                Log(delivery.Feed, "RETAINED", "Input retained in processing; no successful output delivery.");
-                return;
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
-            catch (Exception)
-            {
-                Retry(delivery, "Cannot save failed delivery; input remains in processing.");
-                return;
-            }
+            reason = ex is InvalidDataException ? ex.Message : "Feed processing failed.";
+        }
+
+        // Persist the comparison before any terminal outcome or acknowledgment.
+        // Log I/O failures are retried with the original delivery ID and input.
+        try
+        {
+            string log = await transport.WriteTransactionLogAsync(message, result, reason, cancellationToken);
+            Log(delivery.Feed, "LOGGED", Path.GetFileName(log));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Retry(delivery, "Cannot save transaction log; input remains in processing.");
+            return;
+        }
+
+        if (result is null)
+        {
+            await RetainFailedAsync(message, reason!, cancellationToken);
+            return;
+        }
+
+        try
+        {
+            string destination = await transport.PublishAsync(message with { Content = result.Content }, cancellationToken);
+            Log(delivery.Feed, "PUBLISHED", Path.GetFileName(destination));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            await RetainFailedAsync(message, "Output delivery failed.", cancellationToken);
+            return;
         }
 
         // Only successful output delivery permits acknowledgment. On an ack failure,
@@ -118,6 +140,26 @@ public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRou
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             Retry(delivery, "Output saved; acknowledgment pending.");
+        }
+    }
+
+    private async Task RetainFailedAsync(FeedMessage message, string reason, CancellationToken cancellationToken)
+    {
+        var delivery = message.Delivery;
+        try
+        {
+            string destination = await transport.RejectAsync(message, reason, cancellationToken);
+            Log(delivery.Feed, "FAILED", $"{Path.GetFileName(destination)} | {reason}");
+            _retryAfter.TryRemove(delivery.WorkingPath, out _);
+            Log(delivery.Feed, "RETAINED", "Input retained in processing; no successful output delivery.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            Retry(delivery, "Cannot save failed delivery; input remains in processing.");
         }
     }
 

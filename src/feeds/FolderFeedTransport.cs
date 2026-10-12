@@ -13,6 +13,7 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
     public string InputRoot => _paths.InputRoot;
     public string OutputRoot => _paths.OutputRoot;
     public string FailedRoot => _paths.FailedRoot;
+    public string LogsRoot => _paths.LogsRoot;
     private string ProcessingRoot => _paths.ProcessingRoot;
 
     public void Initialize()
@@ -24,6 +25,7 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
         // A single consumer owns a docs root. This is released automatically on exit.
         _instanceLock = new FileStream(_paths.LockFile,
             FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        Directory.CreateDirectory(LogsRoot);
         foreach (var feed in FeedCatalog.All)
             foreach (var root in new[] { InputRoot, OutputRoot, FailedRoot, ProcessingRoot })
                 Directory.CreateDirectory(Path.Combine(root, feed.FolderName));
@@ -97,6 +99,16 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
         using var buffer = new MemoryStream();
         await input.CopyToAsync(buffer, cancellationToken);
         return buffer.ToArray();
+    }
+
+    public async Task<string> WriteTransactionLogAsync(FeedMessage original, FeedWorkflowResult? result,
+        string? reason, CancellationToken cancellationToken)
+    {
+        string destination = Path.Combine(LogsRoot,
+            $"{FeedCatalog.Get(original.Delivery.Feed).FolderName}.{original.Delivery.MessageId:N}.txt");
+        byte[] report = Encoding.UTF8.GetBytes(FeedTransactionLog.Format(original, result, reason));
+        await WriteOnceAsync(destination, report, cancellationToken);
+        return destination;
     }
 
     public async Task<string> PublishAsync(FeedMessage message, CancellationToken cancellationToken)
