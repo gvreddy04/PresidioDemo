@@ -50,6 +50,7 @@ public static class ConfiguredPiiIdentifier
 {
     public static IReadOnlyList<(FeedField Field, FieldPolicy Rule)> CreatePlan(IReadOnlyList<FeedField> fields, FeedPolicy policy)
     {
+        policy.EnsureConfigured();
         var plan = new List<(FeedField Field, FieldPolicy Rule)>();
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var field in fields)

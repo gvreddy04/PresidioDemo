@@ -1,114 +1,128 @@
 <?xml version='1.0' encoding='utf-8'?>
 <feedPolicies>
   <feed type="ETKT">
-    <field name="pnr" identification="None" action="Keep" />
-    <field name="linkedPnr" identification="None" action="Keep" />
-    <field name="oldPnr" identification="None" action="Keep" />
-    <field name="newPnr" identification="None" action="Keep" />
-    <field name="tenant" identification="None" action="Keep" />
-    <field name="messageId" identification="None" action="Keep" />
-    <field name="feedType" identification="None" action="Keep" />
-    <field name="flight" identification="None" action="Keep" />
-    <field name="flightNumber" identification="None" action="Keep" />
-    <field name="status" identification="None" action="Keep" />
-    <field name="eventType" identification="None" action="Keep" />
-    <field name="timestamp" identification="None" action="Keep" />
-    <field name="departure" identification="None" action="Keep" />
-    <field name="arrival" identification="None" action="Keep" />
-    <field name="origin" identification="None" action="Keep" />
-    <field name="destination" identification="None" action="Keep" />
-    <field name="name" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="fullName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="passengerName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="firstName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="lastName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="surname" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="givenName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="sourcePassengerId" identification="Known" entity="PASSENGER_ID" action="Replace" replacement="[PASSENGER_ID]" />
-    <field name="passengerId" identification="Known" entity="PASSENGER_ID" action="Replace" replacement="[PASSENGER_ID]" />
-    <field name="email" identification="Known" entity="EMAIL_ADDRESS" action="Replace" replacement="[EMAIL_ADDRESS]" />
-    <field name="emailAddress" identification="Known" entity="EMAIL_ADDRESS" action="Replace" replacement="[EMAIL_ADDRESS]" />
-    <field name="phone" identification="Known" entity="PHONE_NUMBER" action="Replace" replacement="[PHONE_NUMBER]" />
-    <field name="phoneNumber" identification="Known" entity="PHONE_NUMBER" action="Replace" replacement="[PHONE_NUMBER]" />
-    <field name="mobile" identification="Known" entity="PHONE_NUMBER" action="Replace" replacement="[PHONE_NUMBER]" />
-    <field name="ticketNumber" identification="Known" entity="TICKET_NUMBER" action="Replace" replacement="[TICKET_NUMBER]" />
-    <field name="creditCard" identification="Known" entity="CREDIT_CARD" action="Redact" />
-    <field name="cardNumber" identification="Known" entity="CREDIT_CARD" action="Redact" />
+    <!-- Exact reference-layout paths; masks preserve field byte lengths and PNR stays unchanged. -->
+    <field name="/Text0012" identification="None" action="Keep" />
+    <field name="/Text0024" identification="None" action="Keep" />
+    <field name="/pnr" identification="None" action="Keep" />
     <field name="/Text0044" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="3" maskCharacter="*" />
     <field name="/Text0072" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="4" maskCharacter="*" />
     <field name="/Text0088" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="15" maskCharacter="*" />
     <field name="/Text0152" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="13" maskCharacter="*" />
     <field name="/Text0172/Prefix" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="8" maskCharacter="*" />
-    <field name="/Text0012" identification="None" action="Keep" />
-    <field name="/Text0024" identification="None" action="Keep" />
-    <field name="/pnr" identification="None" action="Keep" />
     <field name="/Text0172/Remainder" identification="None" action="Keep" />
   </feed>
-  <feed type="PNR">
-    <field name="pnr" identification="None" action="Keep" />
-    <field name="linkedPnr" identification="None" action="Keep" />
-    <field name="oldPnr" identification="None" action="Keep" />
-    <field name="newPnr" identification="None" action="Keep" />
-    <field name="tenant" identification="None" action="Keep" />
-    <field name="messageId" identification="None" action="Keep" />
-    <field name="feedType" identification="None" action="Keep" />
-    <field name="flight" identification="None" action="Keep" />
-    <field name="flightNumber" identification="None" action="Keep" />
-    <field name="status" identification="None" action="Keep" />
-    <field name="eventType" identification="None" action="Keep" />
-    <field name="timestamp" identification="None" action="Keep" />
-    <field name="departure" identification="None" action="Keep" />
-    <field name="arrival" identification="None" action="Keep" />
-    <field name="origin" identification="None" action="Keep" />
-    <field name="destination" identification="None" action="Keep" />
-    <field name="name" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="fullName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="passengerName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="firstName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="lastName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="surname" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="givenName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="sourcePassengerId" identification="Known" entity="PASSENGER_ID" action="Replace" replacement="[PASSENGER_ID]" />
-    <field name="passengerId" identification="Known" entity="PASSENGER_ID" action="Replace" replacement="[PASSENGER_ID]" />
-    <field name="email" identification="Known" entity="EMAIL_ADDRESS" action="Replace" replacement="[EMAIL_ADDRESS]" />
-    <field name="emailAddress" identification="Known" entity="EMAIL_ADDRESS" action="Replace" replacement="[EMAIL_ADDRESS]" />
-    <field name="phone" identification="Known" entity="PHONE_NUMBER" action="Replace" replacement="[PHONE_NUMBER]" />
-    <field name="phoneNumber" identification="Known" entity="PHONE_NUMBER" action="Replace" replacement="[PHONE_NUMBER]" />
-    <field name="mobile" identification="Known" entity="PHONE_NUMBER" action="Replace" replacement="[PHONE_NUMBER]" />
-    <field name="passport" identification="Known" entity="PASSPORT_NUMBER" action="Replace" replacement="[PASSPORT_NUMBER]" />
-    <field name="passportNumber" identification="Known" entity="PASSPORT_NUMBER" action="Replace" replacement="[PASSPORT_NUMBER]" />
-    <field name="dob" identification="Known" entity="DATE_OF_BIRTH" action="Replace" replacement="[DATE_OF_BIRTH]" />
-    <field name="dateOfBirth" identification="Known" entity="DATE_OF_BIRTH" action="Replace" replacement="[DATE_OF_BIRTH]" />
-    <field name="address" identification="Known" entity="ADDRESS" action="Replace" replacement="[ADDRESS]" />
-    <field name="remarks" identification="Analyze" entities="PERSON,EMAIL_ADDRESS,PHONE_NUMBER" threshold="0.5" action="Replace" replacement="[PERSONAL_DETAIL]" />
+  <!-- PNR: reviewed reference paths only; direct same-length masks, no inferred general XDR schema. -->
+  <feed type="PNR" configured="true">
+    <field name="/EventDate0012" identification="None" action="Keep" />
+    <field name="/EventTime0028" identification="None" action="Keep" />
+    <field name="/EventDate0036" identification="None" action="Keep" />
+    <field name="/EventTime0052" identification="None" action="Keep" />
+    <field name="/Identifier0064" identification="Known" action="Mask" entity="UNCLASSIFIED_IDENTIFIER" maskCharacters="9" maskCharacter="*" />
+    <field name="/pnr" identification="None" action="Keep" />
+    <field name="/Identifier0168" identification="Known" action="Mask" entity="UNCLASSIFIED_IDENTIFIER" maskCharacters="6" maskCharacter="*" />
+    <field name="/EventDate0196" identification="None" action="Keep" />
+    <field name="/Identifier0284" identification="Known" action="Mask" entity="UNCLASSIFIED_IDENTIFIER" maskCharacters="6" maskCharacter="*" />
+    <field name="/FlightNumber0336" identification="None" action="Keep" />
+    <field name="/NameText0400" identification="Known" action="Mask" entity="PERSON" maskCharacters="5" maskCharacter="*" />
+    <field name="/NameText0440" identification="Known" action="Mask" entity="PERSON" maskCharacters="4" maskCharacter="*" />
+    <field name="/Docs0496/DateOfBirth1" identification="Known" action="Mask" entity="DATE_OF_BIRTH" maskCharacters="7" maskCharacter="*" />
+    <field name="/Docs0496/Gender1" identification="Known" action="Mask" entity="GENDER" maskCharacters="1" maskCharacter="*" />
+    <field name="/Docs0496/PassengerName1" identification="Known" action="Mask" entity="PERSON" maskCharacters="10" maskCharacter="*" />
+    <field name="/Docs0496/PassengerName2" identification="Known" action="Mask" entity="PERSON" maskCharacters="10" maskCharacter="*" />
+    <field name="/Remark0592" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="53" maskCharacter="*" />
+    <field name="/Remark0696" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="50" maskCharacter="*" />
+    <field name="/Remark0796" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="29" maskCharacter="*" />
+    <field name="/ContactEmail0876/Email1" identification="Known" action="Mask" entity="EMAIL_ADDRESS" maskCharacters="24" maskCharacter="*" />
+    <field name="/ContactEmail0876/PassengerName1" identification="Known" action="Mask" entity="PERSON" maskCharacters="10" maskCharacter="*" />
+    <field name="/ContactPhone0972/Phone1" identification="Known" action="Mask" entity="PHONE_NUMBER" maskCharacters="10" maskCharacter="*" />
+    <field name="/ContactPhone0972/PassengerName1" identification="Known" action="Mask" entity="PERSON" maskCharacters="10" maskCharacter="*" />
+    <field name="/Remark1052" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="37" maskCharacter="*" />
+    <field name="/Remark1140" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="38" maskCharacter="*" />
+    <field name="/Remark1228" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="38" maskCharacter="*" />
+    <field name="/Remark1316" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="21" maskCharacter="*" />
+    <field name="/Remark1388" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="52" maskCharacter="*" />
+    <field name="/Remark1488" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="35" maskCharacter="*" />
+    <field name="/Remark1572" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="8" maskCharacter="*" />
+    <field name="/Ticket1628/PassengerName1" identification="Known" action="Mask" entity="PERSON" maskCharacters="10" maskCharacter="*" />
+    <field name="/Ticket1628/TicketReference1" identification="Known" action="Mask" entity="TICKET_REFERENCE" maskCharacters="14" maskCharacter="*" />
+    <field name="/Ticket1732/PassengerName1" identification="Known" action="Mask" entity="PERSON" maskCharacters="10" maskCharacter="*" />
+    <field name="/Ticket1732/TicketReference1" identification="Known" action="Mask" entity="TICKET_REFERENCE" maskCharacters="14" maskCharacter="*" />
+    <field name="/Loyalty1860/Account1" identification="Known" action="Mask" entity="LOYALTY_NUMBER" maskCharacters="8" maskCharacter="*" />
+    <field name="/Loyalty1860/Status1" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="4" maskCharacter="*" />
+    <field name="/NameText1880" identification="Known" action="Mask" entity="PERSON" maskCharacters="10" maskCharacter="*" />
+    <field name="/Loyalty1964/Account1" identification="Known" action="Mask" entity="LOYALTY_NUMBER" maskCharacters="8" maskCharacter="*" />
+    <field name="/Loyalty1964/Status1" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="4" maskCharacter="*" />
+    <field name="/NameText1984" identification="Known" action="Mask" entity="PERSON" maskCharacters="10" maskCharacter="*" />
+    <field name="/PhonePart2052" identification="Known" action="Mask" entity="PHONE_NUMBER" maskCharacters="3" maskCharacter="*" />
+    <field name="/PhonePart2060" identification="Known" action="Mask" entity="PHONE_NUMBER" maskCharacters="7" maskCharacter="*" />
+    <field name="/Remark2112" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="29" maskCharacter="*" />
+    <field name="/Remark2188" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="50" maskCharacter="*" />
+    <field name="/Remark2284" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="23" maskCharacter="*" />
+    <field name="/Remark2352" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="48" maskCharacter="*" />
+    <field name="/TravelDate2444" identification="None" action="Keep" />
+    <field name="/Airline2468" identification="None" action="Keep" />
+    <field name="/Origin2484" identification="None" action="Keep" />
+    <field name="/Destination2492" identification="None" action="Keep" />
+    <field name="/DepartureTime2500" identification="None" action="Keep" />
+    <field name="/ArrivalTime2508" identification="None" action="Keep" />
+    <field name="/TravelDate2608" identification="None" action="Keep" />
+    <field name="/TravelDate2652" identification="None" action="Keep" />
+    <field name="/Airline2676" identification="None" action="Keep" />
+    <field name="/Origin2692" identification="None" action="Keep" />
+    <field name="/Destination2700" identification="None" action="Keep" />
+    <field name="/DepartureTime2708" identification="None" action="Keep" />
+    <field name="/ArrivalTime2716" identification="None" action="Keep" />
+    <field name="/TravelDate2816" identification="None" action="Keep" />
+    <field name="/MaskedPayment2852/Suffix1" identification="Known" action="Mask" entity="PAYMENT_REFERENCE" maskCharacters="4" maskCharacter="*" />
+    <field name="/ClientAddress2904/IPAddress1" identification="Known" action="Mask" entity="IP_ADDRESS" maskCharacters="9" maskCharacter="*" />
+    <field name="/Remark2956" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="25" maskCharacter="*" />
+    <field name="/Remark3012" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="23" maskCharacter="*" />
+    <field name="/Remark3064" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="6" maskCharacter="*" />
+    <field name="/Membership3100/PassengerName1" identification="Known" action="Mask" entity="PERSON" maskCharacters="10" maskCharacter="*" />
+    <field name="/Membership3100/Account1" identification="Known" action="Mask" entity="LOYALTY_NUMBER" maskCharacters="8" maskCharacter="*" />
+    <field name="/Membership3100/Status1" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="2" maskCharacter="*" />
+    <field name="/Sponsor3172/Account1" identification="Known" action="Mask" entity="LOYALTY_NUMBER" maskCharacters="8" maskCharacter="*" />
+    <field name="/AccountBalance3228/Balance1" identification="Known" action="Mask" entity="FINANCIAL_INFORMATION" maskCharacters="8" maskCharacter="*" />
+    <field name="/Mileage3308" identification="None" action="Keep" />
+    <field name="/MileageQuote3384" identification="None" action="Keep" />
+    <field name="/OfficeReference3456/Identifier1" identification="Known" action="Mask" entity="UNCLASSIFIED_IDENTIFIER" maskCharacters="8" maskCharacter="*" />
+    <field name="/EmailRemark3508/Email1" identification="Known" action="Mask" entity="EMAIL_ADDRESS" maskCharacters="26" maskCharacter="*" />
+    <field name="/FareRemark3576" identification="None" action="Keep" />
+    <field name="/QuoteReference3664/Reference1" identification="Known" action="Mask" entity="ORDER_ID" maskCharacters="36" maskCharacter="*" />
+    <field name="/Remark3740" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="48" maskCharacter="*" />
+    <field name="/TicketOrder3816/Reference1" identification="Known" action="Mask" entity="ORDER_ID" maskCharacters="36" maskCharacter="*" />
+    <field name="/AddressName3896/Value1" identification="Known" action="Mask" entity="PERSON" maskCharacters="10" maskCharacter="*" />
+    <field name="/AddressStreet3940/Value1" identification="Known" action="Mask" entity="ADDRESS" maskCharacters="13" maskCharacter="*" />
+    <field name="/AddressCity3988/Value1" identification="Known" action="Mask" entity="ADDRESS" maskCharacters="7" maskCharacter="*" />
+    <field name="/AddressState4032/Value1" identification="Known" action="Mask" entity="ADDRESS" maskCharacters="2" maskCharacter="*" />
+    <field name="/AddressZip4072/Value1" identification="Known" action="Mask" entity="ADDRESS" maskCharacters="5" maskCharacter="*" />
+    <field name="/AddressText4116/Value1" identification="Known" action="Mask" entity="ADDRESS" maskCharacters="16" maskCharacter="*" />
+    <field name="/RviReference4168/Reference1" identification="Known" action="Mask" entity="UNCLASSIFIED_IDENTIFIER" maskCharacters="36" maskCharacter="*" />
+    <field name="/Remark4240" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="48" maskCharacter="*" />
+    <field name="/PaymentRemark4316/ApprovalReference1" identification="Known" action="Mask" entity="PAYMENT_REFERENCE" maskCharacters="6" maskCharacter="*" />
+    <field name="/MileageOrder4384/Reference1" identification="Known" action="Mask" entity="ORDER_ID" maskCharacters="36" maskCharacter="*" />
+    <field name="/Remark4468" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="48" maskCharacter="*" />
+    <field name="/Remark4544" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="51" maskCharacter="*" />
+    <field name="/Remark4624" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="48" maskCharacter="*" />
+    <field name="/Remark4700" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="49" maskCharacter="*" />
+    <field name="/Remark4780" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="48" maskCharacter="*" />
+    <field name="/FareTicket4860/Account1" identification="Known" action="Mask" entity="LOYALTY_NUMBER" maskCharacters="8" maskCharacter="*" />
+    <field name="/FareTicket4860/TicketReference1" identification="Known" action="Mask" entity="TICKET_REFERENCE" maskCharacters="11" maskCharacter="*" />
+    <field name="/LoyaltyReference4944/Account1" identification="Known" action="Mask" entity="LOYALTY_NUMBER" maskCharacters="8" maskCharacter="*" />
+    <field name="/Remark5000" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="6" maskCharacter="*" />
+    <field name="/FareQuote5036" identification="None" action="Keep" />
+    <field name="/PassengerCountText5088" identification="None" action="Keep" />
+    <field name="/FareAmounts5136" identification="None" action="Keep" />
+    <field name="/TotalFare5216" identification="None" action="Keep" />
+    <field name="/NameText5276" identification="Known" action="Mask" entity="PERSON" maskCharacters="10" maskCharacter="*" />
+    <field name="/EventDate5344" identification="None" action="Keep" />
+    <field name="/EventTime5356" identification="None" action="Keep" />
+    <field name="/Identifier5364" identification="Known" action="Mask" entity="UNCLASSIFIED_IDENTIFIER" maskCharacters="6" maskCharacter="*" />
+    <field name="/Remark5416" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="11" maskCharacter="*" />
   </feed>
   <feed type="PNR-Linking">
-    <field name="pnr" identification="None" action="Keep" />
-    <field name="linkedPnr" identification="None" action="Keep" />
-    <field name="oldPnr" identification="None" action="Keep" />
-    <field name="newPnr" identification="None" action="Keep" />
-    <field name="tenant" identification="None" action="Keep" />
-    <field name="messageId" identification="None" action="Keep" />
-    <field name="feedType" identification="None" action="Keep" />
-    <field name="flight" identification="None" action="Keep" />
-    <field name="flightNumber" identification="None" action="Keep" />
-    <field name="status" identification="None" action="Keep" />
-    <field name="eventType" identification="None" action="Keep" />
-    <field name="timestamp" identification="None" action="Keep" />
-    <field name="departure" identification="None" action="Keep" />
-    <field name="arrival" identification="None" action="Keep" />
-    <field name="origin" identification="None" action="Keep" />
-    <field name="destination" identification="None" action="Keep" />
-    <field name="linkReason" identification="None" action="Keep" />
-    <field name="name" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="fullName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="passengerName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="firstName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="lastName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="surname" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="givenName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="sourcePassengerId" identification="Known" entity="PASSENGER_ID" action="Replace" replacement="[PASSENGER_ID]" />
-    <field name="passengerId" identification="Known" entity="PASSENGER_ID" action="Replace" replacement="[PASSENGER_ID]" />
+    <!-- Exact JSON scalar paths reviewed in the complete PNR_LINKING.txt; array rules use wildcards. -->
     <field name="/*/PaxLinkId" identification="Known" action="Replace" entity="PASSENGER_LINK_ID" replacement="[PASSENGER_LINK_ID]" />
     <field name="/*/LinkVersion" identification="None" action="Keep" />
     <field name="/*/LinkType" identification="None" action="Keep" />
@@ -157,34 +171,11 @@
     <field name="/*/Customers/*/FlightLeg/LocalDepartureDate" identification="None" action="Keep" />
     <field name="/*/Customers/*/FlightLeg/BoardPoint" identification="None" action="Keep" />
     <field name="/*/Customers/*/FlightLeg/OffPoint" identification="None" action="Keep" />
+    <!-- Only null is observed for transitionLinkSegments. Protect future scalar text; nested paths need review. -->
+    <field name="/*/transitionLinkSegments" identification="Known" action="Replace" entity="SENSITIVE_ATTRIBUTE" replacement="[PROTECTED_ATTRIBUTE]" />
   </feed>
   <feed type="Seats">
-    <field name="pnr" identification="None" action="Keep" />
-    <field name="linkedPnr" identification="None" action="Keep" />
-    <field name="oldPnr" identification="None" action="Keep" />
-    <field name="newPnr" identification="None" action="Keep" />
-    <field name="tenant" identification="None" action="Keep" />
-    <field name="messageId" identification="None" action="Keep" />
-    <field name="feedType" identification="None" action="Keep" />
-    <field name="flight" identification="None" action="Keep" />
-    <field name="flightNumber" identification="None" action="Keep" />
-    <field name="status" identification="None" action="Keep" />
-    <field name="eventType" identification="None" action="Keep" />
-    <field name="timestamp" identification="None" action="Keep" />
-    <field name="departure" identification="None" action="Keep" />
-    <field name="arrival" identification="None" action="Keep" />
-    <field name="origin" identification="None" action="Keep" />
-    <field name="destination" identification="None" action="Keep" />
-    <field name="seat" identification="None" action="Keep" />
-    <field name="name" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="fullName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="passengerName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="firstName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="lastName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="surname" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="givenName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="sourcePassengerId" identification="Known" entity="PASSENGER_ID" action="Replace" replacement="[PASSENGER_ID]" />
-    <field name="passengerId" identification="Known" entity="PASSENGER_ID" action="Replace" replacement="[PASSENGER_ID]" />
+    <!-- Exact JSON scalar paths reviewed in SEATS.txt; array rules use wildcards. -->
     <field name="/OrderChangeNotif/EventVersion" identification="None" action="Keep" />
     <field name="/OrderChangeNotif/EventTime" identification="None" action="Keep" />
     <field name="/OrderChangeNotif/EventName" identification="None" action="Keep" />
@@ -226,43 +217,7 @@
     <field name="/OrderChangeNotif/EventDetail/AgentSine" identification="None" action="Keep" />
   </feed>
   <feed type="ACI">
-    <field name="pnr" identification="None" action="Keep" />
-    <field name="linkedPnr" identification="None" action="Keep" />
-    <field name="oldPnr" identification="None" action="Keep" />
-    <field name="newPnr" identification="None" action="Keep" />
-    <field name="tenant" identification="None" action="Keep" />
-    <field name="messageId" identification="None" action="Keep" />
-    <field name="feedType" identification="None" action="Keep" />
-    <field name="flight" identification="None" action="Keep" />
-    <field name="flightNumber" identification="None" action="Keep" />
-    <field name="status" identification="None" action="Keep" />
-    <field name="eventType" identification="None" action="Keep" />
-    <field name="timestamp" identification="None" action="Keep" />
-    <field name="departure" identification="None" action="Keep" />
-    <field name="arrival" identification="None" action="Keep" />
-    <field name="origin" identification="None" action="Keep" />
-    <field name="destination" identification="None" action="Keep" />
-    <field name="name" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="fullName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="passengerName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="firstName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="lastName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="surname" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="givenName" identification="Known" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
-    <field name="sourcePassengerId" identification="Known" entity="PASSENGER_ID" action="Replace" replacement="[PASSENGER_ID]" />
-    <field name="passengerId" identification="Known" entity="PASSENGER_ID" action="Replace" replacement="[PASSENGER_ID]" />
-    <field name="email" identification="Known" entity="EMAIL_ADDRESS" action="Replace" replacement="[EMAIL_ADDRESS]" />
-    <field name="emailAddress" identification="Known" entity="EMAIL_ADDRESS" action="Replace" replacement="[EMAIL_ADDRESS]" />
-    <field name="phone" identification="Known" entity="PHONE_NUMBER" action="Replace" replacement="[PHONE_NUMBER]" />
-    <field name="phoneNumber" identification="Known" entity="PHONE_NUMBER" action="Replace" replacement="[PHONE_NUMBER]" />
-    <field name="mobile" identification="Known" entity="PHONE_NUMBER" action="Replace" replacement="[PHONE_NUMBER]" />
-    <field name="ticketNumber" identification="Known" entity="TICKET_NUMBER" action="Replace" replacement="[TICKET_NUMBER]" />
-    <field name="passport" identification="Known" entity="PASSPORT_NUMBER" action="Replace" replacement="[PASSPORT_NUMBER]" />
-    <field name="passportNumber" identification="Known" entity="PASSPORT_NUMBER" action="Replace" replacement="[PASSPORT_NUMBER]" />
-    <field name="dob" identification="Known" entity="DATE_OF_BIRTH" action="Replace" replacement="[DATE_OF_BIRTH]" />
-    <field name="dateOfBirth" identification="Known" entity="DATE_OF_BIRTH" action="Replace" replacement="[DATE_OF_BIRTH]" />
-    <field name="address" identification="Known" entity="ADDRESS" action="Replace" replacement="[ADDRESS]" />
-    <field name="remarks" identification="Analyze" entities="PERSON,EMAIL_ADDRESS,PHONE_NUMBER" threshold="0.5" action="Replace" replacement="[PERSONAL_DETAIL]" />
+    <!-- Exact reference-layout paths; masks preserve field byte lengths and PNR stays unchanged. -->
     <field name="/Text0008" identification="None" action="Keep" />
     <field name="/Text0020" identification="None" action="Keep" />
     <field name="/Text0040" identification="None" action="Keep" />

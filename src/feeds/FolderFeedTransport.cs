@@ -14,12 +14,14 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
     public string OutputRoot => _paths.OutputRoot;
     public string FailedRoot => _paths.FailedRoot;
     public string LogsRoot => _paths.LogsRoot;
-    private string ProcessingRoot => _paths.ProcessingRoot;
+    public string ProcessingRoot => _paths.ProcessingRoot;
 
     public void Initialize()
     {
         if (Directory.Exists(Path.Combine(_paths.DocsRoot, ".processing")))
-            throw new InvalidDataException("Legacy working deliveries found in docs/.processing. Migrate them to the runtime processing folder before starting.");
+        {
+            throw new InvalidDataException("Legacy working deliveries found in docs/.processing. Migrate them to feed-processing before starting.");
+        }
         Directory.CreateDirectory(_paths.DocsRoot);
         Directory.CreateDirectory(_paths.RuntimeRoot);
         // A single consumer owns a docs root. This is released automatically on exit.
@@ -27,8 +29,13 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
             FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         Directory.CreateDirectory(LogsRoot);
         foreach (var feed in FeedCatalog.All)
+        {
             foreach (var root in new[] { InputRoot, OutputRoot, FailedRoot, ProcessingRoot })
+            {
                 Directory.CreateDirectory(Path.Combine(root, feed.FolderName));
+            }
+        }
+        MigrateRuntimeProcessing();
     }
 
     public IReadOnlyList<FeedDelivery> ClaimReadyDeliveries(IReadOnlySet<FeedType>? busyFeeds = null)
@@ -38,22 +45,30 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
         foreach (var feed in FeedCatalog.All)
         {
             // A worker may delete or reject paths in this feed. Scan it only while idle.
-            if (busyFeeds?.Contains(feed.Type) == true) continue;
-            string workRoot = Path.Combine(ProcessingRoot, feed.FolderName);
-            // Restart recovery keeps the persisted delivery ID, including after publish.
-            foreach (string directory in Directory.EnumerateDirectories(workRoot).Order())
+            if (busyFeeds?.Contains(feed.Type) == true)
             {
-                if (!Guid.TryParseExact(Path.GetFileName(directory), "N", out var messageId)) continue;
-                foreach (string workingPath in Directory.EnumerateFiles(directory))
-                    if (IsFeedFile(workingPath))
+                continue;
+            }
+            string workRoot = Path.Combine(ProcessingRoot, feed.FolderName);
+            // The filename persists both the source name and delivery ID across restarts.
+            foreach (string workingPath in Directory.EnumerateFiles(workRoot).Where(IsFeedFile).Order())
+            {
+                var delivery = RecoverDelivery(feed.Type, workingPath);
+                string failed = Destination(FailedRoot, delivery);
+                if (File.Exists(failed) && File.Exists(Path.ChangeExtension(failed, ".error.txt")))
+                {
+                    // A crash may leave a completed rejection waiting only for cleanup.
+                    try
                     {
-                        var delivery = new FeedDelivery(feed.Type, messageId, Path.GetFileName(workingPath), workingPath);
-                        // Rejected input remains retained. A complete failure outcome prevents automatic retry.
-                        string failed = Destination(FailedRoot, delivery);
-                        if (!File.Exists(FailureMarker(delivery)) && (!File.Exists(failed) || !File.Exists(Path.ChangeExtension(failed, ".error.txt"))))
-                            deliveries.Add(delivery);
+                        Acknowledge(delivery);
                     }
-                if (!Directory.EnumerateFileSystemEntries(directory).Any()) Directory.Delete(directory);
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        // Keep the original until deletion can be retried on the next scan.
+                    }
+                    continue;
+                }
+                deliveries.Add(delivery);
             }
 
             string inbox = Path.Combine(InputRoot, feed.FolderName);
@@ -70,14 +85,16 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
                         _observations[path] = new(info.Length, info.LastWriteTimeUtc.Ticks, now);
                         continue;
                     }
-                    if (now - previous.StableSince < TimeSpan.FromSeconds(1)) continue;
+                    if (now - previous.StableSince < TimeSpan.FromSeconds(1))
+                    {
+                        continue;
+                    }
 
                     // Acquire exclusively before moving. Copy-in-progress files stay pending.
                     using (new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None)) { }
                     var messageId = Guid.NewGuid();
-                    string directory = Path.Combine(workRoot, messageId.ToString("N"));
-                    Directory.CreateDirectory(directory);
-                    string workingPath = Path.Combine(directory, Path.GetFileName(path));
+                    var delivery = new FeedDelivery(feed.Type, messageId, Path.GetFileName(path), "");
+                    string workingPath = Destination(ProcessingRoot, delivery);
                     File.Move(path, workingPath);
                     _observations.Remove(path);
                     deliveries.Add(new(feed.Type, messageId, Path.GetFileName(path), workingPath));
@@ -88,7 +105,9 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
             }
         }
         foreach (string stale in _observations.Keys.Where(path => !seen.Contains(path)).ToArray())
+        {
             _observations.Remove(stale);
+        }
         return deliveries;
     }
 
@@ -113,8 +132,10 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
 
     public async Task<string> PublishAsync(FeedMessage message, CancellationToken cancellationToken)
     {
-        if (File.Exists(FailureMarker(message.Delivery)) || File.Exists(Destination(FailedRoot, message.Delivery)))
+        if (File.Exists(Destination(FailedRoot, message.Delivery)))
+        {
             throw new IOException("Delivery was already moved to the failed feed.");
+        }
         string output = Destination(OutputRoot, message.Delivery);
         await WriteOnceAsync(output, message.Content, cancellationToken);
         return output;
@@ -131,20 +152,83 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
             $"sourceFile: {message.Delivery.OriginalName}\n" +
             $"error: {reason}\n");
         // A recovered rejection already has a stable report; don't replace it.
-        if (!File.Exists(errorPath)) await WriteOnceAsync(errorPath, report, cancellationToken);
-        await WriteOnceAsync(FailureMarker(message.Delivery), Encoding.UTF8.GetBytes("Rejected input retained."), cancellationToken);
+        if (!File.Exists(errorPath))
+        {
+            await WriteOnceAsync(errorPath, report, cancellationToken);
+        }
         return failed;
     }
 
     public void Acknowledge(FeedDelivery delivery)
     {
+        // Keep the per-feed processing folder, including its tracked placeholder.
         File.Delete(delivery.WorkingPath);
-        string directory = Path.GetDirectoryName(delivery.WorkingPath)!;
-        if (!Directory.EnumerateFileSystemEntries(directory).Any()) Directory.Delete(directory);
     }
 
-    private static string FailureMarker(FeedDelivery delivery) =>
-        Path.Combine(Path.GetDirectoryName(delivery.WorkingPath)!, ".failure-retained");
+    private static FeedDelivery RecoverDelivery(FeedType feed, string workingPath)
+    {
+        string stem = Path.GetFileNameWithoutExtension(workingPath);
+        int separator = stem.LastIndexOf('.');
+        if (separator < 0 || !Guid.TryParseExact(stem[(separator + 1)..], "N", out var messageId))
+        {
+            throw new InvalidDataException($"Processing filename must include a delivery ID: {Path.GetFileName(workingPath)}");
+        }
+        string originalName = stem[..separator] + Path.GetExtension(workingPath);
+        return new(feed, messageId, originalName, workingPath);
+    }
+
+    private void MigrateRuntimeProcessing()
+    {
+        string legacyRoot = Path.Combine(_paths.RuntimeRoot, "processing");
+        foreach (var feed in FeedCatalog.All)
+        {
+            string legacyFeed = Path.Combine(legacyRoot, feed.FolderName);
+            if (!Directory.Exists(legacyFeed))
+            {
+                continue;
+            }
+            foreach (string directory in Directory.EnumerateDirectories(legacyFeed))
+            {
+                if (!Guid.TryParseExact(Path.GetFileName(directory), "N", out var messageId))
+                {
+                    throw new InvalidDataException("Legacy processing directory has no valid delivery ID.");
+                }
+                foreach (string source in Directory.EnumerateFiles(directory).Where(IsFeedFile))
+                {
+                    var delivery = new FeedDelivery(feed.Type, messageId, Path.GetFileName(source), source);
+                    string destination = Destination(ProcessingRoot, delivery);
+                    if (File.Exists(destination))
+                    {
+                        if (!File.ReadAllBytes(source).AsSpan().SequenceEqual(File.ReadAllBytes(destination)))
+                        {
+                            throw new IOException("Legacy and current processing files conflict; both were retained.");
+                        }
+                        File.Delete(source);
+                    }
+                    else
+                    {
+                        File.Move(source, destination);
+                    }
+                }
+                if (!Directory.EnumerateFiles(directory).Any(IsFeedFile))
+                {
+                    File.Delete(Path.Combine(directory, ".failure-retained"));
+                }
+                if (!Directory.EnumerateFileSystemEntries(directory).Any())
+                {
+                    Directory.Delete(directory);
+                }
+            }
+            if (!Directory.EnumerateFileSystemEntries(legacyFeed).Any())
+            {
+                Directory.Delete(legacyFeed);
+            }
+        }
+        if (Directory.Exists(legacyRoot) && !Directory.EnumerateFileSystemEntries(legacyRoot).Any())
+        {
+            Directory.Delete(legacyRoot);
+        }
+    }
 
     private string Destination(string root, FeedDelivery delivery) => Path.Combine(root,
         FeedCatalog.Get(delivery.Feed).FolderName,

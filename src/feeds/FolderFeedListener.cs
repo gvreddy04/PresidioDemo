@@ -129,7 +129,7 @@ public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRou
             return;
         }
 
-        // Only successful output delivery permits acknowledgment. On an ack failure,
+        // Successful output delivery permits cleanup. On an ack failure,
         // reuse the same delivery ID and output rather than emitting another copy.
         try
         {
@@ -150,8 +150,9 @@ public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRou
         {
             string destination = await transport.RejectAsync(message, reason, cancellationToken);
             Log(delivery.Feed, "FAILED", $"{Path.GetFileName(destination)} | {reason}");
+            transport.Acknowledge(delivery);
             _retryAfter.TryRemove(delivery.WorkingPath, out _);
-            Log(delivery.Feed, "RETAINED", "Input retained in processing; no successful output delivery.");
+            Log(delivery.Feed, "RETAINED", "Original saved in failed-feeds; processing file deleted.");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

@@ -45,21 +45,47 @@ public sealed class FeedPolicy
 {
     public FeedType Feed { get; }
     public IReadOnlyDictionary<string, FieldPolicy> Fields { get; }
-    public FeedPolicy(FeedType feed, IEnumerable<FieldPolicy> fields)
+    public bool IsConfigured { get; }
+    public FeedPolicy(FeedType feed, IEnumerable<FieldPolicy> fields, bool configured = true)
     {
-        if (!Enum.IsDefined(feed)) throw new InvalidDataException("Unknown feed policy type.");
+        if (!Enum.IsDefined(feed))
+        {
+            throw new InvalidDataException("Unknown feed policy type.");
+        }
         Feed = feed;
+        IsConfigured = configured;
         var rules = new Dictionary<string, FieldPolicy>(StringComparer.OrdinalIgnoreCase);
         foreach (var rule in fields)
         {
             rule.Validate();
-            if (!rules.TryAdd(rule.Name, rule)) throw new InvalidDataException("Duplicate field policy.");
+            if (!rules.TryAdd(rule.Name, rule))
+            {
+                throw new InvalidDataException("Duplicate field policy.");
+            }
         }
-        if (rules.Count == 0) throw new InvalidDataException("Every feed requires field policies.");
+        if (configured && rules.Count == 0)
+        {
+            throw new InvalidDataException("Configured feeds require field policies.");
+        }
+        if (!configured && rules.Count != 0)
+        {
+            throw new InvalidDataException("Unconfigured feeds cannot declare field policies.");
+        }
         Fields = new ReadOnlyDictionary<string, FieldPolicy>(rules);
     }
-    public FieldPolicy Get(string name) => Fields.TryGetValue(name, out var rule) && (!name.StartsWith('/') || rule.Name == name) ? rule :
-        throw new InvalidDataException("The feed codec returned a field without a configured protection policy.");
+    public void EnsureConfigured()
+    {
+        if (!IsConfigured)
+        {
+            throw new InvalidDataException("The feed protection policy is not configured; input retained and no output was published.");
+        }
+    }
+    public FieldPolicy Get(string name)
+    {
+        EnsureConfigured();
+        return Fields.TryGetValue(name, out var rule) && (!name.StartsWith('/') || rule.Name == name) ? rule :
+            throw new InvalidDataException("The feed codec returned a field without a configured protection policy.");
+    }
 }
 
 /// <summary>Strict local XML configuration with exact JSON paths and feed-specific protection rules.</summary>
@@ -74,13 +100,21 @@ public static class FeedPolicyConfiguration
         var policies = new Dictionary<FeedType, FeedPolicy>();
         foreach (var element in root.Elements())
         {
-            Check(element, "feed", ["type"]);
+            Check(element, "feed", ["type", "configured"]);
             string type = Required(element, "type");
             var definition = FeedCatalog.All.SingleOrDefault(f => f.FolderName.Equals(type, StringComparison.OrdinalIgnoreCase))
                 ?? throw new InvalidDataException("Unknown feed type in policy configuration.");
+            bool configured = (string?)element.Attribute("configured") switch
+            {
+                null or "true" => true,
+                "false" => false,
+                _ => throw new InvalidDataException("Feed policy configured must be true or false.")
+            };
             var rules = element.Elements().Select(ParseField).ToArray();
-            if (!policies.TryAdd(definition.Type, new FeedPolicy(definition.Type, rules)))
+            if (!policies.TryAdd(definition.Type, new FeedPolicy(definition.Type, rules, configured)))
+            {
                 throw new InvalidDataException("Duplicate feed policy.");
+            }
         }
         foreach (var feed in FeedCatalog.All)
             if (!policies.ContainsKey(feed.Type)) throw new InvalidDataException("A feed protection policy is missing.");

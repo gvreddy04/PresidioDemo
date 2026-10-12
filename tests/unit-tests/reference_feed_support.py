@@ -17,6 +17,8 @@ def field_spans(feed):
         start = int(text.get("offset")) + 4
         if len(text):
             for part in text:
+                if part.get("fixed") == "true":
+                    continue
                 spans.append(("/" + text.get("name") + "/" + part.get("name"),
                               start + int(part.get("start")), int(part.get("length"))))
         else:

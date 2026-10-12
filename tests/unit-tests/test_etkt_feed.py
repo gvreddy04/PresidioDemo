@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from test_feed_listener import PROJECT, Listener, wait_for, rejected, runtime_root
+from test_feed_listener import PROJECT, Listener, wait_for, rejected, runtime_root, processing_files
 from test_seats_feed import payload
 from reference_feed_support import field_spans, verify_output
 
@@ -33,7 +33,7 @@ class EtktFeedTests(unittest.TestCase):
         directory = self.docs / "output-feeds/ETKT"
         pattern = Path(name).stem + ".*" + Path(name).suffix
         wait_for(lambda: len(list(directory.glob(pattern))) == 1 and not inbox.exists()
-                 and not list((runtime_root(self.docs) / "processing/ETKT").rglob(name)), "ETKT publication and acknowledgment")
+                 and not processing_files(self.docs, "ETKT", name), "ETKT publication and acknowledgment")
         return next(directory.glob(pattern)).read_bytes()
 
     def test_actual_etkt_export_preserves_every_byte_except_configured_masks(self):

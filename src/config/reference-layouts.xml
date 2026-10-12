@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Reviewed ACI and ETKT reference frames only; not general airline producer schemas. -->
+<!-- Reviewed ACI, ETKT and PNR reference frames only; not general airline producer schemas. -->
 <!-- TextNNNN names retain unconfirmed business meanings. Unknown bytes and string lengths are fixed to each reference. -->
 <referenceLayouts>
   <feed type="ACI" name="AciReference888" referenceFile="../../docs/sample-docs/ACI.txt" referenceSha256="f038c05e590ade818748f6547c2a624d8d662a52c54d3596ad93649eafce022d">
@@ -41,5 +41,213 @@
       <part name="Prefix" start="0" length="8" />
       <part name="Remainder" start="8" length="57" />
     </text>
+  </feed>
+  <!-- PNR: selected readable fields from the pinned 5452-byte sample; fixed parts preserve record syntax. -->
+  <feed type="PNR" name="PnrReference5452" referenceFile="../../docs/sample-docs/PNR.txt" referenceSha256="75cc60895384395f8df28eff4c4abf6a0c58f1dc7960c5eee41cb294def0e4de">
+    <text name="EventDate0012" offset="12" length="9" />
+    <text name="EventTime0028" offset="28" length="4" />
+    <text name="EventDate0036" offset="36" length="9" />
+    <text name="EventTime0052" offset="52" length="6" />
+    <text name="Identifier0064" offset="64" length="9" />
+    <text name="pnr" offset="80" length="6" />
+    <text name="Identifier0168" offset="168" length="6" />
+    <text name="EventDate0196" offset="196" length="7" />
+    <text name="Identifier0284" offset="284" length="6" />
+    <text name="FlightNumber0336" offset="336" length="4" />
+    <text name="NameText0400" offset="400" length="5" />
+    <text name="NameText0440" offset="440" length="4" />
+    <text name="Docs0496" offset="496" length="47">
+      <part name="Literal1" start="0" length="14" fixed="true" />
+      <part name="DateOfBirth1" start="14" length="7" />
+      <part name="Literal2" start="21" length="1" fixed="true" />
+      <part name="Gender1" start="22" length="1" />
+      <part name="Literal3" start="23" length="2" fixed="true" />
+      <part name="PassengerName1" start="25" length="10" />
+      <part name="Literal4" start="35" length="2" fixed="true" />
+      <part name="PassengerName2" start="37" length="10" />
+    </text>
+    <text name="Remark0592" offset="592" length="53" />
+    <text name="Remark0696" offset="696" length="50" />
+    <text name="Remark0796" offset="796" length="29" />
+    <text name="ContactEmail0876" offset="876" length="46">
+      <part name="Literal1" start="0" length="10" fixed="true" />
+      <part name="Email1" start="10" length="24" />
+      <part name="Literal2" start="34" length="2" fixed="true" />
+      <part name="PassengerName1" start="36" length="10" />
+    </text>
+    <text name="ContactPhone0972" offset="972" length="32">
+      <part name="Literal1" start="0" length="10" fixed="true" />
+      <part name="Phone1" start="10" length="10" />
+      <part name="Literal2" start="20" length="2" fixed="true" />
+      <part name="PassengerName1" start="22" length="10" />
+    </text>
+    <text name="Remark1052" offset="1052" length="37" />
+    <text name="Remark1140" offset="1140" length="38" />
+    <text name="Remark1228" offset="1228" length="38" />
+    <text name="Remark1316" offset="1316" length="21" />
+    <text name="Remark1388" offset="1388" length="52" />
+    <text name="Remark1488" offset="1488" length="35" />
+    <text name="Remark1572" offset="1572" length="8" />
+    <text name="Ticket1628" offset="1628" length="54">
+      <part name="Literal1" start="0" length="27" fixed="true" />
+      <part name="PassengerName1" start="27" length="10" />
+      <part name="Literal2" start="37" length="1" fixed="true" />
+      <part name="TicketReference1" start="38" length="14" />
+      <part name="Literal3" start="52" length="2" fixed="true" />
+    </text>
+    <text name="Ticket1732" offset="1732" length="54">
+      <part name="Literal1" start="0" length="27" fixed="true" />
+      <part name="PassengerName1" start="27" length="10" />
+      <part name="Literal2" start="37" length="1" fixed="true" />
+      <part name="TicketReference1" start="38" length="14" />
+      <part name="Literal3" start="52" length="2" fixed="true" />
+    </text>
+    <text name="Loyalty1860" offset="1860" length="15">
+      <part name="Account1" start="0" length="8" />
+      <part name="Literal1" start="8" length="3" fixed="true" />
+      <part name="Status1" start="11" length="4" />
+    </text>
+    <text name="NameText1880" offset="1880" length="10" />
+    <text name="Loyalty1964" offset="1964" length="15">
+      <part name="Account1" start="0" length="8" />
+      <part name="Literal1" start="8" length="3" fixed="true" />
+      <part name="Status1" start="11" length="4" />
+    </text>
+    <text name="NameText1984" offset="1984" length="10" />
+    <text name="PhonePart2052" offset="2052" length="3" />
+    <text name="PhonePart2060" offset="2060" length="7" />
+    <text name="Remark2112" offset="2112" length="29" />
+    <text name="Remark2188" offset="2188" length="50" />
+    <text name="Remark2284" offset="2284" length="23" />
+    <text name="Remark2352" offset="2352" length="48" />
+    <text name="TravelDate2444" offset="2444" length="7" />
+    <text name="Airline2468" offset="2468" length="2" />
+    <text name="Origin2484" offset="2484" length="3" />
+    <text name="Destination2492" offset="2492" length="3" />
+    <text name="DepartureTime2500" offset="2500" length="4" />
+    <text name="ArrivalTime2508" offset="2508" length="4" />
+    <text name="TravelDate2608" offset="2608" length="7" />
+    <text name="TravelDate2652" offset="2652" length="7" />
+    <text name="Airline2676" offset="2676" length="2" />
+    <text name="Origin2692" offset="2692" length="3" />
+    <text name="Destination2700" offset="2700" length="3" />
+    <text name="DepartureTime2708" offset="2708" length="4" />
+    <text name="ArrivalTime2716" offset="2716" length="4" />
+    <text name="TravelDate2816" offset="2816" length="7" />
+    <text name="MaskedPayment2852" offset="2852" length="23">
+      <part name="Literal1" start="0" length="19" fixed="true" />
+      <part name="Suffix1" start="19" length="4" />
+    </text>
+    <text name="ClientAddress2904" offset="2904" length="23">
+      <part name="Literal1" start="0" length="14" fixed="true" />
+      <part name="IPAddress1" start="14" length="9" />
+    </text>
+    <text name="Remark2956" offset="2956" length="25" />
+    <text name="Remark3012" offset="3012" length="23" />
+    <text name="Remark3064" offset="3064" length="6" />
+    <text name="Membership3100" offset="3100" length="41">
+      <part name="Literal1" start="0" length="8" fixed="true" />
+      <part name="PassengerName1" start="8" length="10" />
+      <part name="Literal2" start="18" length="6" fixed="true" />
+      <part name="Account1" start="24" length="8" />
+      <part name="Literal3" start="32" length="1" fixed="true" />
+      <part name="Status1" start="33" length="2" />
+      <part name="Literal4" start="35" length="6" fixed="true" />
+    </text>
+    <text name="Sponsor3172" offset="3172" length="25">
+      <part name="Literal1" start="0" length="11" fixed="true" />
+      <part name="Account1" start="11" length="8" />
+      <part name="Literal2" start="19" length="6" fixed="true" />
+    </text>
+    <text name="AccountBalance3228" offset="3228" length="50">
+      <part name="Literal1" start="0" length="16" fixed="true" />
+      <part name="Balance1" start="16" length="8" />
+      <part name="Literal2" start="24" length="26" fixed="true" />
+    </text>
+    <text name="Mileage3308" offset="3308" length="45" />
+    <text name="MileageQuote3384" offset="3384" length="43" />
+    <text name="OfficeReference3456" offset="3456" length="22">
+      <part name="Literal1" start="0" length="14" fixed="true" />
+      <part name="Identifier1" start="14" length="8" />
+    </text>
+    <text name="EmailRemark3508" offset="3508" length="38">
+      <part name="Literal1" start="0" length="12" fixed="true" />
+      <part name="Email1" start="12" length="26" />
+    </text>
+    <text name="FareRemark3576" offset="3576" length="59" />
+    <text name="QuoteReference3664" offset="3664" length="45">
+      <part name="Literal1" start="0" length="9" fixed="true" />
+      <part name="Reference1" start="9" length="36" />
+    </text>
+    <text name="Remark3740" offset="3740" length="48" />
+    <text name="TicketOrder3816" offset="3816" length="51">
+      <part name="Literal1" start="0" length="15" fixed="true" />
+      <part name="Reference1" start="15" length="36" />
+    </text>
+    <text name="AddressName3896" offset="3896" length="15">
+      <part name="Literal1" start="0" length="5" fixed="true" />
+      <part name="Value1" start="5" length="10" />
+    </text>
+    <text name="AddressStreet3940" offset="3940" length="18">
+      <part name="Literal1" start="0" length="5" fixed="true" />
+      <part name="Value1" start="5" length="13" />
+    </text>
+    <text name="AddressCity3988" offset="3988" length="16">
+      <part name="Literal1" start="0" length="9" fixed="true" />
+      <part name="Value1" start="9" length="7" />
+    </text>
+    <text name="AddressState4032" offset="4032" length="12">
+      <part name="Literal1" start="0" length="10" fixed="true" />
+      <part name="Value1" start="10" length="2" />
+    </text>
+    <text name="AddressZip4072" offset="4072" length="13">
+      <part name="Literal1" start="0" length="8" fixed="true" />
+      <part name="Value1" start="8" length="5" />
+    </text>
+    <text name="AddressText4116" offset="4116" length="21">
+      <part name="Literal1" start="0" length="5" fixed="true" />
+      <part name="Value1" start="5" length="16" />
+    </text>
+    <text name="RviReference4168" offset="4168" length="43">
+      <part name="Literal1" start="0" length="7" fixed="true" />
+      <part name="Reference1" start="7" length="36" />
+    </text>
+    <text name="Remark4240" offset="4240" length="48" />
+    <text name="PaymentRemark4316" offset="4316" length="37">
+      <part name="Literal1" start="0" length="19" fixed="true" />
+      <part name="ApprovalReference1" start="19" length="6" />
+      <part name="Literal2" start="25" length="12" fixed="true" />
+    </text>
+    <text name="MileageOrder4384" offset="4384" length="53">
+      <part name="Literal1" start="0" length="17" fixed="true" />
+      <part name="Reference1" start="17" length="36" />
+    </text>
+    <text name="Remark4468" offset="4468" length="48" />
+    <text name="Remark4544" offset="4544" length="51" />
+    <text name="Remark4624" offset="4624" length="48" />
+    <text name="Remark4700" offset="4700" length="49" />
+    <text name="Remark4780" offset="4780" length="48" />
+    <text name="FareTicket4860" offset="4860" length="43">
+      <part name="Literal1" start="0" length="8" fixed="true" />
+      <part name="Account1" start="8" length="8" />
+      <part name="Literal2" start="16" length="9" fixed="true" />
+      <part name="TicketReference1" start="25" length="11" />
+      <part name="Literal3" start="36" length="7" fixed="true" />
+    </text>
+    <text name="LoyaltyReference4944" offset="4944" length="23">
+      <part name="Literal1" start="0" length="9" fixed="true" />
+      <part name="Account1" start="9" length="8" />
+      <part name="Literal2" start="17" length="6" fixed="true" />
+    </text>
+    <text name="Remark5000" offset="5000" length="6" />
+    <text name="FareQuote5036" offset="5036" length="26" />
+    <text name="PassengerCountText5088" offset="5088" length="23" />
+    <text name="FareAmounts5136" offset="5136" length="56" />
+    <text name="TotalFare5216" offset="5216" length="21" />
+    <text name="NameText5276" offset="5276" length="10" />
+    <text name="EventDate5344" offset="5344" length="7" />
+    <text name="EventTime5356" offset="5356" length="4" />
+    <text name="Identifier5364" offset="5364" length="6" />
+    <text name="Remark5416" offset="5416" length="11" />
   </feed>
 </referenceLayouts>

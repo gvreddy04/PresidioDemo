@@ -150,9 +150,10 @@ public static class ReferenceLayoutConfiguration
                 continue;
             }
             int consumed = 0;
+            var partNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var part in text.Elements())
             {
-                Check(part, "part", ["name", "start", "length"]);
+                Check(part, "part", ["name", "start", "length", "fixed"]);
                 if (part.Elements().Any())
                 {
                     throw new InvalidDataException("Reference text parts cannot contain children.");
@@ -163,7 +164,21 @@ public static class ReferenceLayoutConfiguration
                 {
                     throw new InvalidDataException("Reference text parts must cover their string without gaps or overlaps.");
                 }
-                Add("/" + name + "/" + Identifier(Required(part, "name")), offset + 4 + start, partLength);
+                string partName = Identifier(Required(part, "name"));
+                if (!partNames.Add(partName))
+                {
+                    throw new InvalidDataException("Duplicate reference text part name.");
+                }
+                bool fixedPart = (string?)part.Attribute("fixed") switch
+                {
+                    null or "false" => false,
+                    "true" => true,
+                    _ => throw new InvalidDataException("Reference part fixed must be true or false.")
+                };
+                if (!fixedPart)
+                {
+                    Add("/" + name + "/" + partName, offset + 4 + start, partLength);
+                }
                 consumed += partLength;
             }
             if (consumed != length)

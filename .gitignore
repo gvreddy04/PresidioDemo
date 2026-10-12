@@ -10,6 +10,8 @@ __pycache__/
 # Runtime feeds: retain all five route folders without tracking customer data.
 /docs/input-feeds/*/*
 !/docs/input-feeds/*/.gitkeep
+/docs/feed-processing/*/*
+!/docs/feed-processing/*/.gitkeep
 /docs/output-feeds/*/*
 !/docs/output-feeds/*/.gitkeep
 /docs/failed-feeds/*/*

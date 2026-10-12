@@ -71,7 +71,7 @@ static class ReferenceLayoutChecks
     {
         string config = Path.Combine(root, "src", "config", "reference-layouts.xml");
         var references = ReferenceLayoutConfiguration.Load(config);
-        Check(references.Count == 2 && references.ContainsKey(FeedType.ACI) && references.ContainsKey(FeedType.ETKT), "only the reviewed ACI and ETKT reference layouts are enabled");
+        Check(references.Count == 3 && references.ContainsKey(FeedType.ACI) && references.ContainsKey(FeedType.ETKT) && references.ContainsKey(FeedType.PNR), "only the reviewed ACI, ETKT and PNR reference layouts are enabled");
         CheckEtkt(root, references);
         var reference = references[FeedType.ACI];
         var codec = new ReferenceLayoutFeedCodec(reference);

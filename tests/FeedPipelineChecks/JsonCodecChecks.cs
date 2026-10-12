@@ -52,7 +52,7 @@ static class JsonCodecChecks
         Reject(() => codec.Parse(Message(export.Replace("A CCS 1208", "A CCS 437"), "sample.txt")), "JSON payload with an unsupported CCSID is rejected");
         Reject(() => FeedPayloadReader.Read(Message(export + "\r\nA VER 2", "sample.txt")), "multiple MQ messages in one export are rejected");
         Reject(() => FeedPayloadReader.Read(Message(export[..export.IndexOf("X ")] + "X ZZ", "sample.txt")), "malformed MQ hex is rejected");
-        foreach (var pair in new[] { ("ACI.txt", 888), ("PNR.txt", 1523), ("ETKT.txt", 672), ("SEATS.txt", 1362), ("PNR_LINKING.txt", 1523) })
+        foreach (var pair in new[] { ("ACI.txt", 888), ("PNR.txt", 5452), ("ETKT.txt", 672), ("SEATS.txt", 1362), ("PNR_LINKING.txt", 2217) })
         {
             byte[] bytes = File.ReadAllBytes(Path.Combine(root, "docs", "sample-docs", pair.Item1));
             var env = FeedPayloadReader.Read(new(new(FeedType.Seats, Guid.Empty, pair.Item1, "fixture"), bytes));

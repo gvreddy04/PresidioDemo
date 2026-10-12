@@ -35,7 +35,7 @@ static void CheckPolicies(string root, string workspace)
 {
     var policies = FeedPolicyConfiguration.Load(Path.Combine(root, "src", "config", "feed-policies.xml"));
     Check(policies.Count == 5 && policies[FeedType.Seats].Get("/OrderChangeNotif/Old/Customers/*/FirstName").Identification == FieldIdentification.Known, "Feed policies are not distinct.");
-    Check(policies[FeedType.PnrLinking].Get("linkedPnr").Action == FieldAction.Keep, "Linked PNR must be kept.");
+    Check(policies[FeedType.PnrLinking].Get("/*/Customers/*/UaRecordLocator").Action == FieldAction.Keep, "Linked PNR must be kept.");
     ExpectInvalid(() => policies[FeedType.Seats].Get("unconfiguredField"), "unknown fields fail closed");
     ExpectInvalid(() => new FeedPolicy(FeedType.ACI, [new("pnr", FieldIdentification.Known, FieldAction.Redact, "PNR")]), "PNR protection override rejected");
     ExpectInvalid(() => new FeedPolicy(FeedType.ACI, [new("name", FieldIdentification.Known, FieldAction.Keep, "PERSON")]), "incompatible identification and action rejected");
@@ -75,6 +75,13 @@ static async Task CheckProtection(PresidioFeedProtector protector)
     try { await protector.ProtectAsync([new("0", "missing", "value")], policy, CancellationToken.None); throw new Exception("Unknown field accepted"); }
     catch (InvalidDataException) { Console.WriteLine("PASS missing policy retains input before any protection"); }
 }
+static FeedPolicy TestFixturePolicy(FeedType feed) => new(feed, [
+    new("pnr", FieldIdentification.None, FieldAction.Keep),
+    new("name", FieldIdentification.Known, FieldAction.Replace, "PERSON", "[PASSENGER_NAME]"),
+    new("email", FieldIdentification.Known, FieldAction.Replace, "EMAIL_ADDRESS", "[EMAIL_ADDRESS]"),
+    new("sourcePassengerId", FieldIdentification.Known, FieldAction.Replace, "PASSENGER_ID", "[PASSENGER_ID]")
+]);
+
 static async Task CheckScheduling(string workspace, PresidioFeedProtector protector, byte[] input, IReadOnlyDictionary<FeedType, FeedPolicy> policies)
 {
     using var started = new ManualResetEventSlim();
@@ -82,7 +89,8 @@ static async Task CheckScheduling(string workspace, PresidioFeedProtector protec
     using var transport = new FolderFeedTransport(Path.Combine(workspace, "scheduling"));
     transport.Initialize();
     var routes = policies.ToDictionary(p => p.Key, p => p.Value);
-    routes[FeedType.Seats] = new FeedPolicy(FeedType.Seats, policies[FeedType.ACI].Fields.Values);
+    routes[FeedType.ACI] = TestFixturePolicy(FeedType.ACI);
+    routes[FeedType.Seats] = TestFixturePolicy(FeedType.Seats);
     var router = FeedWorkflowRouter.Create(protector, routes, feed => feed == FeedType.ACI ? new BlockingTestCodec(started, release) : new TestOnlyCodec());
     using var listener = new FolderFeedListener(transport, router);
     using var cancellation = new CancellationTokenSource();
@@ -102,7 +110,7 @@ static async Task CheckScheduling(string workspace, PresidioFeedProtector protec
         Check(!running.IsCompleted, "Listener returned before draining active workers.");
         release.Set();
         await running;
-        Check(Directory.EnumerateFiles(Path.Combine(new FeedWorkspacePaths(Path.Combine(workspace, "scheduling")).ProcessingRoot, "ACI"), "slow.bin", SearchOption.AllDirectories).Any(), "Cancelled input was discarded.");
+        Check(Directory.EnumerateFiles(Path.Combine(new FeedWorkspacePaths(Path.Combine(workspace, "scheduling")).ProcessingRoot, "ACI"), "slow.*.bin", SearchOption.AllDirectories).Any(), "Cancelled input was discarded.");
         Check(!Directory.EnumerateFiles(Path.Combine(transport.OutputRoot, "ACI"), "slow.*.bin").Any(), "Cancelled processing was published.");
         Console.WriteLine("PASS shutdown drains active work before Python disposal and retains interrupted input");
     }
@@ -118,8 +126,8 @@ static void CheckWorkspacePaths(string workspace)
     using (var owner = new FolderFeedTransport(docs))
     {
         owner.Initialize();
-        Check(Directory.EnumerateDirectories(docs).Select(Path.GetFileName).ToHashSet().SetEquals(new[] { "input-feeds", "output-feeds", "failed-feeds", "feed-logs" }), "Transport recreated obsolete exchange folders.");
-        foreach (string root in new[] { owner.InputRoot, owner.OutputRoot, owner.FailedRoot })
+        Check(Directory.EnumerateDirectories(docs).Select(Path.GetFileName).ToHashSet().SetEquals(new[] { "input-feeds", "output-feeds", "failed-feeds", "feed-logs", "feed-processing" }), "Transport recreated obsolete exchange folders.");
+        foreach (string root in new[] { owner.InputRoot, owner.ProcessingRoot, owner.OutputRoot, owner.FailedRoot })
             Check(Directory.EnumerateDirectories(root).Select(Path.GetFileName).ToHashSet().SetEquals(FeedCatalog.All.Select(feed => feed.FolderName)), "Route folders differ between exchange roots.");
         Check(File.Exists(paths.LockFile) && Directory.Exists(paths.ProcessingRoot), "Recovery paths were not initialized.");
         using var duplicate = new FolderFeedTransport(docs + Path.DirectorySeparatorChar);
@@ -145,9 +153,12 @@ try
 {
     CheckWorkspacePaths(docsRoot);
     await FeedTransactionLogChecks.RunAsync(docsRoot);
+    await FeedProcessingChecks.RunAsync(docsRoot);
     CheckPolicies(projectRoot, docsRoot);
+    UnconfiguredPolicyChecks.Run(projectRoot, docsRoot);
     JsonCodecChecks.Run(projectRoot);
     ReferenceLayoutChecks.Run(projectRoot, docsRoot);
+    PnrReferenceChecks.Run(projectRoot, docsRoot);
     XdrCodecChecks.Run(projectRoot, docsRoot);
     PythonHost.Start();
     started = true;
@@ -166,7 +177,9 @@ try
     transport.Initialize();
     var policies = FeedPolicyConfiguration.Load(Path.Combine(projectRoot, "src", "config", "feed-policies.xml"));
     await CheckScheduling(docsRoot, protector, input, policies);
-    var router = FeedWorkflowRouter.Create(protector, policies, _ => new TestOnlyCodec());
+    var fixturePolicies = policies.ToDictionary(pair => pair.Key, pair => pair.Value);
+    fixturePolicies[FeedType.ACI] = TestFixturePolicy(FeedType.ACI);
+    var router = FeedWorkflowRouter.Create(protector, fixturePolicies, _ => new TestOnlyCodec());
     using var listener = new FolderFeedListener(transport, router);
     using var cancellation = new CancellationTokenSource();
     Task running = listener.RunAsync(cancellation.Token);
@@ -176,7 +189,7 @@ try
         await File.WriteAllBytesAsync(inbox, input);
         string outputDirectory = Path.Combine(transport.OutputRoot, "ACI");
         await Wait(() => Directory.EnumerateFiles(outputDirectory, "fixture.*.bin").Any() && !File.Exists(inbox) &&
-            !Directory.EnumerateFiles(Path.Combine(new FeedWorkspacePaths(docsRoot).ProcessingRoot, "ACI"), "fixture.bin", SearchOption.AllDirectories).Any());
+            !Directory.EnumerateFiles(Path.Combine(new FeedWorkspacePaths(docsRoot).ProcessingRoot, "ACI"), "fixture.*.bin", SearchOption.AllDirectories).Any());
         byte[] output = await File.ReadAllBytesAsync(Directory.EnumerateFiles(outputDirectory, "fixture.*.bin").Single());
         var rebuilt = codec.Parse(new(metadata, output));
         var values = rebuilt.Fields.Select(field => field.Value).ToArray();
@@ -193,16 +206,18 @@ try
         "RULE"u8.CopyTo(unknown);
         await File.WriteAllBytesAsync(Path.Combine(transport.InputRoot, "ACI", "unknown.bin"), unknown);
         await Wait(() => Directory.EnumerateFiles(Path.Combine(transport.FailedRoot, "ACI"), "unknown.*.error.txt").Any());
-        Check(Directory.EnumerateFiles(Path.Combine(new FeedWorkspacePaths(docsRoot).ProcessingRoot, "ACI"), "unknown.bin", SearchOption.AllDirectories).Any(), "Unknown-field input was deleted.");
+        await Wait(() => !Directory.EnumerateFiles(Path.Combine(transport.ProcessingRoot, "ACI"), "unknown.*.bin").Any());
+        Check(File.ReadAllBytes(Directory.GetFiles(Path.Combine(transport.FailedRoot, "ACI"), "unknown.*.bin").Single()).AsSpan().SequenceEqual(unknown), "Rejected input was not preserved in failed-feeds.");
         Check(!Directory.EnumerateFiles(outputDirectory, "unknown.*").Any(), "Unknown-field input was published.");
-        Console.WriteLine("PASS unconfigured field rejects entire delivery without output or input deletion");
+        Console.WriteLine("PASS unconfigured field rejects entire delivery without output and cleans processing after quarantine");
 
         string malformed = Path.Combine(transport.InputRoot, "ACI", "trailing.bin");
         byte[] extra = [.. input, 0x00];
         await File.WriteAllBytesAsync(malformed, extra);
         string failureDirectory = Path.Combine(transport.FailedRoot, "ACI");
         await Wait(() => Directory.EnumerateFiles(failureDirectory, "trailing.*.error.txt").Any());
-        Check(Directory.EnumerateFiles(Path.Combine(new FeedWorkspacePaths(docsRoot).ProcessingRoot, "ACI"), "trailing.bin", SearchOption.AllDirectories).Any(), "Failed input was deleted.");
+        await Wait(() => !Directory.EnumerateFiles(Path.Combine(transport.ProcessingRoot, "ACI"), "trailing.*.bin").Any());
+        Check(File.ReadAllBytes(Directory.GetFiles(failureDirectory, "trailing.*.bin").Single()).AsSpan().SequenceEqual(extra), "Failed input was not preserved in failed-feeds.");
         Check(!Directory.EnumerateFiles(outputDirectory, "trailing.*").Any(), "Partial parse was published.");
         Console.WriteLine("PASS entire-file parsing rejects trailing bytes and retains the failed input");
     }

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from test_feed_listener import PROJECT, DLL, Listener, wait_for, rejected, runtime_root
+from test_feed_listener import PROJECT, DLL, Listener, wait_for, rejected, runtime_root, processing_files
 from test_seats_feed import payload, header
 
 
@@ -46,7 +46,7 @@ class AciFeedTests(unittest.TestCase):
         outputs = self.docs / "output-feeds/ACI"
         pattern = Path(name).stem + ".*" + Path(name).suffix
         wait_for(lambda: len(list(outputs.glob(pattern))) == 1 and not inbox.exists()
-                 and not list((runtime_root(self.docs) / "processing/ACI").rglob(name)), "ACI output and acknowledgment")
+                 and not processing_files(self.docs, "ACI", name), "ACI output and acknowledgment")
         return next(outputs.glob(pattern)).read_bytes()
 
     def test_actual_mq_export_preserves_all_bytes_except_configured_masks(self):

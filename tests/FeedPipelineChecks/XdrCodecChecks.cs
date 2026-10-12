@@ -37,6 +37,24 @@ static class XdrCodecChecks
     public static void Run(string root, string workspace)
     {
         Check(XdrLayoutConfiguration.Load(Path.Combine(root, "src", "config", "xdr-layouts.xml")).Count == 0, "production XDR layouts remain explicitly unconfigured rather than guessed");
+        byte[] pnrSource = File.ReadAllBytes(Path.Combine(root, "docs", "sample-docs", "PNR.txt"));
+        var pnrMessage = new FeedMessage(new(FeedType.PNR, Guid.Empty, "PNR.txt", "supplied-sample"), pnrSource);
+        var pnrEnvelope = FeedPayloadReader.Read(pnrMessage);
+        Check(pnrEnvelope.Payload.Length == 5452 && pnrEnvelope.Payload.Length % 4 == 0,
+            "updated supplied PNR payload is four-byte aligned without modifying the source");
+        var missingPnrSchema = FeedCodecRegistry.Create(FeedType.PNR);
+        try
+        {
+            missingPnrSchema.Parse(pnrMessage);
+            throw new Exception("PNR with no producer schema was accepted.");
+        }
+        catch (InvalidDataException error)
+        {
+            Check(error.Message.Contains("binary producer schema is not configured", StringComparison.Ordinal),
+                "aligned supplied PNR reaches the missing-schema guard instead of the alignment error");
+        }
+        var truncatedPnr = new FeedMessage(new(FeedType.PNR, Guid.Empty, "truncated-pnr.bin", "test-only"), pnrEnvelope.Payload[..^1]);
+        Reject(() => missingPnrSchema.Parse(truncatedPnr), "unaligned PNR truncation is still rejected before schema lookup");
         var codec = new XdrFeedCodec(FeedType.ACI, new(FeedType.ACI, Fields));
         byte[] fixture = Fixture();
         var parsed = codec.Parse(Message(fixture));

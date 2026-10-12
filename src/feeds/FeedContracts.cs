@@ -26,6 +26,7 @@ public sealed record FeedWorkflowResult(ReadOnlyMemory<byte> Content,
 public interface IFeedTransport : IDisposable
 {
     string InputRoot { get; }
+    string ProcessingRoot { get; }
     string OutputRoot { get; }
     string FailedRoot { get; }
     string LogsRoot { get; }

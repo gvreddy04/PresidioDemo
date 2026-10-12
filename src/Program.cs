@@ -78,6 +78,7 @@ try
     Console.WriteLine("PRESIDIO FEED LISTENER DEMO");
     Console.WriteLine("Input -> listener -> parser -> configured field actions -> anonymization -> serialization -> output");
     Console.WriteLine($"Input:   {transport.InputRoot}");
+    Console.WriteLine($"Processing: {transport.ProcessingRoot}");
     Console.WriteLine($"Output:  {transport.OutputRoot}");
     Console.WriteLine($"Failed:  {transport.FailedRoot}");
     Console.WriteLine($"Logs:    {transport.LogsRoot}");
@@ -85,7 +86,7 @@ try
     {
         Console.WriteLine($"Listening: {feed.FolderName,-12} -> {router.Get(feed.Type).GetType().Name}");
     }
-    Console.WriteLine("Input formats: MQ export (.txt) and raw payload (.bin). JSON: Seats, PNR Linking. ACI/ETKT: configured reference layouts; general XDR requires producer definitions.");
+    Console.WriteLine("Input formats: MQ export (.txt) and raw payload (.bin). JSON: Seats, PNR Linking. ACI/ETKT/PNR: configured reference layouts; general XDR requires producer definitions.");
     Console.WriteLine($"Field policies: {policyFile}");
     Console.WriteLine($"XDR layouts: {xdrLayoutFile} | {xdrSchemas.Count} producer schemas configured");
     Console.WriteLine($"Reference layouts: {referenceLayoutFile} | {referenceLayouts.Count} restricted profiles configured");

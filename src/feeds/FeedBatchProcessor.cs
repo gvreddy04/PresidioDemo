@@ -66,14 +66,16 @@ public static class FeedBatchProcessor
                     string[] failures = Directory.GetFiles(Path.Combine(transport.FailedRoot, folder), pattern).Where(p => !p.EndsWith(".error.txt", StringComparison.Ordinal)).ToArray();
                     string workingRoot = Path.Combine(paths.ProcessingRoot, folder);
                     string? outcome = outputs.SingleOrDefault() ?? failures.SingleOrDefault();
-                    string? deliveryId = outcome is null ? null : Path.GetFileNameWithoutExtension(outcome).Split('.')[^1];
-                    string? working = deliveryId is null ? null : Path.Combine(workingRoot, deliveryId, job.ImportedName);
+                    string? working = outcome is null ? null : Path.Combine(workingRoot, Path.GetFileName(outcome));
                     bool pendingInput = File.Exists(Path.Combine(transport.InputRoot, folder, job.ImportedName));
                     if (outputs.Length == 1 && !File.Exists(working) && !pendingInput)
+                    {
                         results.Add(job.ImportedName, new(job.SourceFile, folder, job.Sha256, job.Content.Length, "Published", outputs[0], null, null));
-                    else if (failures.Length == 1 && File.Exists(working) && File.Exists(Path.ChangeExtension(failures[0], ".error.txt")) &&
-                        File.Exists(Path.Combine(Path.GetDirectoryName(working!)!, ".failure-retained")))
-                        results.Add(job.ImportedName, new(job.SourceFile, folder, job.Sha256, job.Content.Length, "Rejected", null, working, Path.ChangeExtension(failures[0], ".error.txt")));
+                    }
+                    else if (failures.Length == 1 && !File.Exists(working) && !pendingInput && File.Exists(Path.ChangeExtension(failures[0], ".error.txt")))
+                    {
+                        results.Add(job.ImportedName, new(job.SourceFile, folder, job.Sha256, job.Content.Length, "Rejected", null, failures[0], Path.ChangeExtension(failures[0], ".error.txt")));
+                    }
                 }
                 if (DateTime.UtcNow >= deadline) break;
                 await Task.Delay(100, cancellationToken);

@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from test_feed_listener import PROJECT, Listener, runtime_root, wait_for
+from test_feed_listener import PROJECT, Listener, processing_files, wait_for
 
 
 class FeedLogTests(unittest.TestCase):
@@ -22,10 +22,10 @@ class FeedLogTests(unittest.TestCase):
                 inbox = docs / "input-feeds/Seats/comparison.txt"
                 inbox.write_bytes(original)
                 wait_for(lambda: any("Cannot save transaction log" in line for line in listener.lines), "log failure retains transaction")
-                retained = list((runtime_root(docs) / "processing/Seats").rglob("comparison.txt"))
+                retained = processing_files(docs, "Seats", "comparison.txt")
                 self.assertEqual(len(retained), 1)
                 self.assertEqual(retained[0].read_bytes(), original)
-                transaction = retained[0].parent.name
+                transaction = retained[0].stem.split(".")[-1]
                 self.assertFalse(list((docs / "output-feeds/Seats").glob("comparison.*")))
                 self.assertFalse(list((docs / "failed-feeds/Seats").glob("comparison.*")))
                 logs.unlink()

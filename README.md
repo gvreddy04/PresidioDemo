@@ -13,10 +13,10 @@ Process airline feeds using configured field rules and local Presidio. PNR stays
 | ACI | Published using the reviewed 888-byte reference layout |
 | ETKT | Published using the reviewed 672-byte reference layout |
 | Seats | Published using complete JSON |
-| PNR | Retained; complete binary framing and layout need confirmation |
-| PNR-Linking | Retained; supplied JSON ends inside a property name |
+| PNR | Published using the reviewed 5,452-byte reference layout: 76 masked fields and 30 kept fields |
+| PNR-Linking | Published using the complete 2,217-byte JSON payload and 49 exact field paths |
 
-ACI and ETKT support the reviewed reference frames, rather than arbitrary producer messages. The external filename `TKT.txt` routes to ETKT. Protection uses irreversible masks or replacement labels; stable tokens are not implemented.
+ACI, ETKT and PNR support the reviewed reference frames. Arbitrary producer messages require their own reviewed schemas. The external filename `TKT.txt` routes to ETKT. Protection uses irreversible masks or replacement labels; stable tokens are not implemented.
 
 ## Technology stack
 
@@ -105,7 +105,7 @@ dotnet run -- --process-folder D:/Bala_Support/Feeds
 
 For continuous listening, run `dotnet run`, wait for `READY`, then copy a `.txt` MQ export or `.bin` payload into `docs/input-feeds/<feed>`. Press Enter or Ctrl+C to stop. Use the folders `ACI`, `ETKT`, `PNR`, `PNR-Linking` and `Seats`.
 
-A batch succeeds only when every input is published and acknowledged. The supplied PNR and PNR-Linking files currently prevent a fully successful actual-file batch.
+A batch succeeds only when every input is published and acknowledged. All five supplied reference files are supported. The PNR profile covers selected readable fields within the reviewed 5,452-byte frame; unknown binary bytes, record prefixes, separators, counts and padding must match the reference. A different layout is retained without output. Obtain the producer XDR definitions (`.x` file) or serializer/deserializer contract to support general messages and establish passenger associations.
 
 ## Folders and configuration
 
@@ -114,11 +114,16 @@ A batch succeeds only when every input is published and acknowledged. The suppli
 - `docs/sample-docs/`: finalized reference TXT files.
 - `docs/input-feeds/`, `output-feeds/`, `failed-feeds/`: one subfolder per feed.
 - `docs/feed-logs/`: one text file per transaction, named `<feed>.<message-id>.txt`.
-- `.runtime/docs/`: retained processing input, listener lock and batch reports.
+- `docs/feed-processing/`: active input files, with one subfolder per feed.
+- `.runtime/docs/`: listener lock and batch reports.
+
+The listener moves each ready file from `docs/input-feeds/<feed>` into `docs/feed-processing/<feed>/<original-stem>.<unique-id>.<extension>`. This removes it from the input folder before processing starts. The same ID follows the transaction through its log and output. Once output is saved, the processing file is deleted. Rejected input is saved in `docs/failed-feeds/<feed>` with an error report before the processing file is deleted. Interrupted transactions and temporary storage failures stay in `feed-processing` for retry after restart. Older `.runtime/docs/processing` deliveries are migrated on startup while preserving their IDs and bytes.
 
 Each transaction log has separate `BEFORE ANONYMIZATION` and `AFTER ANONYMIZATION` headings with divider lines. Successful transactions include parsed field values and complete input/output data; MQ exports also include the decoded payload. Binary data is shown as a hex dump with a readable character column. Rejected transactions retain the original data and explain why no validated anonymized output is available. Retries reuse the same log file. If a log cannot be saved, input remains pending and is retried before publication or rejection.
 
 These logs contain original personal data and are excluded from Git. They are written under the selected `--docs-root` when a custom folder is used.
+
+ACI, ETKT and Seats policies contain only the reviewed sample field paths: 23 ACI reference fields, 9 ETKT reference fields and 39 Seats JSON paths. Unconfigured fields fail closed. Binary mask lengths and both ACI PNR locations are preserved. PNR-Linking uses 49 exact JSON paths, including protection for `transitionLinkSegments` scalar text; its observed null value stays null, and unconfigured nested fields reject the message. PNR-Linking keeps `PNROwner` and every customer `UaRecordLocator` unchanged. The 36 unbound PNR aliases have been replaced with 106 exact reference paths. PNR masks 76 selected sensitive fields and keeps 30, including PNR, travel dates, routes, flight data, fares and mileage. Masks cover names, document DOB/gender, encoded emails, phone fragments, addresses, loyalty/ticket/order/payment references, IP text and selected remarks. Mixed-record prefixes and separators use fixed reference parts. No stable passenger identity is inferred. An explicitly unconfigured policy still rejects protection even if a layout is supplied separately. Policies default to configured when the attribute is omitted; configured policies require at least one field, and unconfigured policies cannot declare fields.
 
 Edit [field policies](src/config/feed-policies.xml) to Keep, Mask, Replace or Redact fields. `Known` protects the entire value; `Analyze` uses local NLP. Reviewed binary profiles are in [reference layouts](src/config/reference-layouts.xml); general producer definitions belong in [XDR layouts](src/config/xdr-layouts.xml). Restart after configuration changes.
 

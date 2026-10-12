@@ -7,7 +7,7 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from test_feed_listener import PROJECT, Listener, wait_for, rejected, runtime_root
+from test_feed_listener import PROJECT, Listener, wait_for, rejected, runtime_root, processing_files
 
 
 def payload(raw):
@@ -93,7 +93,7 @@ class SeatsFeedTests(unittest.TestCase):
         directory = self.docs / "output-feeds" / "Seats"
         pattern = Path(name).stem + ".*" + Path(name).suffix
         wait_for(lambda: len(list(directory.glob(pattern))) == 1 and not inbox.exists()
-                 and not list((runtime_root(self.docs) / "processing" / "Seats").rglob(name)), "SEATS delivery and acknowledgment")
+                 and not processing_files(self.docs, "Seats", name), "SEATS delivery and acknowledgment")
         return next(directory.glob(pattern)).read_bytes()
 
     def test_finalized_export_every_field(self):

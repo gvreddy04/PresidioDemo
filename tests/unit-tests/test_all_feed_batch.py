@@ -30,11 +30,13 @@ class AllFeedBatchTests(unittest.TestCase):
         logs = list((docs / "feed-logs").glob("*.txt"))
         self.assertEqual(len(logs), len(report["Items"]))
         self.assertFalse(list((docs / "feed-logs").glob("*.pending")))
+        self.assertFalse(list((docs / "feed-processing").rglob("*.txt")))
+        self.assertFalse(list((docs / "feed-processing").rglob("*.bin")))
         for item in report["Items"]:
             if item["Status"] == "Published":
                 transaction = Path(item["OutputFile"]).stem.split(".")[-1]
             else:
-                transaction = Path(item["RetainedFile"]).parent.name
+                transaction = Path(item["RetainedFile"]).stem.split(".")[-1]
             log = docs / "feed-logs" / (item["Feed"] + "." + transaction + ".txt")
             text = log.read_text(encoding="utf-8")
             self.assertEqual(text.count("BEFORE ANONYMIZATION"), 1)
@@ -51,7 +53,7 @@ class AllFeedBatchTests(unittest.TestCase):
             source = Path(item["SourceFile"])
             if source.suffix == ".txt":
                 self.assertIn(source.read_text(encoding="utf-8"), before)
-            if source.name in ("ACI.bin", "PNR.bin", "TKT.bin"):
+            if item["Status"] == "Published" and source.name in ("ACI.bin", "PNR.bin", "TKT.bin"):
                 self.assertIn("Emily Carter", before)
                 self.assertIn("Michael Brooks", before)
                 self.assertNotIn("Emily Carter", after)
@@ -65,28 +67,64 @@ class AllFeedBatchTests(unittest.TestCase):
             shutil.copytree(PROJECT / "docs" / "sample-docs", sources)
             before = {p.name: p.read_bytes() for p in sources.iterdir()}
             process, report = self.run_batch(sources, root / "docs")
-            self.assertEqual(process.returncode, 2, process.stdout + process.stderr)
-            self.assertFalse(report["AllPublished"])
+            self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+            self.assertTrue(report["AllPublished"])
             self.assertEqual(len(report["Items"]), 5)
             self.verify_transaction_logs(root / "docs", report)
             statuses = {item["Feed"]: item["Status"] for item in report["Items"]}
-            self.assertEqual(statuses, {"Seats": "Published", "ACI": "Published", "ETKT": "Published", "PNR": "Rejected", "PNR-Linking": "Rejected"})
+            self.assertEqual(statuses, {"Seats": "Published", "ACI": "Published", "ETKT": "Published", "PNR": "Published", "PNR-Linking": "Published"})
             for item in report["Items"]:
                 original = before[Path(item["SourceFile"]).name]
                 self.assertEqual(Path(item["SourceFile"]).read_bytes(), original)
                 self.assertEqual(item["SourceSha256"], hashlib.sha256(original).hexdigest())
                 if item["Status"] == "Published":
                     output = Path(item["OutputFile"]).read_bytes()
-                    if item["Feed"] in ("ACI", "ETKT"):
-                        expected = {"Keep": 17, "Mask": 6} if item["Feed"] == "ACI" else {"Keep": 4, "Mask": 5}
+                    if item["Feed"] in ("ACI", "ETKT", "PNR"):
+                        expected = {"ACI": {"Keep": 17, "Mask": 6}, "ETKT": {"Keep": 4, "Mask": 5}, "PNR": {"Keep": 30, "Mask": 76}}[item["Feed"]]
                         self.assertEqual(verify_reference_output(item["Feed"], original, output), expected)
                     else:
-                        result = verify_output(original, output)
-                        self.assertEqual(result["actions"], {"Keep": 30, "Replace": 29})
+                        result = verify_output(original, output, item["Feed"])
+                        expected = {"Keep": 30, "Replace": 29} if item["Feed"] == "Seats" else {"Keep": 54, "Replace": 22}
+                        self.assertEqual(result["actions"], expected)
                 else:
                     self.assertIsNone(item["OutputFile"])
                     self.assertEqual(Path(item["RetainedFile"]).read_bytes(), original)
                     self.assertTrue(Path(item["ErrorReport"]).exists())
+
+
+    def test_supplied_test_only_pnr_layout_cannot_enable_an_unconfigured_policy(self):
+        with tempfile.TemporaryDirectory(prefix="pnr-policy-guard-", dir=PROJECT / ".test-runs") as temp:
+            root = Path(temp)
+            sources = root / "test-only-sources"
+            sources.mkdir()
+            raw = struct.pack(">I", 2)
+            (sources / "PNR.bin").write_bytes(raw)
+            layouts = ET.Element("xdrLayouts")
+            for feed in ("ACI", "PNR", "ETKT"):
+                entry = ET.SubElement(layouts, "feed", type=feed, configured="true" if feed == "PNR" else "false")
+                if feed == "PNR":
+                    ET.SubElement(entry, "uint32", name="Version", expected="2")
+            layoutfile = root / "test-only-xdr.xml"
+            ET.ElementTree(layouts).write(layoutfile, encoding="utf-8", xml_declaration=True)
+            policies = ET.parse(PROJECT / "src/config/feed-policies.xml")
+            pending = policies.find("feed[@type='PNR']")
+            for field in list(pending):
+                pending.remove(field)
+            pending.set("configured", "false")
+            policyfile = root / "test-only-unconfigured-policy.xml"
+            policies.write(policyfile, encoding="utf-8", xml_declaration=True)
+            referencefile = root / "test-only-no-reference-layouts.xml"
+            referencefile.write_text("<referenceLayouts />", encoding="utf-8")
+            process, report = self.run_batch(sources, root / "docs", ["--xdr-layout-file", str(layoutfile), "--policy-file", str(policyfile), "--reference-layout-file", str(referencefile)])
+            self.assertEqual(process.returncode, 2, process.stdout + process.stderr)
+            self.assertFalse(report["AllPublished"])
+            self.assertEqual(len(report["Items"]), 1)
+            item = report["Items"][0]
+            self.assertEqual(item["Status"], "Rejected")
+            self.assertIsNone(item["OutputFile"])
+            self.assertEqual(Path(item["RetainedFile"]).read_bytes(), raw)
+            self.assertIn("feed protection policy is not configured", Path(item["ErrorReport"]).read_text(encoding="utf-8"))
+            self.verify_transaction_logs(root / "docs", report)
 
     def test_all_five_routes_publish_with_explicit_test_only_layouts_and_complete_json(self):
         with tempfile.TemporaryDirectory(prefix="test-only-five-routes-", dir=PROJECT / ".test-runs") as temp:
@@ -114,6 +152,9 @@ class AllFeedBatchTests(unittest.TestCase):
                 item = ET.SubElement(array, 'struct', name='Item')
                 for name in ['Name', 'PassengerId', 'Email']: ET.SubElement(item, 'string', name=name, max='128')
                 policy = next(e for e in policies.getroot() if e.get('type') == feed)
+                policy.set('configured', 'true')
+                for existing in list(policy):
+                    policy.remove(existing)
                 for path in ['/Version', '/pnr']:
                     if not any(field.get('name') == path for field in policy):
                         ET.SubElement(policy, 'field', name=path, identification='None', action='Keep')
@@ -124,7 +165,9 @@ class AllFeedBatchTests(unittest.TestCase):
             policyfile = root / 'test-only-policies.xml'
             policies.write(policyfile, encoding='utf-8', xml_declaration=True)
             before = {p.name:p.read_bytes() for p in sources.iterdir()}
-            process,report = self.run_batch(sources, root / 'docs', ['--xdr-layout-file',str(layoutfile),'--policy-file',str(policyfile)])
+            referencefile = root / "test-only-no-reference-layouts.xml"
+            referencefile.write_text("<referenceLayouts />", encoding="utf-8")
+            process,report = self.run_batch(sources, root / 'docs', ['--xdr-layout-file',str(layoutfile),'--policy-file',str(policyfile),'--reference-layout-file',str(referencefile)])
             self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
             self.assertTrue(report['AllPublished'])
             self.assertEqual(len(report['Items']), 5)
