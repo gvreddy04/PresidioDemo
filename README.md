@@ -32,11 +32,68 @@ Python runs inside the .NET process. Processing makes no HTTP calls or model dow
 
 ## Setup and run
 
-Requires Windows, the .NET 10 SDK and Python 3.12. From the project root, perform initial setup:
+Requires Windows, the .NET 10 SDK and Python 3.12. Run these steps in PowerShell from the project root.
+
+### 1. Create the Python virtual environment
+
+Do this once during initial setup:
 
 ```powershell
 py -3.12 -m venv src/.venv
-src/.venv/Scripts/python.exe -m pip install -r requirements.txt
+```
+
+### 2. Activate the Python virtual environment
+
+Activate it whenever you open a new PowerShell terminal:
+
+```powershell
+.\src\.venv\Scripts\Activate.ps1
+```
+
+If PowerShell reports that running scripts is disabled, allow locally created scripts for this terminal session, then retry activation:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+.\src\.venv\Scripts\Activate.ps1
+```
+
+If prompted, enter `Y`. The policy change lasts only until this PowerShell terminal closes; administrator access is not required. See [PowerShell execution policies](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies).
+
+If your organization enforces a policy that still blocks activation, use the Python launcher to install packages for its selected interpreter:
+
+```powershell
+py -m pip install -r requirements.txt
+```
+
+With an active virtual environment and no explicit Python version, `py` uses that environment. Without activation, `py` uses its default interpreter and may install packages outside `src/.venv`. If activation remains blocked, confirm the selected interpreter with `py -c "import sys; print(sys.executable)"` before installing; it should end in `src\.venv\Scripts\python.exe` for this project.
+
+The prompt normally shows `(.venv)` after activation. Confirm Python uses this environment:
+
+```powershell
+python -c "import sys; print(sys.executable)"
+```
+
+The path should end in `src\.venv\Scripts\python.exe`.
+
+### 3. Install the Python packages
+
+With the virtual environment active, install the required packages:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+### 4. Deactivate the Python virtual environment
+
+After package installation finishes, deactivate it:
+
+```powershell
+deactivate
+```
+
+### Build and run the .NET demo
+
+```powershell
 dotnet build
 ```
 
