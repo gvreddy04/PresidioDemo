@@ -46,7 +46,7 @@ class EtktFeedTests(unittest.TestCase):
     def test_raw_etkt_with_different_identifier_values_and_pnr(self):
         raw = bytearray(payload((PROJECT / "docs/sample-docs/ETKT.txt").read_bytes()))
         changed = {"/pnr": "K7QX2M", "/Text0044": "USR", "/Text0072": "1234", "/Text0088": "000000000000123",
-                   "/Text0152": "0161234567890", "/Text0172/Prefix": "42B00012"}
+                   "/ticketNumber": "0161234567890", "/Text0172/Prefix": "42B00012"}
         for name, start, length in field_spans("ETKT"):
             if name in changed:
                 encoded = changed[name].encode("ascii")

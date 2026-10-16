@@ -57,7 +57,7 @@ class AciFeedTests(unittest.TestCase):
 
     def test_raw_payload_and_different_values_use_the_same_field_configuration(self):
         raw = bytearray(payload((PROJECT / "docs/sample-docs/ACI.txt").read_bytes()))
-        values = {"/PassengerName": "CARTER/EMMA", "/Text0840": "EMMAID00001",
+        values = {"/rawPassengerName": "CARTER/EMMA", "/Text0840": "EMMAID00001",
                   "/pnr": "K7QX2M", "/RecordReference/pnr": "K7QX2M", "/RecordReference/Prefix": "000000002"}
         for name, start, length in field_spans():
             if name in values:

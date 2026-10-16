@@ -60,7 +60,7 @@ static class ReferenceLayoutChecks
         values["/pnr"] = "K7QX2M";
         Reject(() => codec.Serialize(parsed, values), "ETKT serialization rejects PNR mutation");
         values["/pnr"] = parsed.Fields.Single(field => field.Id == "/pnr").Value;
-        values["/Text0152"] = "[TICKET_NUMBER]";
+        values["/ticketNumber"] = "[TICKET_NUMBER]";
         Reject(() => codec.Serialize(parsed, values), "ETKT rejects protection that changes a field's byte length");
         byte[] raw = FeedPayloadReader.ReadPayload(Message(source, "ETKT.txt", FeedType.ETKT));
         raw[128] ^= 1;
@@ -109,19 +109,19 @@ static class ReferenceLayoutChecks
 
         var rawParsed = codec.Parse(Message(before));
         Check(codec.Serialize(rawParsed, rawParsed.Fields.ToDictionary(field => field.Id, field => field.Value)).AsSpan().SequenceEqual(before), "raw ACI BIN input preserves its original representation");
-        var changedName = new Dictionary<string, string>(values) { ["/PassengerName"] = "CARTER/EMMA" };
+        var changedName = new Dictionary<string, string>(values) { ["/rawPassengerName"] = "CARTER/EMMA" };
         codec.Validate(parsed, codec.Serialize(parsed, changedName));
         Console.WriteLine("PASS ACI field configuration accepts different same-length values without matching literal names");
-        changedName["/PassengerName"] = "[PASSENGER_NAME]";
+        changedName["/rawPassengerName"] = "[PASSENGER_NAME]";
         Reject(() => codec.Serialize(parsed, changedName), "ACI rejects length-changing replacement before publication");
-        changedName["/PassengerName"] = "";
+        changedName["/rawPassengerName"] = "";
         Reject(() => codec.Serialize(parsed, changedName), "ACI reference rejects redaction that would change frame lengths");
-        changedName["/PassengerName"] = "CARTER/EMM\u00e9";
+        changedName["/rawPassengerName"] = "CARTER/EMM\u00e9";
         Reject(() => codec.Serialize(parsed, changedName), "ACI rejects non-ASCII replacement");
         var changedPnr = new Dictionary<string, string>(values) { ["/pnr"] = "ABC123" };
         Reject(() => codec.Serialize(parsed, changedPnr), "ACI serializer refuses PNR mutation");
         var missing = new Dictionary<string, string>(values);
-        missing.Remove("/PassengerName");
+        missing.Remove("/rawPassengerName");
         Reject(() => codec.Serialize(parsed, missing), "ACI serialization requires every configured field");
         var extra = new Dictionary<string, string>(values) { ["/Unknown"] = "value" };
         Reject(() => codec.Serialize(parsed, extra), "ACI serialization rejects unconfigured extra fields");
@@ -172,7 +172,7 @@ static class ReferenceLayoutChecks
         Invalid(feed => feed.Elements("text").ElementAt(1).SetAttributeValue("offset", 8), "ACI configuration rejects overlapping text spans");
         Invalid(feed => feed.Element("text")!.SetAttributeValue("offset", -1), "ACI configuration rejects invalid offsets");
         Invalid(feed => feed.Elements("text").Last().Elements("part").Last().Remove(), "ACI configuration requires complete coverage of split strings");
-        Invalid(feed => feed.Elements("text").ElementAt(1).SetAttributeValue("name", "Text0008"), "ACI configuration rejects duplicate field paths");
+        Invalid(feed => feed.Elements("text").ElementAt(1).SetAttributeValue("name", "airlineCode"), "ACI configuration rejects duplicate field paths");
         File.WriteAllText(temporary, "<!DOCTYPE referenceLayouts [<!ENTITY ext SYSTEM 'file:///unknown'>]><referenceLayouts>&ext;</referenceLayouts>");
         try
         {

@@ -2,13 +2,13 @@
 <feedPolicies>
   <feed type="ETKT">
     <!-- Exact reference-layout paths; masks preserve field byte lengths and PNR stays unchanged. -->
-    <field name="/Text0012" identification="None" action="Keep" />
-    <field name="/Text0024" identification="None" action="Keep" />
+    <field name="/entryDate" identification="None" action="Keep" />
+    <field name="/entryTime" identification="None" action="Keep" />
     <field name="/pnr" identification="None" action="Keep" />
     <field name="/Text0044" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="3" maskCharacter="*" />
     <field name="/Text0072" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="4" maskCharacter="*" />
     <field name="/Text0088" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="15" maskCharacter="*" />
-    <field name="/Text0152" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="13" maskCharacter="*" />
+    <field name="/ticketNumber" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="13" maskCharacter="*" />
     <field name="/Text0172/Prefix" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="8" maskCharacter="*" />
     <field name="/Text0172/Remainder" identification="None" action="Keep" />
   </feed>
@@ -218,21 +218,21 @@
   </feed>
   <feed type="ACI">
     <!-- Exact reference-layout paths; masks preserve field byte lengths and PNR stays unchanged. -->
-    <field name="/Text0008" identification="None" action="Keep" />
+    <field name="/airlineCode" identification="None" action="Keep" />
     <field name="/Text0020" identification="None" action="Keep" />
-    <field name="/Text0040" identification="None" action="Keep" />
+    <field name="/origin" identification="None" action="Keep" />
     <field name="/Text0072" identification="None" action="Keep" />
     <field name="/Text0088" identification="None" action="Keep" />
-    <field name="/Text0124" identification="None" action="Keep" />
+    <field name="/destination" identification="None" action="Keep" />
     <field name="/Text0144" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="3" maskCharacter="*" />
     <field name="/Text0152" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="4" maskCharacter="*" />
-    <field name="/Text0160" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="4" maskCharacter="*" />
+    <field name="/seatNumber" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="4" maskCharacter="*" />
     <field name="/Text0172" identification="None" action="Keep" />
     <field name="/Text0188" identification="None" action="Keep" />
     <field name="/Text0204" identification="None" action="Keep" />
     <field name="/Text0220" identification="None" action="Keep" />
     <field name="/pnr" identification="None" action="Keep" />
-    <field name="/PassengerName" identification="Known" entity="PERSON" action="Mask" maskCharacters="11" maskCharacter="*" />
+    <field name="/rawPassengerName" identification="Known" entity="PERSON" action="Mask" maskCharacters="11" maskCharacter="*" />
     <field name="/Text0468" identification="None" action="Keep" />
     <field name="/Text0492" identification="None" action="Keep" />
     <field name="/Text0504" identification="None" action="Keep" />
