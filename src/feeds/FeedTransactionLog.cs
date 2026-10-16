@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace PresidioDemo.Feeds;
 
-/// <summary>Produces a readable comparison while retaining all input and output bytes.</summary>
+/// <summary>Reports feed data in workflow order while retaining all input and output bytes.</summary>
 public static class FeedTransactionLog
 {
     private const string Divider = "========================================================================";
@@ -16,8 +16,9 @@ public static class FeedTransactionLog
         report.AppendLine($"Source file: {JsonSerializer.Serialize(original.Delivery.OriginalName)}");
         report.AppendLine();
         AppendHeading(report, "BEFORE ANONYMIZATION");
-        AppendFields(report, result?.OriginalFields);
         AppendMessage(report, original);
+        report.AppendLine();
+        AppendFields(report, result?.OriginalFields);
         report.AppendLine();
         AppendHeading(report, "AFTER ANONYMIZATION");
         if (result is null)
