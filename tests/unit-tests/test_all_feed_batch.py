@@ -38,27 +38,40 @@ class AllFeedBatchTests(unittest.TestCase):
             else:
                 transaction = Path(item["RetainedFile"]).stem.split(".")[-1]
             log = docs / "feed-logs" / (item["Feed"] + "." + transaction + ".txt")
-            text = log.read_text(encoding="utf-8")
+            text = log.read_bytes().decode("utf-8")
             self.assertEqual(text.count("BEFORE ANONYMIZATION"), 1)
             self.assertEqual(text.count("AFTER ANONYMIZATION"), 1)
             before, after = text.split("AFTER ANONYMIZATION")
-            self.assertIn("Complete feed data", before)
+            source = Path(item["SourceFile"])
+            is_mq = source.suffix == ".txt" and ("Decoded MQ payload" in before)
+            self.assertIn("Complete feed data (" + str(source.stat().st_size) + " bytes):", before)
+            self.assertNotIn("Parsed fields", after)
             if item["Status"] == "Published":
                 self.assertIn("Parsed fields", before)
-                self.assertIn("Parsed fields", after)
                 self.assertIn("Complete feed data", after)
+                output = Path(item["OutputFile"]).read_bytes()
+                self.assertIn("Complete feed data (" + str(len(output)) + " bytes):", after)
+                if is_mq:
+                    self.assertLess(before.index("Complete feed data"), before.index("Decoded MQ payload"))
+                    self.assertLess(before.index("Decoded MQ payload"), before.index("Parsed fields"))
+                    self.assertLess(after.index("Decoded MQ payload"), after.index("Complete feed data"))
+                    self.assertIn(output.decode("utf-8"), after)
+                    if item["Feed"] == "ACI":
+                        self.assertIn("Complete feed data (2604 bytes):", before)
+                        self.assertIn("Decoded MQ payload (888 bytes):", before)
+                        self.assertIn("Decoded MQ payload (888 bytes):", after)
+                        self.assertIn("Complete feed data (2604 bytes):", after)
             else:
                 self.assertIn("No validated anonymized output was produced.", after)
                 self.assertIn("Reason:", after)
-            source = Path(item["SourceFile"])
             if source.suffix == ".txt":
-                self.assertIn(source.read_text(encoding="utf-8"), before)
+                self.assertIn(source.read_bytes().decode("utf-8"), before)
             if item["Status"] == "Published" and source.name in ("ACI.bin", "PNR.bin", "TKT.bin"):
                 self.assertIn("Emily Carter", before)
                 self.assertIn("Michael Brooks", before)
                 self.assertNotIn("Emily Carter", after)
                 self.assertNotIn("emily.carter@example.com", after)
-                self.assertIn("[PASSENGER_NAME]", after)
+                self.assertIn(b"[PASSENGER_NAME]", Path(item["OutputFile"]).read_bytes())
 
     def test_actual_supplied_files_report_every_outcome_and_preserve_sources(self):
         with tempfile.TemporaryDirectory(prefix="actual-batch-", dir=PROJECT / ".test-runs") as temp:

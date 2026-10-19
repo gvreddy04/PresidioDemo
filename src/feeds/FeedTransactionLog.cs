@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace PresidioDemo.Feeds;
 
-/// <summary>Reports feed data in workflow order while retaining all input and output bytes.</summary>
+/// <summary>Reports complete input, decoded payload and parsed fields, followed by output payload and complete feed data.</summary>
 public static class FeedTransactionLog
 {
     private const string Divider = "========================================================================";
@@ -16,7 +16,7 @@ public static class FeedTransactionLog
         report.AppendLine($"Source file: {JsonSerializer.Serialize(original.Delivery.OriginalName)}");
         report.AppendLine();
         AppendHeading(report, "BEFORE ANONYMIZATION");
-        AppendMessage(report, original);
+        AppendMessage(report, original, completeFeedFirst: true);
         report.AppendLine();
         AppendFields(report, result?.OriginalFields);
         report.AppendLine();
@@ -28,8 +28,7 @@ public static class FeedTransactionLog
         }
         else
         {
-            AppendFields(report, result.ProtectedFields);
-            AppendMessage(report, original with { Content = result.Content });
+            AppendMessage(report, original with { Content = result.Content }, completeFeedFirst: false);
         }
         return report.ToString();
     }
@@ -56,28 +55,39 @@ public static class FeedTransactionLog
         report.AppendLine();
     }
 
-    private static void AppendMessage(StringBuilder report, FeedMessage message)
+    private static void AppendMessage(StringBuilder report, FeedMessage message, bool completeFeedFirst)
+    {
+        if (completeFeedFirst) AppendCompleteFeed(report, message);
+        bool decoded = false;
+        if (Path.GetExtension(message.Delivery.OriginalName).Equals(".txt", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var envelope = FeedPayloadReader.Read(message);
+                if (envelope.Format != "Raw")
+                {
+                    if (completeFeedFirst) report.AppendLine();
+                    report.AppendLine($"Decoded MQ payload ({envelope.Payload.Length} bytes):");
+                    AppendData(report, envelope.Payload);
+                    decoded = true;
+                }
+            }
+            catch (InvalidDataException)
+            {
+                // Malformed envelopes still retain their complete bytes.
+            }
+        }
+        if (!completeFeedFirst)
+        {
+            if (decoded) report.AppendLine();
+            AppendCompleteFeed(report, message);
+        }
+    }
+
+    private static void AppendCompleteFeed(StringBuilder report, FeedMessage message)
     {
         report.AppendLine($"Complete feed data ({message.Content.Length} bytes):");
         AppendData(report, message.Content.Span);
-        if (!Path.GetExtension(message.Delivery.OriginalName).Equals(".txt", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-        try
-        {
-            var envelope = FeedPayloadReader.Read(message);
-            if (envelope.Format != "Raw")
-            {
-                report.AppendLine();
-                report.AppendLine($"Decoded MQ payload ({envelope.Payload.Length} bytes):");
-                AppendData(report, envelope.Payload);
-            }
-        }
-        catch (InvalidDataException)
-        {
-            // Malformed envelopes still retain their complete original bytes above.
-        }
     }
 
     private static void AppendData(StringBuilder report, ReadOnlySpan<byte> bytes)

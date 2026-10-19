@@ -37,7 +37,8 @@ static class FeedTransactionLogChecks
         Require(text.Contains("BEFORE ANONYMIZATION") && text.Contains(new string('=', 72)), "Missing headings or separators.");
         Require(sections[0].Contains(Encoding.UTF8.GetString(input.Content.Span)) && sections[1].Contains(Encoding.UTF8.GetString(result.Content.Span)), "Complete JSON data is missing.");
         RequireOrder(text, "BEFORE ANONYMIZATION", "Complete feed data", Encoding.UTF8.GetString(input.Content.Span),
-            "Parsed fields", "AFTER ANONYMIZATION", "Parsed fields", "Complete feed data", Encoding.UTF8.GetString(result.Content.Span));
+            "Parsed fields", "AFTER ANONYMIZATION", "Complete feed data", Encoding.UTF8.GetString(result.Content.Span));
+        Require(!sections[1].Contains("Parsed fields"), "After section includes an unrequested parsed-field table.");
         byte[] saved = await File.ReadAllBytesAsync(path);
         string repeated = await transport.WriteTransactionLogAsync(input, result, null, CancellationToken.None);
         byte[] repeatedBytes = await File.ReadAllBytesAsync(path);
@@ -62,15 +63,23 @@ static class FeedTransactionLogChecks
             "AFTER ANONYMIZATION", "No validated anonymized output was produced.", "Reason: Malformed fixture.");
         string export = "A VER 2\nA MSI DEMO\nA ENC 546\nA CCS 1208\nX " + Convert.ToHexString(input.Content.Span) + "\n";
         string exported = FeedTransactionLog.Format(input with { Delivery = delivery with { OriginalName = "sample.txt" }, Content = Encoding.UTF8.GetBytes(export) }, null, "Test rejection.");
-        Require(exported.Contains(export) && exported.Contains("Decoded MQ payload") && exported.Contains(Encoding.UTF8.GetString(input.Content.Span)), "MQ export lacks original transport bytes or readable payload.");
+        RequireOrder(exported, "BEFORE ANONYMIZATION", $"Complete feed data ({Encoding.UTF8.GetByteCount(export)} bytes):", export,
+            $"Decoded MQ payload ({input.Content.Length} bytes):", Encoding.UTF8.GetString(input.Content.Span), "AFTER ANONYMIZATION", "No validated anonymized output was produced.");
+        string malformed = "A VER 2\nX invalid\n";
+        string malformedLog = FeedTransactionLog.Format(input with { Delivery = delivery with { OriginalName = "malformed.txt" }, Content = Encoding.UTF8.GetBytes(malformed) }, null, "Invalid MQ export.");
+        Require(malformedLog.Contains(malformed) && malformedLog.Contains("Complete feed data") && !malformedLog.Contains("Decoded MQ payload"), "Malformed MQ export lost its original bytes.");
         string protectedExport = "A VER 2\nA MSI DEMO\nA ENC 546\nA CCS 1208\nX " + Convert.ToHexString(result.Content.Span) + "\n";
         string mqLog = FeedTransactionLog.Format(input with { Delivery = delivery with { OriginalName = "sample.txt" }, Content = Encoding.UTF8.GetBytes(export) },
             result with { Content = Encoding.UTF8.GetBytes(protectedExport) }, null);
-        RequireOrder(mqLog, "BEFORE ANONYMIZATION", "Complete feed data", export, "Decoded MQ payload", Encoding.UTF8.GetString(input.Content.Span),
-            "Parsed fields", "AFTER ANONYMIZATION", "Parsed fields", "Complete feed data", protectedExport, "Decoded MQ payload", Encoding.UTF8.GetString(result.Content.Span));
+        RequireOrder(mqLog, "BEFORE ANONYMIZATION", $"Complete feed data ({Encoding.UTF8.GetByteCount(export)} bytes):", export,
+            $"Decoded MQ payload ({input.Content.Length} bytes):", Encoding.UTF8.GetString(input.Content.Span),
+            "Parsed fields (location | policy field | value):", "AFTER ANONYMIZATION", $"Decoded MQ payload ({result.Content.Length} bytes):", Encoding.UTF8.GetString(result.Content.Span),
+            $"Complete feed data ({Encoding.UTF8.GetByteCount(protectedExport)} bytes):", protectedExport);
+        string[] mqSections = mqLog.Split("AFTER ANONYMIZATION");
+        Require(mqSections[0].Split("Complete feed data").Length == 2 && mqSections[1].Split("Complete feed data").Length == 2 && !mqSections[1].Contains("Parsed fields") && !mqSections[1].Contains("Emily Carter"), "MQ sections duplicate complete data or mix original and protected values.");
         string binaryLog = FeedTransactionLog.Format(input with { Content = binary }, result with { Content = new byte[] { 0, 255, 42 } }, null);
         RequireOrder(binaryLog, "BEFORE ANONYMIZATION", "Complete feed data", "Hex dump", "Parsed fields",
-            "AFTER ANONYMIZATION", "Parsed fields", "Complete feed data", "Hex dump", "00 FF 2A");
+            "AFTER ANONYMIZATION", "Complete feed data", "Hex dump", "00 FF 2A");
         Require(!Directory.GetFiles(transport.LogsRoot, "*.pending").Any(), "Incomplete log was left exposed.");
         Console.WriteLine("PASS transaction logs follow workflow order for JSON, binary, MQ and rejected input, separate original/protected data, and reuse stable transaction IDs");
     }
