@@ -1,4 +1,4 @@
-"""Reference-layout ACI checks; these do not claim support for other airline layouts."""
+"""ACI sequence checks, including configuration-only field binding changes."""
 from pathlib import Path
 import json
 import subprocess
@@ -51,8 +51,8 @@ class AciFeedTests(unittest.TestCase):
 
     def test_actual_mq_export_preserves_all_bytes_except_configured_masks(self):
         original = (PROJECT / "docs/sample-docs/ACI.txt").read_bytes()
-        self.assertEqual(verify_output(original, self.deliver("original-aci.txt", original)), {"Keep": 17, "Mask": 6})
-        self.assertFalse(any("analyzed |" in line and "6 known | 0 analyzed" not in line
+        self.assertEqual(verify_output(original, self.deliver("original-aci.txt", original)), {"Keep": 14, "Mask": 9})
+        self.assertFalse(any("analyzed |" in line and "9 known | 0 analyzed" not in line
                              for line in self.listener.lines if "ACI" in line and "FIELDS" in line))
 
     def test_raw_payload_and_different_values_use_the_same_field_configuration(self):
@@ -64,13 +64,13 @@ class AciFeedTests(unittest.TestCase):
                 encoded = values[name].encode("ascii")
                 self.assertEqual(len(encoded), length)
                 raw[start:start + length] = encoded
-        self.assertEqual(verify_output(bytes(raw), self.deliver("changed-values.bin", raw), raw=True), {"Keep": 17, "Mask": 6})
+        self.assertEqual(verify_output(bytes(raw), self.deliver("changed-values.bin", raw), raw=True), {"Keep": 14, "Mask": 9})
 
     def test_changed_unclassified_binary_region_is_retained(self):
         raw = bytearray(payload((PROJECT / "docs/sample-docs/ACI.txt").read_bytes()))
-        raw[403] = 2  # The reference frame has a fixed word here; a different collection shape is unreviewed.
+        raw[3] = 3  # A different feed discriminator does not match this sequence.
         (self.docs / "input-feeds/ACI/changed-layout.bin").write_bytes(raw)
-        rejected(self.docs, "ACI", "changed-layout.bin", bytes(raw), "unclassified binary region")
+        rejected(self.docs, "ACI", "changed-layout.bin", bytes(raw), "expected constant")
 
     def test_configuration_can_keep_an_ambiguous_field_without_changing_other_actions(self):
         with tempfile.TemporaryDirectory(prefix="aci-policy-", dir=PROJECT / ".test-runs") as temp:
@@ -79,23 +79,22 @@ class AciFeedTests(unittest.TestCase):
             sources.mkdir()
             original = (PROJECT / "docs/sample-docs/ACI.txt").read_bytes()
             (sources / "ACI.txt").write_bytes(original)
-            policies = ET.parse(PROJECT / "src/config/feed-policies.xml")
-            feed = next(item for item in policies.getroot() if item.get("type") == "ACI")
-            field = next(item for item in feed if item.get("name") == "/Text0152")
+            schema = ET.parse(PROJECT / "src/config/feed-policies.xml")
+            field = schema.find("feed[@type='ACI']/field[@name='/Text0152']")
             field.attrib.clear()
             field.attrib.update(name="/Text0152", identification="None", action="Keep")
-            policy_file = root / "policies.xml"
-            policies.write(policy_file, encoding="utf-8", xml_declaration=True)
+            schema_file = root / "schema.xml"
+            schema.write(schema_file, encoding="utf-8", xml_declaration=True)
             docs = root / "docs"
             process = subprocess.run(["dotnet", str(DLL), "--docs-root", str(docs), "--process-folder", str(sources),
-                                      "--policy-file", str(policy_file)], cwd=PROJECT, capture_output=True,
+                                      "--policy-file", str(schema_file)], cwd=PROJECT, capture_output=True,
                                      text=True, encoding="utf-8", timeout=90)
             self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
             report_file = next((runtime_root(docs) / "reports").glob("*.json"))
             report = json.loads(report_file.read_text())
             self.assertTrue(report["AllPublished"])
             output = Path(report["Items"][0]["OutputFile"]).read_bytes()
-            self.assertEqual(verify_output(original, output, policy_file), {"Keep": 18, "Mask": 5})
+            self.assertEqual(verify_reference_output("ACI", original, output, policy_file=schema_file), {"Keep": 15, "Mask": 8})
             self.assertEqual((sources / "ACI.txt").read_bytes(), original)
 
 

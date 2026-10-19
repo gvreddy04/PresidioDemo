@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace PresidioDemo.Feeds;
 
-/// <summary>Reports complete input, decoded payload and parsed fields, followed by output payload and complete feed data.</summary>
+/// <summary>Reports complete input, decoded payload, plain text and parsed fields, followed by output payload and complete feed data.</summary>
 public static class FeedTransactionLog
 {
     private const string Divider = "========================================================================";
@@ -58,6 +58,7 @@ public static class FeedTransactionLog
     private static void AppendMessage(StringBuilder report, FeedMessage message, bool completeFeedFirst)
     {
         if (completeFeedFirst) AppendCompleteFeed(report, message);
+        ReadOnlyMemory<byte> plainTextPayload = message.Content;
         bool decoded = false;
         if (Path.GetExtension(message.Delivery.OriginalName).Equals(".txt", StringComparison.OrdinalIgnoreCase))
         {
@@ -69,6 +70,7 @@ public static class FeedTransactionLog
                     if (completeFeedFirst) report.AppendLine();
                     report.AppendLine($"Decoded MQ payload ({envelope.Payload.Length} bytes):");
                     AppendData(report, envelope.Payload);
+                    plainTextPayload = envelope.Payload;
                     decoded = true;
                 }
             }
@@ -77,11 +79,30 @@ public static class FeedTransactionLog
                 // Malformed envelopes still retain their complete bytes.
             }
         }
-        if (!completeFeedFirst)
+        if (completeFeedFirst)
+        {
+            report.AppendLine();
+            AppendPlainText(report, plainTextPayload.Span);
+        }
+        else
         {
             if (decoded) report.AppendLine();
             AppendCompleteFeed(report, message);
         }
+    }
+
+    private static void AppendPlainText(StringBuilder report, ReadOnlySpan<byte> bytes)
+    {
+        report.AppendLine("Plain text:");
+        // Keep readable UTF-8 together, including text crossing hex-dump rows.
+        // Binary controls and invalid UTF-8 become spaces; the dumps retain exact bytes.
+        foreach (char character in Encoding.UTF8.GetString(bytes))
+        {
+            report.Append(character == '\uFFFD' ||
+                (char.IsControl(character) && character is not ('\r' or '\n' or '\t'))
+                ? ' ' : character);
+        }
+        report.AppendLine();
     }
 
     private static void AppendCompleteFeed(StringBuilder report, FeedMessage message)

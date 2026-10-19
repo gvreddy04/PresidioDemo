@@ -37,8 +37,8 @@ static class FeedTransactionLogChecks
         Require(text.Contains("BEFORE ANONYMIZATION") && text.Contains(new string('=', 72)), "Missing headings or separators.");
         Require(sections[0].Contains(Encoding.UTF8.GetString(input.Content.Span)) && sections[1].Contains(Encoding.UTF8.GetString(result.Content.Span)), "Complete JSON data is missing.");
         RequireOrder(text, "BEFORE ANONYMIZATION", "Complete feed data", Encoding.UTF8.GetString(input.Content.Span),
-            "Parsed fields", "AFTER ANONYMIZATION", "Complete feed data", Encoding.UTF8.GetString(result.Content.Span));
-        Require(!sections[1].Contains("Parsed fields"), "After section includes an unrequested parsed-field table.");
+            "Plain text:", Encoding.UTF8.GetString(input.Content.Span), "Parsed fields", "AFTER ANONYMIZATION", "Complete feed data", Encoding.UTF8.GetString(result.Content.Span));
+        Require(!sections[1].Contains("Parsed fields") && !sections[1].Contains("Plain text:"), "After section includes an unrequested view.");
         byte[] saved = await File.ReadAllBytesAsync(path);
         string repeated = await transport.WriteTransactionLogAsync(input, result, null, CancellationToken.None);
         byte[] repeatedBytes = await File.ReadAllBytesAsync(path);
@@ -60,7 +60,7 @@ static class FeedTransactionLogChecks
         string rejected = FeedTransactionLog.Format(input with { Content = binary }, null, "Malformed fixture.");
         Require(rejected.Contains("00 FF 41 42 7F 80") && rejected.Contains("| ..AB..") && rejected.Contains("No validated anonymized output was produced.") && rejected.Contains("Malformed fixture."), "Rejected binary log lost bytes or failure reason.");
         RequireOrder(rejected, "BEFORE ANONYMIZATION", "Complete feed data", "Hex dump", "00 FF 41 42 7F 80",
-            "AFTER ANONYMIZATION", "No validated anonymized output was produced.", "Reason: Malformed fixture.");
+            "Plain text:", "  AB  ", "AFTER ANONYMIZATION", "No validated anonymized output was produced.", "Reason: Malformed fixture.");
         string export = "A VER 2\nA MSI DEMO\nA ENC 546\nA CCS 1208\nX " + Convert.ToHexString(input.Content.Span) + "\n";
         string exported = FeedTransactionLog.Format(input with { Delivery = delivery with { OriginalName = "sample.txt" }, Content = Encoding.UTF8.GetBytes(export) }, null, "Test rejection.");
         RequireOrder(exported, "BEFORE ANONYMIZATION", $"Complete feed data ({Encoding.UTF8.GetByteCount(export)} bytes):", export,
@@ -73,13 +73,19 @@ static class FeedTransactionLogChecks
             result with { Content = Encoding.UTF8.GetBytes(protectedExport) }, null);
         RequireOrder(mqLog, "BEFORE ANONYMIZATION", $"Complete feed data ({Encoding.UTF8.GetByteCount(export)} bytes):", export,
             $"Decoded MQ payload ({input.Content.Length} bytes):", Encoding.UTF8.GetString(input.Content.Span),
-            "Parsed fields (location | policy field | value):", "AFTER ANONYMIZATION", $"Decoded MQ payload ({result.Content.Length} bytes):", Encoding.UTF8.GetString(result.Content.Span),
+            "Plain text:", Encoding.UTF8.GetString(input.Content.Span), "Parsed fields (location | policy field | value):", "AFTER ANONYMIZATION", $"Decoded MQ payload ({result.Content.Length} bytes):", Encoding.UTF8.GetString(result.Content.Span),
             $"Complete feed data ({Encoding.UTF8.GetByteCount(protectedExport)} bytes):", protectedExport);
         string[] mqSections = mqLog.Split("AFTER ANONYMIZATION");
+        string plainText = mqSections[0].Split("Plain text:")[1].Split("Parsed fields")[0];
+        Require(plainText.Contains("Emily Carter") && !plainText.Contains("A VER") && !plainText.Contains("Hex dump"), "Plain text must show the decoded payload without envelope or hex-dump formatting.");
         Require(mqSections[0].Split("Complete feed data").Length == 2 && mqSections[1].Split("Complete feed data").Length == 2 && !mqSections[1].Contains("Parsed fields") && !mqSections[1].Contains("Emily Carter"), "MQ sections duplicate complete data or mix original and protected values.");
         string binaryLog = FeedTransactionLog.Format(input with { Content = binary }, result with { Content = new byte[] { 0, 255, 42 } }, null);
         RequireOrder(binaryLog, "BEFORE ANONYMIZATION", "Complete feed data", "Hex dump", "Parsed fields",
             "AFTER ANONYMIZATION", "Complete feed data", "Hex dump", "00 FF 2A");
+        byte[] readableBinary = [0, 255, .. Encoding.UTF8.GetBytes("A long passenger name spanning hex rows | José\nNext\tfield"), 0];
+        string readableExport = export[..export.IndexOf("X ", StringComparison.Ordinal)] + "X " + Convert.ToHexString(readableBinary) + "\n";
+        string readableLog = FeedTransactionLog.Format(input with { Delivery = delivery with { OriginalName = "binary.txt" }, Content = Encoding.UTF8.GetBytes(readableExport) }, null, "Test rejection.");
+        RequireOrder(readableLog, "Decoded MQ payload", "Hex dump", "Plain text:", "  A long passenger name spanning hex rows | José\nNext\tfield ", "AFTER ANONYMIZATION");
         Require(!Directory.GetFiles(transport.LogsRoot, "*.pending").Any(), "Incomplete log was left exposed.");
         Console.WriteLine("PASS transaction logs follow workflow order for JSON, binary, MQ and rejected input, separate original/protected data, and reuse stable transaction IDs");
     }

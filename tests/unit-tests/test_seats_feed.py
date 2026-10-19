@@ -23,8 +23,8 @@ def escaped(key):
 
 
 def verify_output(original, protected, feed_type="Seats"):
-    rules = {field.get("name"): field.attrib for feed in ET.parse(PROJECT / "src" / "config" / "feed-policies.xml").getroot()
-             if feed.get("type") == feed_type for field in feed}
+    from configuration_support import json_rules
+    rules = json_rules(feed_type)
     if header(original) != header(protected):
         raise AssertionError("MQ metadata changed")
     before, after = json.loads(payload(original)), json.loads(payload(protected))

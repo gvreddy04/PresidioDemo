@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace PresidioDemo.Feeds;
 
@@ -25,11 +26,12 @@ public static class FeedBatchProcessor
             string extension = Path.GetExtension(source);
             if (!new[] { ".txt", ".bin" }.Contains(extension, StringComparer.OrdinalIgnoreCase)) continue;
             string route = Path.GetFileNameWithoutExtension(source).Replace('_', '-').ToUpperInvariant();
+            route = Regex.Replace(route, "-[0-9]+$", "", RegexOptions.CultureInvariant);
             FeedType feed = route switch
             {
                 "ACI" => FeedType.ACI, "PNR" => FeedType.PNR, "PNR-LINKING" => FeedType.PnrLinking,
                 "SEATS" => FeedType.Seats, "ETKT" or "TKT" => FeedType.ETKT,
-                _ => throw new InvalidDataException("Unknown source feed filename. Use ACI, PNR, PNR_LINKING, SEATS, or ETKT.")
+                _ => throw new InvalidDataException("Unknown source feed filename. Use ACI, PNR, PNR_LINKING, SEATS, ETKT or TKT, optionally followed by a numeric _NN or -NN suffix.")
             };
             byte[] content = await File.ReadAllBytesAsync(source, cancellationToken);
             string imported = FeedCatalog.Get(feed).FolderName + ".run-" + runId + "-" + jobs.Count + extension;

@@ -28,7 +28,7 @@ static class PnrReferenceChecks
     public static void Run(string root, string workspace)
     {
         string config = Path.Combine(root, "src/config/reference-layouts.xml");
-        var references = ReferenceLayoutConfiguration.Load(config);
+        var references = ReferenceLayoutConfiguration.Load(config, XdrLayoutConfiguration.Load(Path.Combine(root, "src/config/xdr-layouts.xml")));
         var layout = references[FeedType.PNR];
         var codec = FeedCodecRegistry.Create(FeedType.PNR, new Dictionary<FeedType, XdrFeedSchema>(), references);
         Check(codec is ReferenceLayoutFeedCodec, "PNR registry selects only the reviewed reference profile");
@@ -50,9 +50,9 @@ static class PnrReferenceChecks
             if (rule.Action == FieldAction.Mask)
             {
                 var span = layout.Fields.Single(item => item.Name == field.Id);
-                Check(rule.MaskCharacters == span.Length, "PNR mask length matches " + field.Id);
-                values[field.Id] = new string('*', span.Length);
-                Array.Fill(expected, (byte)'*', span.Offset, span.Length);
+                Check(rule.MaskCount(field.Value) == span.Length, "PNR mask length matches " + field.Id);
+                values[field.Id] = new string(rule.MaskCharacter[0], span.Length);
+                Array.Fill(expected, (byte)rule.MaskCharacter[0], span.Offset, span.Length);
             }
         }
         byte[] output = codec.Serialize(parsed, values);
@@ -84,11 +84,11 @@ static class PnrReferenceChecks
             entry.SetAttributeValue("referenceFile", Path.Combine(root, "docs/sample-docs/PNR.txt"));
             change(entry);
             new XDocument(new XElement("referenceLayouts", entry)).Save(temporary);
-            Reject(() => ReferenceLayoutConfiguration.Load(temporary), label);
+            Reject(() => ReferenceLayoutConfiguration.Load(temporary, XdrLayoutConfiguration.Load(Path.Combine(root, "src/config/xdr-layouts.xml"))), label);
         }
         Invalid(entry => entry.Descendants("part").First().SetAttributeValue("fixed", "yes"),
             "reference loader rejects malformed fixed-part flags");
-        Invalid(entry => entry.Elements("text").First(text => text.Elements("part").Any()).Elements("part").ElementAt(1).SetAttributeValue("name", "Literal1"),
+        Invalid(entry => entry.Elements("text").First(text => text.Elements("part").Count() > 1).Elements("part").ElementAt(1).SetAttributeValue("name", "Literal1"),
             "reference loader rejects duplicate names across fixed and mutable parts");
     }
 }

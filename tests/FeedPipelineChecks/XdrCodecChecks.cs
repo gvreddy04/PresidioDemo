@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
+using System.Xml.Linq;
 using PresidioDemo.Feeds;
 
 static class XdrCodecChecks
@@ -36,7 +37,8 @@ static class XdrCodecChecks
     }
     public static void Run(string root, string workspace)
     {
-        Check(XdrLayoutConfiguration.Load(Path.Combine(root, "src", "config", "xdr-layouts.xml")).Count == 0, "production XDR layouts remain explicitly unconfigured rather than guessed");
+        Directory.CreateDirectory(workspace);
+        CheckWordsShorthand(root, workspace);
         byte[] pnrSource = File.ReadAllBytes(Path.Combine(root, "docs", "sample-docs", "PNR.txt"));
         var pnrMessage = new FeedMessage(new(FeedType.PNR, Guid.Empty, "PNR.txt", "supplied-sample"), pnrSource);
         var pnrEnvelope = FeedPayloadReader.Read(pnrMessage);
@@ -97,6 +99,53 @@ static class XdrCodecChecks
         File.WriteAllText(config, "<!DOCTYPE xdrLayouts [<!ENTITY ext SYSTEM 'file:///missing'>]><xdrLayouts>&ext;</xdrLayouts>");
         try { XdrLayoutConfiguration.Load(config); throw new Exception("XDR DTD accepted"); }
         catch (System.Xml.XmlException) { Console.WriteLine("PASS XDR configuration rejects DTD and external entities"); }
+    }
+    private static void CheckWordsShorthand(string root, string workspace)
+    {
+        string active = Path.Combine(root, "src", "config", "xdr-layouts.xml");
+        var compact = XdrLayoutConfiguration.Load(active);
+        var expanded = XDocument.Load(active);
+        var blocks = expanded.Descendants("words").ToArray();
+        Check(blocks.Length > 0, "production XDR configuration uses words shorthand");
+        foreach (var block in blocks)
+            block.ReplaceWith(new XElement("fixedArray", new XAttribute("name", block.Attribute("name")!.Value),
+                new XAttribute("count", block.Attribute("count")!.Value),
+                new XElement("uint32", new XAttribute("name", "Value"))));
+        string legacyFile = Path.Combine(workspace, "expanded-original-xdr.xml");
+        expanded.Save(legacyFile);
+        var legacy = XdrLayoutConfiguration.Load(legacyFile);
+        int samples = 0;
+        foreach (string source in Directory.GetFiles(Path.Combine(root, "docs", "sample-docs"), "*.txt"))
+        {
+            string name = Path.GetFileNameWithoutExtension(source);
+            FeedType? feed = name.StartsWith("ACI", StringComparison.Ordinal) ? FeedType.ACI :
+                name.StartsWith("ETKT", StringComparison.Ordinal) ? FeedType.ETKT : name == "PNR" ? FeedType.PNR : null;
+            if (feed is null) continue;
+            var message = new FeedMessage(new(feed.Value, Guid.Empty, Path.GetFileName(source), "supplied-sample"),
+                File.ReadAllBytes(source));
+            var codec = new XdrFeedCodec(feed.Value, compact[feed.Value]);
+            var originalCodec = new XdrFeedCodec(feed.Value, legacy[feed.Value]);
+            var parsed = codec.Parse(message);
+            Check(parsed.Fields.SequenceEqual(originalCodec.Parse(message).Fields),
+                name + " shorthand and original XML produce identical field IDs, paths and values");
+            byte[] output = codec.Serialize(parsed, parsed.Fields.ToDictionary(field => field.Id, field => field.Value));
+            codec.Validate(parsed, output);
+            Check(output.AsSpan().SequenceEqual(message.Content.Span), name + " words shorthand preserves every source byte");
+            samples++;
+        }
+        Check(samples == 13, "words compatibility covers all 13 supplied binary samples");
+
+        string invalid = Path.Combine(workspace, "invalid-words.xml");
+        foreach (string declaration in new[] {
+            "<words name='Block' count='0'/>", "<words name='Block' count='-1'/>",
+            "<words name='Block' count='1048577'/>", "<words name='Block'/>",
+            "<words name='Block' count='2' typo='yes'/>", "<words name='Block' count='2'>unexpected</words>",
+            "<words name='Block' count='2'><uint32 name='Value'/></words>" })
+        {
+            File.WriteAllText(invalid, "<xdrLayouts><feed type='ACI' configured='true'>" + declaration +
+                "</feed><feed type='PNR' configured='false'/><feed type='ETKT' configured='false'/></xdrLayouts>");
+            Reject(() => XdrLayoutConfiguration.Load(invalid), "invalid words declaration rejected: " + declaration);
+        }
     }
     public static async Task CheckProtection(PresidioFeedProtector protector)
     {

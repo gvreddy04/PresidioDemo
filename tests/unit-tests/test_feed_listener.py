@@ -111,7 +111,7 @@ def main():
             for feed in FEEDS:
                 path = docs / "input-feeds" / feed / "unconfigured.BIN"
                 path.write_bytes(binary)
-                rejected(docs, feed, path.name, binary, "malformed JSON" if feed in ("Seats", "PNR-Linking") else "requires 888 payload bytes" if feed == "ACI" else "requires 672 payload bytes" if feed == "ETKT" else "requires 5452 payload bytes")
+                rejected(docs, feed, path.name, binary, "malformed JSON" if feed in ("Seats", "PNR-Linking") else "XDR")
             check("raw binary routes retain unsupported input without publishing")
 
             partial = (PROJECT / "tests" / "unit-tests" / "fixtures" / "aci-mq-partial.txt").read_bytes()
@@ -124,8 +124,8 @@ def main():
             complete = b"AMQSBCG0 - starts here\nlength - 3 of 3 bytes\n00000000:  4142 43           'ABC'\n"
             path = docs / "input-feeds" / "ACI" / "complete.txt"
             path.write_bytes(complete)
-            rejected(docs, "ACI", path.name, complete, "requires 888 payload bytes")
-            check("complete diagnostic dump is reconstructed and rejected for a reference-layout mismatch")
+            rejected(docs, "ACI", path.name, complete, "not a multiple of four")
+            check("complete diagnostic dump is reconstructed and rejected for a sequence mismatch")
 
             gap = b"AMQSBCG0 - starts here\nlength - 2 bytes\n00000010:  4142 'AB'\n"
             path = docs / "input-feeds" / "ACI" / "gap.txt"
@@ -210,7 +210,7 @@ def main():
             aci_outputs = docs / "output-feeds" / "ACI"
             wait_for(lambda: len(list(aci_outputs.glob("finalized-aci.*.txt"))) == 1 and not aci_input.exists()
                      and not processing_files(docs, "ACI", aci_input.name), "ACI output and acknowledgment")
-            assert verify_aci_output(aci_original, next(aci_outputs.glob("finalized-aci.*.txt")).read_bytes()) == {"Keep": 17, "Mask": 6}
+            assert verify_aci_output(aci_original, next(aci_outputs.glob("finalized-aci.*.txt")).read_bytes()) == {"Keep": 14, "Mask": 9}
             check("the finalized ACI reference export is protected using configuration without NLP and preserves PNR and binary framing")
 
             from reference_feed_support import verify_output as verify_reference_output

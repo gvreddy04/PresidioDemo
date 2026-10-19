@@ -10,13 +10,17 @@ Process airline feeds using configured field rules and local Presidio. PNR stays
 
 | Feed | Actual input result |
 | --- | --- |
-| ACI | Published using the reviewed 888-byte reference layout |
-| ETKT | Published using the reviewed 672-byte reference layout |
-| Seats | Published using complete JSON |
-| PNR | Published using the reviewed 5,452-byte reference layout: 76 masked fields and 30 kept fields |
-| PNR-Linking | Published using the complete 2,217-byte JSON payload and 49 exact field paths |
+| ACI | All six samples use one sequential XML definition, including four optional groups |
+| ETKT | All six samples use one 136-slot definition; empty strings account for missing values |
+| Seats | Complete JSON with 39 existing policy field paths |
+| PNR | One reviewed sequential definition; 76 masked fields and 30 kept fields; structural tags preserved |
+| PNR-Linking | Complete JSON with 49 existing policy field paths |
 
-ACI, ETKT and PNR support the reviewed reference frames. Arbitrary producer messages require their own reviewed schemas. The external filename `TKT.txt` routes to ETKT. Protection uses irreversible masks or replacement labels; stable tokens are not implemented.
+The three original XML formats remain: [reference mappings](src/config/reference-layouts.xml), [feed policies](src/config/feed-policies.xml), and [XDR structures](src/config/xdr-layouts.xml). Each binary feed has one common structural definition. Optional extensions enable variable widths, optional groups, named capture mappings and 14 shared masking rules without replacing the original roots or feed sections. New structures use reviewed XML changes and a restart. Unsupported structures are retained without publication. `TKT.txt` routes to ETKT.
+
+XDR raw-word blocks use `<words name="..." count="..." />`, a compact alias for the original fixed array of `uint32` values. The loader supports both forms and expands the alias before processing; byte widths, field paths and validation remain unchanged.
+
+All 15 supplied samples pass actual local Presidio processing and independent byte checks: 19 identified PNR occurrences, source bytes and binary framing stay unchanged. The former ETKT `Text0132` mapping is corrected to two preserved raw words. See [verification results](docs/feed-analysis.md#reviewed-samples-and-results).
 
 ## Technology stack
 
@@ -105,13 +109,13 @@ dotnet run -- --process-folder D:/Bala_Support/Feeds
 
 For continuous listening, run `dotnet run`, wait for `READY`, then copy a `.txt` MQ export or `.bin` payload into `docs/input-feeds/<feed>`. Press Enter or Ctrl+C to stop. Use the folders `ACI`, `ETKT`, `PNR`, `PNR-Linking` and `Seats`.
 
-A batch succeeds only when every input is published and acknowledged. All five supplied reference files are supported. The PNR profile covers selected readable fields within the reviewed 5,452-byte frame; unknown binary bytes, record prefixes, separators, counts and padding must match the reference. A different layout is retained without output. Obtain the producer XDR definitions (`.x` file) or serializer/deserializer contract to support general messages and establish passenger associations.
+A batch succeeds only when every input is published and acknowledged. Batch filenames accept numeric suffixes such as `ACI_03.txt` and `ETKT_05.txt`; the listener routes by feed folder and accepts arbitrary filenames. Samples are review/test inputs and are not required at runtime. The schemas describe the structures supported by the supplied examples; a producer contract is still needed to confirm unknown binary meanings and general passenger associations.
 
 ## Folders and configuration
 
 - `src/`: C# worker, `feeds/`, `python/`, `config/` and `.venv/`.
 - `tests/unit-tests/`: Python tests; `tests/FeedPipelineChecks/`: .NET checks.
-- `docs/sample-docs/`: finalized reference TXT files.
+- `docs/sample-docs/`: immutable source TXT files for review and testing; not required at runtime.
 - `docs/input-feeds/`, `output-feeds/`, `failed-feeds/`: one subfolder per feed.
 - `docs/feed-logs/`: one text file per transaction, named `<feed>.<message-id>.txt`.
 - `docs/feed-processing/`: active input files, with one subfolder per feed.
@@ -119,13 +123,13 @@ A batch succeeds only when every input is published and acknowledged. All five s
 
 The listener moves each ready file from `docs/input-feeds/<feed>` into `docs/feed-processing/<feed>/<original-stem>.<unique-id>.<extension>`. This removes it from the input folder before processing starts. The same ID follows the transaction through its log and output. Once output is saved, the processing file is deleted. Rejected input is saved in `docs/failed-feeds/<feed>` with an error report before the processing file is deleted. Interrupted transactions and temporary storage failures stay in `feed-processing` for retry after restart. Older `.runtime/docs/processing` deliveries are migrated on startup while preserving their IDs and bytes.
 
-Each transaction log has separate `BEFORE ANONYMIZATION` and `AFTER ANONYMIZATION` headings with divider lines. For MQ input, the before section shows the complete original feed data, decoded payload, then parsed original fields (`location | policy field | value`). The after section shows the decoded anonymized payload followed by the complete rebuilt and validated feed data. Byte counts reflect the actual payload and feed sizes. Raw input or malformed MQ envelopes show complete input data without a decoded payload. Binary data is shown as a hex dump with a readable character column. Rejected transactions retain the complete input data and any decoded payload and explain why no validated anonymized output is available. Retries reuse the same log file. If a log cannot be saved, input remains pending and is retried before publication or rejection.
+Each transaction log has separate `BEFORE ANONYMIZATION` and `AFTER ANONYMIZATION` headings with divider lines. For MQ input, the before section shows the complete original feed data, decoded payload, a plain-text payload view, then parsed original fields (`location | policy field | value`). The plain-text view preserves readable UTF-8 text and whitespace; binary controls and invalid UTF-8 are shown as spaces. The after section shows the decoded anonymized payload followed by the complete rebuilt and validated feed data. Byte counts reflect the actual payload and feed sizes. Raw input or malformed MQ envelopes show complete input data and its plain-text view without a decoded payload. Binary data is shown as a hex dump with a readable character column. Rejected transactions retain the complete input data and any decoded payload and explain why no validated anonymized output is available. Retries reuse the same log file. If a log cannot be saved, input remains pending and is retried before publication or rejection.
 
 These logs contain original personal data and are excluded from Git. They are written under the selected `--docs-root` when a custom folder is used.
 
-ACI, ETKT and Seats policies contain only the reviewed sample field paths: 23 ACI reference fields, 9 ETKT reference fields and 39 Seats JSON paths. Unconfigured fields fail closed. Binary mask lengths and both ACI PNR locations are preserved. PNR-Linking uses 49 exact JSON paths, including protection for `transitionLinkSegments` scalar text; its observed null value stays null, and unconfigured nested fields reject the message. PNR-Linking keeps `PNROwner` and every customer `UaRecordLocator` unchanged. The 36 unbound PNR aliases have been replaced with 106 exact reference paths. PNR masks 76 selected sensitive fields and keeps 30, including PNR, travel dates, routes, flight data, fares and mileage. Masks cover names, document DOB/gender, encoded emails, phone fragments, addresses, loyalty/ticket/order/payment references, IP text and selected remarks. Mixed-record prefixes and separators use fixed reference parts. No stable passenger identity is inferred. An explicitly unconfigured policy still rejects protection even if a layout is supplied separately. Policies default to configured when the attribute is omitted; configured policies require at least one field, and unconfigured policies cannot declare fields.
+All three XML files are loaded and validated together before input is claimed. Reference mappings retain `name`, `offset` and `length`; with `schemaDriven="true"`, these numbers document the reviewed baseline while the XDR structure determines actual input positions and widths. Reference sample filenames and hashes are provenance only in this mode. Original reference configurations without this flag retain their existing sample-based behavior. Binary fields use Keep or Known full-width ASCII masks. PNRs and confirmed operational fields stay unchanged. Unknown readable identifiers are masked, including the two additional ETKT codes. The three catalog rules for loyalty, sensitive attributes and financial information use `#` to preserve `*` record separators; other masks use `*`. JSON retains its original inline policies, replacement behavior, nulls, types and grouping.
 
-Edit [field policies](src/config/feed-policies.xml) to Keep, Mask, Replace or Redact fields. `Known` protects the entire value; `Analyze` uses local NLP. Reviewed binary profiles are in [reference layouts](src/config/reference-layouts.xml); general producer definitions belong in [XDR layouts](src/config/xdr-layouts.xml). Restart after configuration changes.
+Restart after changes. The existing switches `--reference-layout-file <xml>`, `--xdr-layout-file <xml>` and `--policy-file <xml>` select alternate files. See the [feed analysis](docs/feed-analysis.md) for commented XML examples, empty/optional values, per-sample results and verification commands.
 
 ## Tests
 
@@ -133,6 +137,7 @@ Edit [field policies](src/config/feed-policies.xml) to Keep, Mask, Replace or Re
 src/.venv/Scripts/python.exe -m unittest discover -s tests/unit-tests -p test_*.py -v
 src/.venv/Scripts/python.exe tests/unit-tests/test_feed_listener.py
 dotnet run --project tests/FeedPipelineChecks
+src/.venv/Scripts/python.exe tests/run_sample_verification.py
 ```
 
 [Implementation details](topics/feeds-demo/v14/feed-implementation-reference-v14.md) · [Feed format analysis](docs/feed-analysis.md)

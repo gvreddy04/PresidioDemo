@@ -110,6 +110,10 @@ public static class FeedCodecRegistry
         {
             return new JsonFeedCodec(feed);
         }
+        if (references.TryGetValue(feed, out var dynamicReference) && dynamicReference.Schema is not null)
+        {
+            return new ReferenceLayoutFeedCodec(dynamicReference);
+        }
         if (schemas.TryGetValue(feed, out var schema))
         {
             return new XdrFeedCodec(feed, schema);

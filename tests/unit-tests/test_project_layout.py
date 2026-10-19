@@ -20,7 +20,17 @@ class ProjectLayoutTests(unittest.TestCase):
     def test_samples_are_flat_finalized_txt_files_with_unchanged_bytes(self):
         expected = {
             "ACI.txt": "f038c05e590ade818748f6547c2a624d8d662a52c54d3596ad93649eafce022d",
+            "ACI_02.txt": "bdfa61c1999cef2590a535ca6b0049fa30104b1a717537ef413a02480b3bd95c",
+            "ACI_03.txt": "aaacd2a473d3155ed8cc4bd44f9ce00b8494a52be516860561a5112774ab1042",
+            "ACI_04.txt": "3b5cee1e10a83f5da21c7fbce779f8e978a26c2c3aaf2a5ade18b40f136b73b5",
+            "ACI_05.txt": "71c8fde1c93e0bb6f1562d596e58ef8c3618a0a9ee0a72c12bbf42b2da2cecb2",
+            "ACI_06.txt": "9526c95f10f5e0dab53ce2bda1ae24e3cfffbfac0d2c65f15f0c5d5913ef0087",
             "ETKT.txt": "6a0f5f65a53ff39fee57fdf8dbb870a28dc4fe136296ba4c151c277e99b78cfa",
+            "ETKT_02.txt": "6a0f5f65a53ff39fee57fdf8dbb870a28dc4fe136296ba4c151c277e99b78cfa",
+            "ETKT_03.txt": "aeed5bf95815a1358dde1388a34bdd1c0d93d8ef9a52dee8e4cf1620cfc6ee64",
+            "ETKT_04.txt": "14722ed6d86806b17e21a186e1fcd239f1c02923818d80998ee72d96d440d1db",
+            "ETKT_05.txt": "231943ee46a57c5f1c6e1d5ddf2cf0508d9560638cc05d9da7ca69446204ad2e",
+            "ETKT_06.txt": "ecde914276f406c9e32127f7f056973bc9deb30184747e1f6ac93484ab794266",
             "PNR.txt": "75cc60895384395f8df28eff4c4abf6a0c58f1dc7960c5eee41cb294def0e4de",
             "PNR_LINKING.txt": "2a8caf4538eee4a2232bdcc939adf427171d5ab35a6b380059b2e09eb5c03610",
             "SEATS.txt": "3f7fd3eb9d48c5b646c3ae73c7b982f419c2c86476370bf9c8ffbddc2a19fccf",

@@ -1,15 +1,24 @@
 using System.Buffers.Binary;
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 
 namespace PresidioDemo.Feeds;
 
+/// <summary>Describes an ordered binary field; offsets are computed while parsing each message.</summary>
 public sealed record XdrFieldDefinition(string Name, string Kind, int Limit = 0, int Count = 0,
     long? Expected = null, IReadOnlyList<XdrFieldDefinition>? Members = null,
-    IReadOnlyDictionary<int, XdrFieldDefinition>? Cases = null, XdrFieldDefinition? DefaultCase = null);
-public sealed record XdrFeedSchema(FeedType Feed, IReadOnlyList<XdrFieldDefinition> Fields);
+    IReadOnlyDictionary<int, XdrFieldDefinition>? Cases = null, XdrFieldDefinition? DefaultCase = null,
+    Regex? Pattern = null,
+    IReadOnlyList<XdrCaptureDefinition>? Captures = null, bool AllowEmpty = false);
+
+/// <summary>Describes a named reference-text capture and optional PNR equality check.</summary>
+public sealed record XdrCaptureDefinition(string Name, string EqualTo = "");
+
+/// <summary>Defines a sequential binary layout and its serialization-width contract.</summary>
+public sealed record XdrFeedSchema(FeedType Feed, IReadOnlyList<XdrFieldDefinition> Fields, bool PreserveWidths = false);
 
 /// <summary>Explicit producer layouts only; no inference from strings, names, or offsets.</summary>
 public static class XdrLayoutConfiguration
@@ -23,7 +32,7 @@ public static class XdrLayoutConfiguration
         var seen = new HashSet<FeedType>();
         foreach (var feed in root.Elements())
         {
-            Check(feed, "feed", ["type", "configured"]);
+            Check(feed, "feed", ["type", "configured", "preserveWidths"]);
             var type = FeedCatalog.All.SingleOrDefault(f => f.FolderName == Required(feed, "type"))?.Type
                 ?? throw new InvalidDataException("Unknown XDR feed route.");
             if (type is FeedType.Seats or FeedType.PnrLinking || !seen.Add(type)) throw new InvalidDataException("Duplicate or non-binary XDR feed route.");
@@ -35,7 +44,13 @@ public static class XdrLayoutConfiguration
             }
             if (configured != "true") throw new InvalidDataException("XDR configured must be true or false.");
             var fields = ParseMembers(feed, 0);
-            schemas.Add(type, new(type, fields));
+            bool preserveWidths = (string?)feed.Attribute("preserveWidths") switch
+            {
+                null or "false" => false,
+                "true" => true,
+                _ => throw new InvalidDataException("preserveWidths must be true or false.")
+            };
+            schemas.Add(type, new(type, fields, preserveWidths));
         }
         foreach (var type in new[] { FeedType.ACI, FeedType.PNR, FeedType.ETKT })
             if (!seen.Contains(type)) throw new InvalidDataException("An XDR feed declaration is missing.");
@@ -55,7 +70,7 @@ public static class XdrLayoutConfiguration
         string[] allowed = kind switch
         {
             "string" or "opaque" or "array" => ["name", "max"],
-            "fixedOpaque" or "fixedArray" => ["name", "count"],
+            "fixedOpaque" or "fixedArray" or "words" => ["name", "count"],
             "int32" or "uint32" => ["name", "expected"],
             "int64" or "uint64" or "float32" or "float64" or "boolean" or "struct" or "optional" or "union" => ["name"],
             _ => throw new InvalidDataException("Unsupported XDR schema type.")
@@ -66,7 +81,14 @@ public static class XdrLayoutConfiguration
         int Positive(string key) => int.TryParse(Required(element, key), NumberStyles.None, CultureInfo.InvariantCulture, out int n) && n is > 0 and <= 1048576
             ? n : throw new InvalidDataException("XDR length/count limit must be between 1 and 1048576.");
         int limit = kind is "string" or "opaque" or "array" ? Positive("max") : 0;
-        int count = kind is "fixedOpaque" or "fixedArray" ? Positive("count") : 0;
+        int count = kind is "fixedOpaque" or "fixedArray" or "words" ? Positive("count") : 0;
+        // Normalize the shorthand to the original definition. No count prefix is added,
+        // and the Value member preserves existing scalar paths and codec behavior.
+        if (kind == "words")
+        {
+            if (element.Elements().Any()) throw new InvalidDataException("XDR words cannot contain schema children.");
+            return new(name, "fixedArray", Count: count, Members: [new("Value", "uint32")]);
+        }
         long? expected = null;
         if (element.Attribute("expected") is not null)
         {
@@ -119,7 +141,7 @@ public static class XdrLayoutConfiguration
 /// <summary>Strict, schema-driven XDR; consumes the whole payload and rebuilds counted strings and padding.</summary>
 public sealed class XdrFeedCodec(FeedType feed, XdrFeedSchema? schema) : IFeedCodec
 {
-    private sealed record Scalar(FeedField Field, string Kind, int Offset, int Length, int Maximum);
+    private sealed record Scalar(FeedField Field, string Kind, int Offset, int Length, int Maximum, int ValueLength = 0);
     private sealed record Layout(FeedMessage Message, FeedEnvelope Envelope, IReadOnlyList<Scalar> Scalars, IReadOnlyDictionary<string, string> Structure);
     public ParsedFeed Parse(FeedMessage message)
     {
@@ -128,17 +150,30 @@ public sealed class XdrFeedCodec(FeedType feed, XdrFeedSchema? schema) : IFeedCo
         if (envelope.Payload.Length % 4 != 0)
             throw new InvalidDataException($"XDR payload has {envelope.Payload.Length} bytes, not a multiple of four. Incomplete input or custom framing requires producer confirmation; no output was published.");
         if (schema is null) throw new InvalidDataException("The binary producer schema is not configured. XDR encoding alone does not identify airline fields; input retained and no output was published.");
-        var parser = new Parser(envelope.Payload);
+        var parser = new Parser(envelope.Payload, schema.PreserveWidths);
         foreach (var field in schema.Fields) parser.Read(field, "/" + field.Name, "/" + field.Name, 0);
+        parser.ValidateReferences();
         if (parser.Offset != envelope.Payload.Length) throw new InvalidDataException("XDR schema did not consume the entire payload; trailing bytes are rejected.");
         if (parser.Scalars.Count == 0) throw new InvalidDataException("XDR message contains no configured scalar fields.");
         return new(parser.Scalars.Select(s => s.Field).ToArray(), new Layout(message, envelope, parser.Scalars, parser.Structure));
     }
-    private sealed class Parser(byte[] bytes)
+    private sealed class Parser(byte[] bytes, bool printableText)
     {
         public int Offset { get; private set; }
         public List<Scalar> Scalars { get; } = [];
         public Dictionary<string, string> Structure { get; } = new(StringComparer.Ordinal);
+        private readonly List<(string FieldId, string TargetPath)> _references = [];
+
+        public void ValidateReferences()
+        {
+            foreach (var (fieldId, targetPath) in _references)
+            {
+                var value = Scalars.Single(s => s.Field.Id == fieldId).Field.Value;
+                var targets = Scalars.Where(s => s.Field.Name == targetPath).ToArray();
+                if (targets.Length != 1 || targets[0].Field.Value != value)
+                    throw new InvalidDataException("Configured cross-field reference values do not agree.");
+            }
+        }
         private ReadOnlySpan<byte> Take(int count)
         {
             if (count < 0 || count > bytes.Length - Offset) throw new InvalidDataException("Incomplete XDR field; complete message retained.");
@@ -190,9 +225,39 @@ public sealed class XdrFeedCodec(FeedType feed, XdrFeedSchema? schema) : IFeedCo
                 case "string":
                     int length = Count(definition.Limit);
                     var encoded = Take(length);
-                    foreach (byte b in encoded) if (b > 127) throw new InvalidDataException("This XDR string schema supports ASCII only; producer text encoding needs an explicit adapter.");
+                    foreach (byte b in encoded)
+                        if (b > 127 || printableText && b is < 32 or > 126)
+                            throw new InvalidDataException("This XDR string schema requires ASCII text in its configured character range.");
                     value = Encoding.ASCII.GetString(encoded);
                     Padding(length);
+                    if (definition.Pattern is not null)
+                    {
+                        if (definition.AllowEmpty && length == 0)
+                        {
+                            Structure.Add(id, "empty-capture-string");
+                            return;
+                        }
+                        Match match = definition.Pattern.Match(value);
+                        if (!match.Success) throw new InvalidDataException($"XDR text at {path} does not match its configured record pattern.");
+                        if (definition.Captures is not null)
+                        {
+                            Structure.Add(id, "capture-string");
+                            var groups = definition.Captures.Select(capture => (Definition: capture, Group: match.Groups[capture.Name]))
+                                .Where(item => item.Group.Success).OrderBy(item => item.Group.Index).ToArray();
+                            int previousEnd = 0;
+                            foreach (var (capture, group) in groups)
+                            {
+                                if (group.Captures.Count != 1 || group.Index < previousEnd)
+                                    throw new InvalidDataException("Text captures overlap or repeat; exact protection spans are required.");
+                                string captureId = id + "/" + capture.Name;
+                                Scalars.Add(new(new(captureId, path + "/" + capture.Name, group.Value),
+                                    "capture", start + 4 + group.Index, group.Length, group.Length, group.Length));
+                                if (capture.EqualTo.Length > 0) _references.Add((captureId, capture.EqualTo));
+                                previousEnd = group.Index + group.Length;
+                            }
+                            return;
+                        }
+                    }
                     break;
                 case "opaque": case "fixedOpaque":
                     int size = definition.Kind == "opaque" ? Count(definition.Limit) : definition.Count;
@@ -214,7 +279,8 @@ public sealed class XdrFeedCodec(FeedType feed, XdrFeedSchema? schema) : IFeedCo
             }
             if (definition.Expected is not null && value != definition.Expected.Value.ToString(CultureInfo.InvariantCulture))
                 throw new InvalidDataException("XDR message version or expected constant does not match its schema.");
-            Scalars.Add(new(new(id, path, value), definition.Kind, start, Offset - start, definition.Limit));
+            Scalars.Add(new(new(id, path, value), definition.Kind, start, Offset - start, definition.Limit,
+                definition.Kind == "string" ? value.Length : 0));
         }
     }
     public byte[] Serialize(ParsedFeed original, IReadOnlyDictionary<string, string> anonymizedFields)
@@ -230,10 +296,19 @@ public sealed class XdrFeedCodec(FeedType feed, XdrFeedSchema? schema) : IFeedCo
             if (value == scalar.Field.Value) output.Write(layout.Envelope.Payload.AsSpan(scalar.Offset, scalar.Length));
             else
             {
-                if (scalar.Kind != "string") throw new InvalidDataException("Non-string XDR changes require a producer-specific protection adapter.");
+                if (scalar.Kind is not ("string" or "capture")) throw new InvalidDataException("Non-string XDR changes require a producer-specific protection adapter.");
                 if (value.Any(c => c > 127)) throw new InvalidDataException("XDR replacement is not valid ASCII.");
                 byte[] encoded = Encoding.ASCII.GetBytes(value);
+                if ((schema!.PreserveWidths || scalar.Kind == "capture") && encoded.Length != scalar.ValueLength)
+                    throw new InvalidDataException("Binary protection must preserve every configured field's byte width.");
+                if (FieldPolicy.IsPnr(scalar.Field.Name)) throw new InvalidDataException("XDR serialization cannot change a PNR.");
                 if (encoded.Length > scalar.Maximum) throw new InvalidDataException("Protected XDR string exceeds its schema maximum.");
+                if (scalar.Kind == "capture")
+                {
+                    output.Write(encoded);
+                    cursor = scalar.Offset + scalar.Length;
+                    continue;
+                }
                 byte[] length = new byte[4];
                 BinaryPrimitives.WriteUInt32BigEndian(length, (uint)encoded.Length);
                 output.Write(length);
@@ -249,7 +324,9 @@ public sealed class XdrFeedCodec(FeedType feed, XdrFeedSchema? schema) : IFeedCo
     {
         var before = (Layout)original.Layout;
         var after = (Layout)Parse(before.Message with { Content = serialized }).Layout;
-        if (before.Envelope.Header != after.Envelope.Header || before.Scalars.Count != after.Scalars.Count ||
+        if (before.Envelope.Header != after.Envelope.Header || before.Envelope.Format != after.Envelope.Format ||
+            before.Envelope.Newline != after.Envelope.Newline || before.Envelope.FinalNewline != after.Envelope.FinalNewline ||
+            before.Scalars.Count != after.Scalars.Count ||
             before.Structure.Count != after.Structure.Count || before.Structure.Any(kv => !after.Structure.TryGetValue(kv.Key, out var v) || v != kv.Value))
             throw new InvalidDataException("XDR message structure or MQ metadata changed.");
         for (int i = 0; i < before.Scalars.Count; i++)
@@ -257,8 +334,23 @@ public sealed class XdrFeedCodec(FeedType feed, XdrFeedSchema? schema) : IFeedCo
             var left = before.Scalars[i];
             var right = after.Scalars[i];
             if (left.Field.Id != right.Field.Id || left.Field.Name != right.Field.Name || left.Kind != right.Kind ||
-                (left.Kind != "string" || FieldPolicy.IsPnr(left.Field.Name)) && left.Field.Value != right.Field.Value)
+                (left.Kind is not ("string" or "capture") || FieldPolicy.IsPnr(left.Field.Name)) && left.Field.Value != right.Field.Value ||
+                schema!.PreserveWidths && (left.Offset != right.Offset || left.Length != right.Length))
                 throw new InvalidDataException("XDR field types, binary values or PNR preservation failed validation.");
+        }
+        if (schema!.PreserveWidths)
+        {
+            if (before.Envelope.Payload.Length != after.Envelope.Payload.Length)
+                throw new InvalidDataException("Binary framing length changed.");
+            var mutable = new bool[before.Envelope.Payload.Length];
+            foreach (var scalar in before.Scalars)
+            {
+                if (scalar.Kind == "string") Array.Fill(mutable, true, scalar.Offset + 4, scalar.ValueLength);
+                else if (scalar.Kind == "capture") Array.Fill(mutable, true, scalar.Offset, scalar.Length);
+            }
+            for (int offset = 0; offset < mutable.Length; offset++)
+                if (!mutable[offset] && before.Envelope.Payload[offset] != after.Envelope.Payload[offset])
+                    throw new InvalidDataException("Binary framing, structural values or record separators changed.");
         }
     }
 }

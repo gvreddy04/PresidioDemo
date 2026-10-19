@@ -58,12 +58,12 @@ class EtktFeedTests(unittest.TestCase):
         raw = bytearray(payload((PROJECT / "docs/sample-docs/ETKT.txt").read_bytes()))
         raw[3] ^= 1
         (self.docs / "input-feeds/ETKT/changed-version.bin").write_bytes(raw)
-        rejected(self.docs, "ETKT", "changed-version.bin", bytes(raw), "unclassified binary region")
+        rejected(self.docs, "ETKT", "changed-version.bin", bytes(raw), "expected constant")
 
     def test_etkt_rejects_truncated_reference(self):
         raw = payload((PROJECT / "docs/sample-docs/ETKT.txt").read_bytes())[:-4]
         (self.docs / "input-feeds/ETKT/truncated-etkt.bin").write_bytes(raw)
-        rejected(self.docs, "ETKT", "truncated-etkt.bin", raw, "requires 672 payload bytes")
+        rejected(self.docs, "ETKT", "truncated-etkt.bin", raw, "Incomplete XDR field")
 
 
 if __name__ == "__main__":

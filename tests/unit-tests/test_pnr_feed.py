@@ -1,4 +1,4 @@
-"""PNR protection of selected fields within the pinned 5452-byte reference frame."""
+"""PNR protection of selected fields within the reviewed sequential PNR schema."""
 from pathlib import Path
 import tempfile
 import unittest
@@ -64,13 +64,13 @@ class PnrFeedTests(unittest.TestCase):
         raw = bytearray(payload((PROJECT / "docs/sample-docs/PNR.txt").read_bytes()))
         raw[3] ^= 1
         (self.docs / "input-feeds/PNR/changed-version.bin").write_bytes(raw)
-        rejected(self.docs, "PNR", "changed-version.bin", bytes(raw), "unclassified binary region")
+        rejected(self.docs, "PNR", "changed-version.bin", bytes(raw), "error:")
 
     def test_fixed_record_prefix_changes_are_retained_without_output(self):
         raw = bytearray(payload((PROJECT / "docs/sample-docs/PNR.txt").read_bytes()))
         raw[500] = ord("Z")
         (self.docs / "input-feeds/PNR/changed-docs-prefix.bin").write_bytes(raw)
-        rejected(self.docs, "PNR", "changed-docs-prefix.bin", bytes(raw), "unclassified binary region")
+        rejected(self.docs, "PNR", "changed-docs-prefix.bin", bytes(raw), "error:")
 
     def test_changed_counts_padding_and_frame_lengths_are_rejected(self):
         source = payload((PROJECT / "docs/sample-docs/PNR.txt").read_bytes())
@@ -79,11 +79,11 @@ class PnrFeedTests(unittest.TestCase):
             raw[position] ^= 1
             filename = "changed-" + name + ".bin"
             (self.docs / "input-feeds/PNR" / filename).write_bytes(raw)
-            rejected(self.docs, "PNR", filename, bytes(raw), "unclassified binary region")
+            rejected(self.docs, "PNR", filename, bytes(raw), "error:")
         for name, raw in (("truncated", source[:-4]), ("extended", source + bytes(4))):
             filename = name + "-pnr.bin"
             (self.docs / "input-feeds/PNR" / filename).write_bytes(raw)
-            rejected(self.docs, "PNR", filename, raw, "requires 5452 payload bytes")
+            rejected(self.docs, "PNR", filename, raw, "XDR")
 
 
 if __name__ == "__main__":

@@ -56,15 +56,19 @@ Console.CancelKeyPress += (_, e) =>
 bool pythonStarted = false;
 try
 {
-    // Validate configuration and reference checksums before claiming any input.
+    // Validate all three XML files before claiming input; schema-driven mappings need no sample files.
     var policies = FeedPolicyConfiguration.Load(policyFile);
     var xdrSchemas = XdrLayoutConfiguration.Load(xdrLayoutFile);
-    var referenceLayouts = ReferenceLayoutConfiguration.Load(referenceLayoutFile);
+    var referenceLayouts = ReferenceLayoutConfiguration.Load(referenceLayoutFile, xdrSchemas);
     foreach (var (feed, reference) in referenceLayouts)
     {
         foreach (var field in reference.Fields)
         {
-            _ = policies[feed].Get(field.Name);
+            var rule = policies[feed].Get(field.Name);
+            if (reference.Schema is not null && rule.Action != FieldAction.Keep &&
+                (rule.Identification != FieldIdentification.Known || rule.Action != FieldAction.Mask ||
+                 rule.MaskCharacter[0] is < ' ' or > '~'))
+                throw new InvalidDataException("Schema-driven binary fields require Keep or Known ASCII masks.");
         }
     }
     using var transport = new FolderFeedTransport(docsRoot);
@@ -86,9 +90,9 @@ try
     {
         Console.WriteLine($"Listening: {feed.FolderName,-12} -> {router.Get(feed.Type).GetType().Name}");
     }
-    Console.WriteLine("Input formats: MQ export (.txt) and raw payload (.bin). JSON: Seats, PNR Linking. ACI/ETKT/PNR: configured reference layouts; general XDR requires producer definitions.");
+    Console.WriteLine("Input formats: MQ export (.txt) and raw payload (.bin). JSON: Seats, PNR Linking. ACI/ETKT/PNR: reference mappings with optional XDR-based offset/width resolution.");
     Console.WriteLine($"Field policies: {policyFile}");
-    Console.WriteLine($"XDR layouts: {xdrLayoutFile} | {xdrSchemas.Count} producer schemas configured");
+    Console.WriteLine($"XDR layouts: {xdrLayoutFile} | {xdrSchemas.Count} structural schemas configured");
     Console.WriteLine($"Reference layouts: {referenceLayoutFile} | {referenceLayouts.Count} restricted profiles configured");
     Console.WriteLine("Scheduling: one active delivery per feed; shared local Presidio calls serialized per field.");
     Console.WriteLine(processFolder is null ? "READY - Press Ctrl+C or Enter to stop." : "READY - Processing source-folder batch; press Ctrl+C to interrupt.");

@@ -8,10 +8,22 @@ namespace PresidioDemo.Feeds;
 public enum FieldIdentification { None, Known, Analyze }
 public enum FieldAction { Keep, Replace, Mask, Redact }
 
+/// <summary>Defines field protection; MaskAll resolves the full width of each input value.</summary>
 public sealed record FieldPolicy(string Name, FieldIdentification Identification, FieldAction Action,
     string Entity = "", string Replacement = "", string Entities = "", double Threshold = 0.5,
-    string MaskCharacter = "*", int MaskCharacters = 0, bool FromEnd = true)
+    string MaskCharacter = "*", int MaskCharacters = 0, bool FromEnd = true, bool MaskAll = false)
 {
+    /// <summary>Resolves maskCharacters="all" without fixing a sample-specific width.</summary>
+    public int MaskCount(string value) => MaskAll ? value.Length : MaskCharacters;
+
+    /// <summary>Accepts an already masked value without allowing unprotected Known fields through.</summary>
+    public bool IsAlreadyMasked(string value)
+    {
+        if (Action != FieldAction.Mask) return false;
+        int count = Math.Min(value.Length, MaskCount(value));
+        int start = FromEnd ? value.Length - count : 0;
+        return value.AsSpan(start, count).IndexOfAnyExcept(MaskCharacter[0]) < 0;
+    }
     public static bool IsPnr(string name) => new[] { "pnr", "linkedPnr", "oldPnr", "newPnr", "UARecloc", "UaRecordLocator", "PNROwner" }.Contains(name.Split('/')[^1], StringComparer.OrdinalIgnoreCase);
     public void Validate()
     {
@@ -30,13 +42,16 @@ public sealed record FieldPolicy(string Name, FieldIdentification Identification
             throw new InvalidDataException("Detection threshold must be between zero and one.");
         if (Action == FieldAction.Replace && string.IsNullOrEmpty(Replacement))
             throw new InvalidDataException("Replace requires an explicit replacement value.");
-        if (Action == FieldAction.Mask && (MaskCharacter.Length != 1 || MaskCharacters < 1))
-            throw new InvalidDataException("Mask requires one masking character and a positive character count.");
+        bool invalidMaskCount = MaskAll ? MaskCharacters != 0 : MaskCharacters < 1;
+        if (Action == FieldAction.Mask && (MaskCharacter.Length != 1 || invalidMaskCount))
+        {
+            throw new InvalidDataException("Mask requires one masking character and a positive character count or maskCharacters=all.");
+        }
         if (Action == FieldAction.Keep && (Entity.Length > 0 || Replacement.Length > 0 || Entities.Length > 0 || MaskCharacters != 0))
             throw new InvalidDataException("Keep cannot include identification or protection settings.");
         if (Identification == FieldIdentification.Known && Entities.Length > 0 || Identification == FieldIdentification.Analyze && Entity.Length > 0)
             throw new InvalidDataException("Use entity for Known identification, entities for Analyze.");
-        if (Action != FieldAction.Replace && Replacement.Length > 0 || Action != FieldAction.Mask && MaskCharacters != 0)
+        if (Action != FieldAction.Replace && Replacement.Length > 0 || Action != FieldAction.Mask && (MaskCharacters != 0 || MaskAll))
             throw new InvalidDataException("Operator settings do not match the selected action.");
     }
 }
@@ -88,7 +103,7 @@ public sealed class FeedPolicy
     }
 }
 
-/// <summary>Strict local XML configuration with exact JSON paths and feed-specific protection rules.</summary>
+/// <summary>Loads reusable protection operators independently of feed layouts and field paths.</summary>
 public static class FeedPolicyConfiguration
 {
     public static IReadOnlyDictionary<FeedType, FeedPolicy> Load(string path)
@@ -98,7 +113,21 @@ public static class FeedPolicyConfiguration
         var root = doc.Root ?? throw new InvalidDataException("Missing field-policy root.");
         Check(root, "feedPolicies", []);
         var policies = new Dictionary<FeedType, FeedPolicy>();
-        foreach (var element in root.Elements())
+        var catalog = new Dictionary<string, FieldPolicy>(StringComparer.Ordinal);
+        var catalogs = root.Elements("catalog").ToArray();
+        if (catalogs.Length > 1) throw new InvalidDataException("Duplicate shared policy catalog.");
+        foreach (var shared in catalogs)
+        {
+            Check(shared, "catalog", []);
+            foreach (var item in shared.Elements())
+            {
+                var rule = ParseField(item, shared: true);
+                rule.Validate();
+                if (!rule.Name.All(c => char.IsAsciiLetterOrDigit(c) || c == '_') || !catalog.TryAdd(rule.Name, rule))
+                    throw new InvalidDataException("Invalid or duplicate shared policy ID.");
+            }
+        }
+        foreach (var element in root.Elements().Where(item => item.Name != "catalog"))
         {
             Check(element, "feed", ["type", "configured"]);
             string type = Required(element, "type");
@@ -110,7 +139,14 @@ public static class FeedPolicyConfiguration
                 "false" => false,
                 _ => throw new InvalidDataException("Feed policy configured must be true or false.")
             };
-            var rules = element.Elements().Select(ParseField).ToArray();
+            var rules = element.Elements().Select(field =>
+            {
+                if (field.Attribute("policy") is not { } reference) return ParseField(field);
+                Check(field, "field", ["name", "policy"]);
+                if (field.Elements().Any() || !catalog.TryGetValue(reference.Value, out var shared))
+                    throw new InvalidDataException("Unknown shared field policy.");
+                return shared with { Name = Required(field, "name") };
+            }).ToArray();
             if (!policies.TryAdd(definition.Type, new FeedPolicy(definition.Type, rules, configured)))
             {
                 throw new InvalidDataException("Duplicate feed policy.");
@@ -120,9 +156,11 @@ public static class FeedPolicyConfiguration
             if (!policies.ContainsKey(feed.Type)) throw new InvalidDataException("A feed protection policy is missing.");
         return new ReadOnlyDictionary<FeedType, FeedPolicy>(policies);
     }
-    private static FieldPolicy ParseField(XElement e)
+    private static FieldPolicy ParseField(XElement e) => ParseField(e, shared: false);
+
+    private static FieldPolicy ParseField(XElement e, bool shared)
     {
-        Check(e, "field", ["name", "identification", "action", "entity", "replacement", "entities", "threshold", "maskCharacter", "maskCharacters", "fromEnd"]);
+        Check(e, shared ? "policy" : "field", [shared ? "id" : "name", "identification", "action", "entity", "replacement", "entities", "threshold", "maskCharacter", "maskCharacters", "fromEnd"]);
         if (e.Elements().Any()) throw new InvalidDataException("Field policies cannot contain nested elements.");
         T Choice<T>(string key) where T : struct, Enum => Enum.GetNames<T>().Contains(Required(e, key)) && Enum.TryParse<T>(Required(e, key), false, out var value)
             ? value : throw new InvalidDataException("Unknown policy identification or action.");
@@ -134,9 +172,13 @@ public static class FeedPolicyConfiguration
             throw new InvalidDataException("Configuration contains settings unused by the selected policy.");
         try
         {
-            return new(Required(e, "name"), identification, action,
+            string maskCountText = Value("maskCharacters", "0");
+            bool maskAll = maskCountText == "all";
+            int maskCharacters = maskAll ? 0 : int.Parse(maskCountText, CultureInfo.InvariantCulture);
+
+            return new(Required(e, shared ? "id" : "name"), identification, action,
                 Value("entity"), Value("replacement"), Value("entities"), double.Parse(Value("threshold", "0.5"), CultureInfo.InvariantCulture),
-                Value("maskCharacter", "*"), int.Parse(Value("maskCharacters", "0"), CultureInfo.InvariantCulture), bool.Parse(Value("fromEnd", "true")));
+                Value("maskCharacter", "*"), maskCharacters, bool.Parse(Value("fromEnd", "true")), maskAll);
         }
         catch (Exception ex) when (ex is FormatException or OverflowException) { throw new InvalidDataException("Invalid numeric or boolean field-policy setting."); }
     }

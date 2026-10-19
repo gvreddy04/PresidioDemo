@@ -46,21 +46,22 @@ class AllFeedBatchTests(unittest.TestCase):
             is_mq = source.suffix == ".txt" and ("Decoded MQ payload" in before)
             self.assertIn("Complete feed data (" + str(source.stat().st_size) + " bytes):", before)
             self.assertNotIn("Parsed fields", after)
+            self.assertNotIn("Plain text:", after)
+            self.assertLess(before.index("Complete feed data"), before.index("Plain text:"))
             if item["Status"] == "Published":
                 self.assertIn("Parsed fields", before)
+                self.assertLess(before.index("Plain text:"), before.index("Parsed fields"))
                 self.assertIn("Complete feed data", after)
                 output = Path(item["OutputFile"]).read_bytes()
                 self.assertIn("Complete feed data (" + str(len(output)) + " bytes):", after)
                 if is_mq:
                     self.assertLess(before.index("Complete feed data"), before.index("Decoded MQ payload"))
-                    self.assertLess(before.index("Decoded MQ payload"), before.index("Parsed fields"))
+                    self.assertLess(before.index("Decoded MQ payload"), before.index("Plain text:"))
                     self.assertLess(after.index("Decoded MQ payload"), after.index("Complete feed data"))
                     self.assertIn(output.decode("utf-8"), after)
                     if item["Feed"] == "ACI":
-                        self.assertIn("Complete feed data (2604 bytes):", before)
-                        self.assertIn("Decoded MQ payload (888 bytes):", before)
-                        self.assertIn("Decoded MQ payload (888 bytes):", after)
-                        self.assertIn("Complete feed data (2604 bytes):", after)
+                        self.assertIn(f"Decoded MQ payload ({len(payload(source.read_bytes()))} bytes):", before)
+                        self.assertIn(f"Decoded MQ payload ({len(payload(source.read_bytes()))} bytes):", after)
             else:
                 self.assertIn("No validated anonymized output was produced.", after)
                 self.assertIn("Reason:", after)
@@ -71,7 +72,7 @@ class AllFeedBatchTests(unittest.TestCase):
                 self.assertIn("Michael Brooks", before)
                 self.assertNotIn("Emily Carter", after)
                 self.assertNotIn("emily.carter@example.com", after)
-                self.assertIn(b"[PASSENGER_NAME]", Path(item["OutputFile"]).read_bytes())
+                self.assertIn(b"************", Path(item["OutputFile"]).read_bytes())
 
     def test_actual_supplied_files_report_every_outcome_and_preserve_sources(self):
         with tempfile.TemporaryDirectory(prefix="actual-batch-", dir=PROJECT / ".test-runs") as temp:
@@ -82,7 +83,7 @@ class AllFeedBatchTests(unittest.TestCase):
             process, report = self.run_batch(sources, root / "docs")
             self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
             self.assertTrue(report["AllPublished"])
-            self.assertEqual(len(report["Items"]), 5)
+            self.assertEqual(len(report["Items"]), 15)
             self.verify_transaction_logs(root / "docs", report)
             statuses = {item["Feed"]: item["Status"] for item in report["Items"]}
             self.assertEqual(statuses, {"Seats": "Published", "ACI": "Published", "ETKT": "Published", "PNR": "Published", "PNR-Linking": "Published"})
@@ -93,8 +94,22 @@ class AllFeedBatchTests(unittest.TestCase):
                 if item["Status"] == "Published":
                     output = Path(item["OutputFile"]).read_bytes()
                     if item["Feed"] in ("ACI", "ETKT", "PNR"):
-                        expected = {"ACI": {"Keep": 17, "Mask": 6}, "ETKT": {"Keep": 4, "Mask": 5}, "PNR": {"Keep": 30, "Mask": 76}}[item["Feed"]]
+                        keep, mask = {
+                            "ACI.txt": (14, 9), "ACI_02.txt": (14, 9), "ACI_03.txt": (13, 7),
+                            "ACI_04.txt": (13, 8), "ACI_05.txt": (13, 6), "ACI_06.txt": (13, 11),
+                            "ETKT.txt": (4, 5), "ETKT_02.txt": (4, 5), "ETKT_03.txt": (20, 5),
+                            "ETKT_04.txt": (4, 5), "ETKT_05.txt": (3, 7), "ETKT_06.txt": (4, 5),
+                            "PNR.txt": (30, 76),
+                        }[Path(item["SourceFile"]).name]
+                        expected = {"Keep": keep, "Mask": mask}
                         self.assertEqual(verify_reference_output(item["Feed"], original, output), expected)
+                        if Path(item["SourceFile"]).name == "ETKT_05.txt":
+                            protected = payload(output)
+                            self.assertEqual(protected[36:42], b"D7DF15")
+                            self.assertEqual(protected[488:494], b"******")
+                            self.assertEqual(protected[500:506], b"******")
+                        if Path(item["SourceFile"]).name == "ACI_05.txt":
+                            self.assertEqual(payload(output)[424:437], b"*" * 13)
                     else:
                         result = verify_output(original, output, item["Feed"])
                         expected = {"Keep": 30, "Replace": 29} if item["Feed"] == "Seats" else {"Keep": 54, "Replace": 22}
@@ -105,30 +120,25 @@ class AllFeedBatchTests(unittest.TestCase):
                     self.assertTrue(Path(item["ErrorReport"]).exists())
 
 
-    def test_supplied_test_only_pnr_layout_cannot_enable_an_unconfigured_policy(self):
+    def test_disabled_xdr_route_retains_input_without_publication(self):
         with tempfile.TemporaryDirectory(prefix="pnr-policy-guard-", dir=PROJECT / ".test-runs") as temp:
             root = Path(temp)
             sources = root / "test-only-sources"
             sources.mkdir()
             raw = struct.pack(">I", 2)
             (sources / "PNR.bin").write_bytes(raw)
-            layouts = ET.Element("xdrLayouts")
-            for feed in ("ACI", "PNR", "ETKT"):
-                entry = ET.SubElement(layouts, "feed", type=feed, configured="true" if feed == "PNR" else "false")
-                if feed == "PNR":
-                    ET.SubElement(entry, "uint32", name="Version", expected="2")
-            layoutfile = root / "test-only-xdr.xml"
-            ET.ElementTree(layouts).write(layoutfile, encoding="utf-8", xml_declaration=True)
-            policies = ET.parse(PROJECT / "src/config/feed-policies.xml")
-            pending = policies.find("feed[@type='PNR']")
+            schema = ET.parse(PROJECT / "src/config/xdr-layouts.xml")
+            pending = schema.find("feed[@type='PNR']")
             for field in list(pending):
                 pending.remove(field)
             pending.set("configured", "false")
-            policyfile = root / "test-only-unconfigured-policy.xml"
-            policies.write(policyfile, encoding="utf-8", xml_declaration=True)
-            referencefile = root / "test-only-no-reference-layouts.xml"
-            referencefile.write_text("<referenceLayouts />", encoding="utf-8")
-            process, report = self.run_batch(sources, root / "docs", ["--xdr-layout-file", str(layoutfile), "--policy-file", str(policyfile), "--reference-layout-file", str(referencefile)])
+            schemafile = root / "disabled-schema.xml"
+            schema.write(schemafile, encoding="utf-8", xml_declaration=True)
+            references = ET.parse(PROJECT / "src/config/reference-layouts.xml")
+            references.getroot().remove(references.find("feed[@type='PNR']"))
+            referencefile = root / "references.xml"
+            references.write(referencefile, encoding="utf-8", xml_declaration=True)
+            process, report = self.run_batch(sources, root / "docs", ["--xdr-layout-file", str(schemafile), "--reference-layout-file", str(referencefile)])
             self.assertEqual(process.returncode, 2, process.stdout + process.stderr)
             self.assertFalse(report["AllPublished"])
             self.assertEqual(len(report["Items"]), 1)
@@ -136,7 +146,7 @@ class AllFeedBatchTests(unittest.TestCase):
             self.assertEqual(item["Status"], "Rejected")
             self.assertIsNone(item["OutputFile"])
             self.assertEqual(Path(item["RetainedFile"]).read_bytes(), raw)
-            self.assertIn("feed protection policy is not configured", Path(item["ErrorReport"]).read_text(encoding="utf-8"))
+            self.assertIn("binary producer schema is not configured", Path(item["ErrorReport"]).read_text(encoding="utf-8"))
             self.verify_transaction_logs(root / "docs", report)
 
     def test_all_five_routes_publish_with_explicit_test_only_layouts_and_complete_json(self):
@@ -156,31 +166,33 @@ class AllFeedBatchTests(unittest.TestCase):
             linking = [{"PNROwner": "K7QX2M", "Customers": [{"PaxId": p[1], "FirstName": p[0].split()[0], "LastName": p[0].split()[1], "UaRecordLocator": "K7QX2M", "DOB": None} for p in passengers]}]
             (sources / "PNR_LINKING.bin").write_bytes(json.dumps(linking).encode())
             layout = ET.Element('xdrLayouts')
-            policies = ET.parse(PROJECT / "src" / "config" / "feed-policies.xml")
+            references = ET.Element('referenceLayouts')
+            policies = ET.parse(PROJECT / 'src/config/feed-policies.xml')
             for feed in ['ACI', 'PNR', 'ETKT']:
-                entry = ET.SubElement(layout, 'feed', type=feed, configured='true')
+                entry = ET.SubElement(layout, 'feed', type=feed, configured='true', preserveWidths='true')
                 ET.SubElement(entry, 'uint32', name='Version', expected='2')
                 ET.SubElement(entry, 'string', name='pnr', max='6')
                 array = ET.SubElement(entry, 'array', name='Passengers', max='10')
                 item = ET.SubElement(array, 'struct', name='Item')
-                for name in ['Name', 'PassengerId', 'Email']: ET.SubElement(item, 'string', name=name, max='128')
-                policy = next(e for e in policies.getroot() if e.get('type') == feed)
-                policy.set('configured', 'true')
-                for existing in list(policy):
-                    policy.remove(existing)
-                for path in ['/Version', '/pnr']:
-                    if not any(field.get('name') == path for field in policy):
-                        ET.SubElement(policy, 'field', name=path, identification='None', action='Keep')
-                for name,entity,replacement in [('Name','PERSON','[PASSENGER_NAME]'),('PassengerId','PASSENGER_ID','[PASSENGER_ID]'),('Email','EMAIL_ADDRESS','[EMAIL_ADDRESS]')]:
-                    ET.SubElement(policy, 'field', name='/Passengers/*/'+name, identification='Known', action='Replace', entity=entity, replacement=replacement)
-            layoutfile = root / 'test-only-xdr-layouts.xml'
-            ET.ElementTree(layout).write(layoutfile, encoding='utf-8', xml_declaration=True)
-            policyfile = root / 'test-only-policies.xml'
-            policies.write(policyfile, encoding='utf-8', xml_declaration=True)
+                for name in ['Name','PassengerId','Email']:
+                    ET.SubElement(item, 'string', name=name, max='128')
+                ref = ET.SubElement(references, 'feed', type=feed, name='TestOnly', schemaDriven='true')
+                ET.SubElement(ref, 'text', name='pnr', offset='4', length='6')
+                for name,offset,width in [('Name',20,12),('PassengerId',36,8),('Email',48,24)]:
+                    ET.SubElement(ref, 'text', name=name, offset=str(offset), length=str(width), path='/Passengers/*/'+name)
+                policy = policies.find("feed[@type='"+feed+"']")
+                for field in list(policy):
+                    policy.remove(field)
+                for name,rule in [('pnr','KeepPnr'),('Name','MaskPerson'),('PassengerId','MaskUnclassifiedIdentifier'),('Email','MaskEmailAddress')]:
+                    if name == 'pnr':
+                        ET.SubElement(policy, 'field', name='/pnr', identification='None', action='Keep')
+                    else:
+                        ET.SubElement(policy, 'field', name='/'+name, policy=rule)
+            schemafile, referencefile, policyfile = root/'xdr.xml', root/'references.xml', root/'policies.xml'
+            for file,document in [(schemafile,layout),(referencefile,references),(policyfile,policies.getroot())]:
+                ET.ElementTree(document).write(file, encoding='utf-8', xml_declaration=True)
             before = {p.name:p.read_bytes() for p in sources.iterdir()}
-            referencefile = root / "test-only-no-reference-layouts.xml"
-            referencefile.write_text("<referenceLayouts />", encoding="utf-8")
-            process,report = self.run_batch(sources, root / 'docs', ['--xdr-layout-file',str(layoutfile),'--policy-file',str(policyfile),'--reference-layout-file',str(referencefile)])
+            process,report = self.run_batch(sources, root/'docs', ['--xdr-layout-file',str(schemafile),'--reference-layout-file',str(referencefile),'--policy-file',str(policyfile)])
             self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
             self.assertTrue(report['AllPublished'])
             self.assertEqual(len(report['Items']), 5)

@@ -164,6 +164,7 @@ try
     started = true;
     var protector = new PresidioFeedProtector();
     await CheckProtection(protector);
+    await ReferenceLayoutChecks.CheckProtection(projectRoot, docsRoot, protector);
     await XdrCodecChecks.CheckProtection(protector);
     var codec = new TestOnlyCodec();
     byte[] input = codec.CreateFixture();

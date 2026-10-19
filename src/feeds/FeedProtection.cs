@@ -30,14 +30,14 @@ public sealed class PresidioFeedProtector : IFeedProtector
                     value = PythonHost.Call("protect_configured_field", field.Value, field.Name,
                         rule.Identification.ToString(), rule.Action.ToString(), rule.Entity, rule.Replacement,
                         rule.Entities, rule.Threshold.ToString(CultureInfo.InvariantCulture), rule.MaskCharacter,
-                        rule.MaskCharacters.ToString(CultureInfo.InvariantCulture), rule.FromEnd ? "true" : "false");
+                        rule.MaskCount(field.Value).ToString(CultureInfo.InvariantCulture), rule.FromEnd ? "true" : "false");
                 }
                 catch (Exception) { throw new InvalidDataException("Configured local Presidio processing failed; input retained and no output was published."); }
                 finally { EngineGate.Release(); }
             }
             if (FieldPolicy.IsPnr(field.Name) && value != field.Value)
                 throw new InvalidDataException("Protection changed a PNR.");
-            if (rule.Identification == FieldIdentification.Known && field.Value.Length > 0 && value == field.Value)
+            if (rule.Identification == FieldIdentification.Known && field.Value.Length > 0 && value == field.Value && !rule.IsAlreadyMasked(field.Value))
                 throw new InvalidDataException("A configured personal field was not changed by its protection action.");
             result.Add(field.Id, value);
         }

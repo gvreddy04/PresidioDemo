@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -15,6 +16,24 @@ public sealed class ReferenceFeedLayout
 {
     private readonly byte[] _template;
     private readonly bool[] _fieldBytes;
+
+    internal XdrFeedSchema? Schema { get; }
+    internal IReadOnlyDictionary<string, string> Aliases { get; } = new Dictionary<string, string>();
+    internal IReadOnlySet<string> RequiredPaths { get; } = new HashSet<string>();
+
+    internal ReferenceFeedLayout(FeedType feed, string name, XdrFeedSchema schema,
+        IReadOnlyList<ReferenceFieldSpan> fields, IReadOnlyDictionary<string, string> aliases,
+        IReadOnlySet<string> requiredPaths)
+    {
+        Feed = feed;
+        Name = name;
+        Schema = schema;
+        Fields = fields;
+        Aliases = aliases;
+        RequiredPaths = requiredPaths;
+        _template = [];
+        _fieldBytes = [];
+    }
 
     internal ReferenceFeedLayout(FeedType feed, string name, byte[] template, IReadOnlyList<ReferenceFieldSpan> fields)
     {
@@ -73,7 +92,9 @@ public sealed class ReferenceFeedLayout
 /// <summary>Loads observed reference layouts without claiming an airline-wide producer schema.</summary>
 public static class ReferenceLayoutConfiguration
 {
-    public static IReadOnlyDictionary<FeedType, ReferenceFeedLayout> Load(string filename)
+    /// <summary>Loads original fixed layouts or optional schema-driven mappings without sample-file dependencies.</summary>
+    public static IReadOnlyDictionary<FeedType, ReferenceFeedLayout> Load(string filename,
+        IReadOnlyDictionary<FeedType, XdrFeedSchema>? schemas = null)
     {
         using var reader = XmlReader.Create(filename, new XmlReaderSettings
         {
@@ -85,7 +106,7 @@ public static class ReferenceLayoutConfiguration
         var layouts = new Dictionary<FeedType, ReferenceFeedLayout>();
         foreach (var element in root.Elements())
         {
-            Check(element, "feed", ["type", "name", "referenceFile", "referenceSha256"]);
+            Check(element, "feed", ["type", "name", "referenceFile", "referenceSha256", "schemaDriven"]);
             var feed = FeedCatalog.All.SingleOrDefault(item => item.FolderName == Required(element, "type"))
                 ?? throw new InvalidDataException("Unknown reference-layout feed route.");
             if (feed.Type is FeedType.Seats or FeedType.PnrLinking || layouts.ContainsKey(feed.Type))
@@ -93,6 +114,17 @@ public static class ReferenceLayoutConfiguration
                 throw new InvalidDataException("Duplicate or non-binary reference-layout route.");
             }
             string name = Identifier(Required(element, "name"));
+            bool schemaDriven = Flag(element, "schemaDriven");
+            if (schemaDriven)
+            {
+                if (schemas is null || !schemas.TryGetValue(feed.Type, out var schema))
+                    throw new InvalidDataException("Schema-driven reference layout requires a configured XDR feed.");
+                if (element.Attribute("referenceSha256") is { } hash &&
+                    (hash.Value.Length != 64 || !hash.Value.All(Uri.IsHexDigit)))
+                    throw new InvalidDataException("Invalid reference provenance hash.");
+                layouts.Add(feed.Type, ReadSchemaDriven(element, name, schema));
+                continue;
+            }
             string reference = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(filename))!, Required(element, "referenceFile")));
             byte[] fileBytes = File.ReadAllBytes(reference);
             string expectedHash = Required(element, "referenceSha256");
@@ -113,6 +145,110 @@ public static class ReferenceLayoutConfiguration
             layouts.Add(feed.Type, layout);
         }
         return new ReadOnlyDictionary<FeedType, ReferenceFeedLayout>(layouts);
+    }
+
+    private static bool Flag(XElement element, string name) => (string?)element.Attribute(name) switch
+    {
+        null or "false" => false,
+        "true" => true,
+        _ => throw new InvalidDataException("Reference boolean settings must be true or false.")
+    };
+
+    private static ReferenceFeedLayout ReadSchemaDriven(XElement element, string name, XdrFeedSchema schema)
+    {
+        var definitions = new Dictionary<string, XElement>(StringComparer.Ordinal);
+        var fields = new List<ReferenceFieldSpan>();
+        var aliases = new Dictionary<string, string>(StringComparer.Ordinal);
+        var required = new HashSet<string>(StringComparer.Ordinal);
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var text in element.Elements())
+        {
+            Check(text, "text", ["name", "offset", "length", "path", "pattern", "allowEmpty", "optional"]);
+            string alias = Identifier(Required(text, "name"));
+            _ = Number(text, "offset", true);
+            _ = Number(text, "length", true);
+            if (!names.Add(alias) || !definitions.TryAdd((string?)text.Attribute("path") ?? "/" + alias, text))
+                throw new InvalidDataException("Duplicate reference text name or schema path.");
+            _ = Flag(text, "optional");
+            _ = Flag(text, "allowEmpty");
+        }
+        var used = new HashSet<string>(StringComparer.Ordinal);
+        var mapped = schema.Fields.Select(field => Map(field, "/" + field.Name, false)).ToArray();
+        if (!used.SetEquals(definitions.Keys) || fields.Count == 0)
+            throw new InvalidDataException("Reference mappings must match the complete XDR text structure.");
+        var paths = new HashSet<string>(aliases.Keys, StringComparer.Ordinal);
+        foreach (var text in definitions.Values)
+        foreach (var part in text.Elements("part"))
+            if (part.Attribute("equalTo") is { } target && !paths.Contains(target.Value))
+                throw new InvalidDataException("Reference PNR target is not a mapped scalar path.");
+        return new(schema.Feed, name, schema with { Fields = mapped, PreserveWidths = true },
+            fields.AsReadOnly(), new ReadOnlyDictionary<string, string>(aliases), required);
+
+        XdrFieldDefinition Map(XdrFieldDefinition field, string path, bool conditional)
+        {
+            if (field.Kind == "struct")
+                return field with { Members = field.Members!.Select(child => Map(child, path + "/" + child.Name, conditional)).ToArray() };
+            if (field.Kind is "array" or "fixedArray" or "optional")
+                return field with { Members = [Map(field.Members![0], path + (field.Kind == "optional" ? "/value" : "/*"), true)] };
+            if (field.Kind == "union")
+                return field with
+                {
+                    Cases = field.Cases!.ToDictionary(pair => pair.Key, pair => Map(pair.Value, path + "/" + pair.Value.Name, true)),
+                    DefaultCase = field.DefaultCase is null ? null : Map(field.DefaultCase, path + "/" + field.DefaultCase.Name, true)
+                };
+            if (field.Kind != "string") return field;
+            if (!definitions.TryGetValue(path, out var text))
+                throw new InvalidDataException("An XDR string is missing its reviewed reference mapping.");
+            used.Add(path);
+            string alias = "/" + Required(text, "name");
+            int offset = Number(text, "offset", true), length = Number(text, "length", true);
+            if (length > field.Limit)
+                throw new InvalidDataException("Reference baseline length exceeds the XDR string bounds.");
+            bool optional = conditional || Flag(text, "optional"), allowEmpty = Flag(text, "allowEmpty");
+            Regex? pattern = null;
+            if (text.Attribute("pattern") is { } expression)
+            {
+                try { pattern = new Regex(@"\A(?:" + expression.Value + @")\z", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture | RegexOptions.NonBacktracking, TimeSpan.FromSeconds(1)); }
+                catch (Exception error) when (error is ArgumentException or NotSupportedException)
+                { throw new InvalidDataException("Invalid reference text pattern.", error); }
+            }
+            var captures = new List<XdrCaptureDefinition>();
+            var parts = text.Elements().ToArray();
+            int consumed = 0;
+            var partNames = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var part in parts)
+            {
+                Check(part, "part", ["name", "start", "length", "fixed", "equalTo"]);
+                if (part.Elements().Any()) throw new InvalidDataException("Reference parts cannot contain children.");
+                string partName = Identifier(Required(part, "name"));
+                int start = Number(part, "start", true), width = Number(part, "length", true);
+                if (!partNames.Add(partName) || start != consumed || width > length - consumed)
+                    throw new InvalidDataException("Reference parts must cover their reviewed baseline without gaps or overlaps.");
+                consumed += width;
+                if (Flag(part, "fixed")) continue;
+                captures.Add(new(partName, (string?)part.Attribute("equalTo") ?? ""));
+                Add(path + "/" + partName, alias + "/" + partName, offset + 4 + start, width);
+            }
+            if (parts.Length > 0 && consumed != length) throw new InvalidDataException("Incomplete reference text parts.");
+            if (captures.Count > 0 && (pattern is null || !pattern.GetGroupNames().Where(group => group != "0").ToHashSet(StringComparer.Ordinal).SetEquals(captures.Select(c => c.Name))))
+                throw new InvalidDataException("Dynamic reference parts require an exact named-capture pattern.");
+            if (parts.Length == 0)
+            {
+                if (pattern is not null && pattern.GetGroupNames().Length != 1)
+                    throw new InvalidDataException("Reference patterns with captures require mapped parts.");
+                Add(path, alias, offset + 4, length);
+            }
+            if (allowEmpty && captures.Count == 0)
+                throw new InvalidDataException("allowEmpty requires a capture string.");
+            return field with { Pattern = pattern, Captures = captures.Count == 0 ? null : captures.AsReadOnly(), AllowEmpty = allowEmpty };
+
+            void Add(string sourcePath, string policyPath, int start, int width)
+            {
+                if (!aliases.TryAdd(sourcePath, policyPath)) throw new InvalidDataException("Duplicate reference part path.");
+                fields.Add(new(policyPath, start, width));
+                if (!optional && !allowEmpty) required.Add(sourcePath);
+            }
+        }
     }
 
     private static IReadOnlyList<ReferenceFieldSpan> ReadFields(XElement parent, byte[] payload)
@@ -239,7 +375,8 @@ public static class ReferenceLayoutConfiguration
 /// <summary>Protects configured text in the approved reference frame while retaining every other byte.</summary>
 public sealed class ReferenceLayoutFeedCodec(ReferenceFeedLayout layout) : IFeedCodec
 {
-    private sealed record ParsedLayout(FeedMessage Message, FeedEnvelope Envelope);
+    private readonly XdrFeedCodec? _schemaCodec = layout.Schema is null ? null : new(layout.Feed, layout.Schema);
+    private sealed record ParsedLayout(FeedMessage Message, FeedEnvelope Envelope, ParsedFeed? SchemaFields = null);
 
     public ParsedFeed Parse(FeedMessage message)
     {
@@ -248,6 +385,16 @@ public sealed class ReferenceLayoutFeedCodec(ReferenceFeedLayout layout) : IFeed
             throw new InvalidDataException("Reference layout and delivery routes do not match.");
         }
         var envelope = FeedPayloadReader.Read(message);
+        if (_schemaCodec is not null)
+        {
+            var decoded = _schemaCodec.Parse(message);
+            var paths = decoded.Fields.Select(field => field.Name).ToHashSet(StringComparer.Ordinal);
+            if (layout.RequiredPaths.Any(path => !paths.Contains(path)))
+                throw new InvalidDataException("A required reference field is missing from this XDR message.");
+            var selected = decoded.Fields.Where(field => layout.Aliases.ContainsKey(field.Name))
+                .Select(field => new FeedField(field.Id, layout.Aliases[field.Name], field.Value)).ToArray();
+            return new(selected, new ParsedLayout(message, envelope, decoded));
+        }
         layout.ValidatePayload(envelope.Payload);
         var fields = layout.Fields.Select(field => new FeedField(field.Name, field.Name,
             Encoding.ASCII.GetString(envelope.Payload, field.Offset, field.Length))).ToArray();
@@ -257,6 +404,21 @@ public sealed class ReferenceLayoutFeedCodec(ReferenceFeedLayout layout) : IFeed
     public byte[] Serialize(ParsedFeed original, IReadOnlyDictionary<string, string> anonymizedFields)
     {
         var parsed = (ParsedLayout)original.Layout;
+        if (parsed.SchemaFields is not null)
+        {
+            if (anonymizedFields.Count != original.Fields.Count)
+                throw new InvalidDataException("Reference serialization requires exactly the parsed fields.");
+            var values = parsed.SchemaFields.Fields.ToDictionary(field => field.Id, field => field.Value);
+            foreach (var field in original.Fields)
+            {
+                if (!anonymizedFields.TryGetValue(field.Id, out string? value) || value is null ||
+                    value.Length != field.Value.Length || value.Any(c => c is < ' ' or > '~') ||
+                    FieldPolicy.IsPnr(field.Name) && value != field.Value)
+                    throw new InvalidDataException("Reference protection must preserve field widths and PNRs.");
+                values[field.Id] = value;
+            }
+            return _schemaCodec!.Serialize(parsed.SchemaFields, values);
+        }
         if (anonymizedFields.Count != layout.Fields.Count)
         {
             throw new InvalidDataException("Reference serialization requires exactly the configured fields.");
@@ -283,6 +445,7 @@ public sealed class ReferenceLayoutFeedCodec(ReferenceFeedLayout layout) : IFeed
     public void Validate(ParsedFeed original, ReadOnlyMemory<byte> serialized)
     {
         var before = (ParsedLayout)original.Layout;
+        if (before.SchemaFields is not null) _schemaCodec!.Validate(before.SchemaFields, serialized);
         var rebuilt = Parse(new(before.Message.Delivery, serialized));
         var after = (ParsedLayout)rebuilt.Layout;
         if (after.Envelope.Format != before.Envelope.Format || after.Envelope.Header != before.Envelope.Header ||
