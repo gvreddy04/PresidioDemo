@@ -49,7 +49,7 @@ static class PnrReferenceChecks
         {
             if (rule.Action == FieldAction.Mask)
             {
-                var span = layout.Fields.Single(item => item.Name == field.Id);
+                var span = layout.Fields.Single(item => item.Name == field.Name);
                 Check(rule.MaskCount(field.Value) == span.Length, "PNR mask length matches " + field.Id);
                 values[field.Id] = new string(rule.MaskCharacter[0], span.Length);
                 Array.Fill(expected, (byte)rule.MaskCharacter[0], span.Offset, span.Length);

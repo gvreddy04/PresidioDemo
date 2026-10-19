@@ -94,6 +94,25 @@ All three files retain their original roots and feed sections. Startup validates
 
 The XDR file is not technically required as a separate physical file. However, its structural information is required for variable widths and optional sections. Combining it with the reference file would require adding the same structural definitions there. Keeping the original three files preserves the existing configuration model and loader responsibilities.
 
+## Reviewed field names
+
+Readable aliases replace 38 reference field names and 51 policy paths: three ACI, one ETKT and 34 PNR. Names describe content supported by the samples. Uncertain codes, date purposes, identifiers and general remarks retain their existing names and masking rules. JSON property paths are unchanged.
+
+| Feed | Original field | Policy alias | Evidence and limits |
+| --- | --- | --- | --- |
+| ACI | `Text0088` | `recordTimestamp` | Date and time with fractional seconds |
+| ACI | `Text0792` | `recordTime` | Matches the time component of the timestamp across all six examples |
+| ACI | `Text0492` | `secondaryAirlineCode` | Second airline-code field, populated with UA in all six examples |
+| ETKT | `Text0172` | `ticketStatusRecord` | Eight-character masked prefix followed by readable status text; the `StatusText` capture is kept |
+| PNR | `NameText0400`, `NameText0440` | `passengerSurname`, `passengerGivenName` | Match the surname/given-name pair in DOCS and contact records |
+| PNR | `Docs0496`, `ContactEmail0876`, `ContactPhone0972` | `travelDocumentRecord`, `emailContactRecord`, `phoneContactRecord` | Reviewed DOCS, CTCE and CTCM prefixes and named captures |
+| PNR | `NameText1880`, `NameText1984`, `NameText5276` | `passengerNameOccurrence1` through `passengerNameOccurrence3` | Repeated full-name occurrences; suffixes do not imply different passengers |
+| PNR | Address, membership, account, ticket and fare records with numeric offset suffixes | Descriptive record aliases such as `addressPostalCodeRecord`, `loyaltyMembershipRecord`, `accountBalanceRecord`, `ticketOrderRecord` and `totalFare` | Existing reviewed record syntax/content supports these names; actions and capture widths are unchanged |
+
+Confirmed top-level string names now agree across all three XML files. For example, XDR declares `<string name="recordTimestamp" max="4096" />`, the reference declares `<text name="recordTimestamp" offset="88" length="21" />`, and policies declare `<field name="/recordTimestamp" identification="None" action="Keep" />`. The 38 redundant alias paths are removed. The three nested ACI optional-string paths remain explicit because their reference aliases differ from their structural paths. Existing explicit path aliases remain supported by the loader.
+
+Only XDR string names change: field order, word counts, bounds, optional groups and width-preservation settings stay the same. Date-only fields such as ACI `Text0020` retain their names because the samples do not establish their exact business purpose. Existing custom configurations need matching name/path changes for renamed XDR keys and policies. `Text0132` remains a removed false string inference, not a renamed field. A configuration regression check requires every XDR string to have exactly one reference mapping and every exposed scalar/capture to have exactly one policy, with consistent top-level names and configured flags.
+
 ## Extensions to the original approach
 
 The listener, transport, workflows and Python host retain the original processing flow. Existing configuration filenames and CLI switches remain available. The reference codec delegates structural reading to the existing XDR codec only when `schemaDriven="true"`. Original reference configurations without this flag retain their pinned sample/template behavior and their runtime reference-file requirement. The JSON codec is unchanged; its registry adds the selection of schema-driven reference mappings before ordinary XDR routing.
@@ -192,4 +211,6 @@ src/.venv/Scripts/python.exe tests/run_sample_verification.py
 
 The verification command retains outputs, transaction logs and a value-free `verification.json` in a fresh `.test-runs/e2e-*` folder. Across the 15 supplied samples, 158 populated fields have Mask policies, 233 are kept, and 51 JSON scalars have Replace policies. Forty-three replacements changed; eight empty/null values remained unchanged. All 19 identified PNR occurrences, source hashes and binary framing were preserved.
 
-Latest run: **20 October 2026, 01:12:09 IST**, with 15 published, zero failures and zero pending inputs. [Verification evidence](../.test-runs/e2e-20261020-011209-24a203a4/verification.json) and [outputs](../.test-runs/e2e-20261020-011209-24a203a4/docs/output-feeds) are retained locally. The run folder is ignored by Git and contains original-value transaction logs. Regression checks cover equivalent original and compact word declarations across all 13 binary samples, invalid shorthand settings, changed string widths, legacy configuration compatibility, exact no-op round trips, idempotent real Presidio protection, malformed framing, startup validation and delivery/retention behavior.
+Latest run: **20 October 2026, 01:46:56 IST**, with 15 published, zero failures and zero pending inputs. [Verification evidence](../.test-runs/e2e-20261020-014656-f40d3f64/verification.json) and [outputs](../.test-runs/e2e-20261020-014656-f40d3f64/docs/output-feeds) are retained locally. The run folder is ignored by Git and contains original-value transaction logs. Regression checks cover equivalent original and compact word declarations across all 13 binary samples, invalid shorthand settings, changed string widths, legacy configuration compatibility, exact no-op round trips, idempotent real Presidio protection, malformed framing, startup validation and delivery/retention behavior.
+
+The synchronized XML configuration preserves all 15 output files byte-for-byte against the prior verified run. The [XML synchronization audit](../.test-runs/e2e-20261020-014656-f40d3f64/xml-sync-audit.json) records matching mapping counts, unchanged policy settings and configuration hashes without personal values. The clean build, .NET pipeline checks and all 39 Python tests passed, including the new cross-file synchronization check.

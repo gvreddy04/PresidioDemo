@@ -50,7 +50,7 @@ class PnrFeedTests(unittest.TestCase):
 
     def test_raw_reference_can_change_selected_same_width_values_and_keep_pnr(self):
         raw = bytearray(payload((PROJECT / "docs/sample-docs/PNR.txt").read_bytes()))
-        replacements = {"/pnr": "K7QX2M", "/NameText0400": "SMITH", "/NameText0440": "EMMA"}
+        replacements = {"/pnr": "K7QX2M", "/passengerSurname": "SMITH", "/passengerGivenName": "EMMA"}
         for name, start, length in field_spans("PNR"):
             if name in replacements:
                 value = replacements[name].encode("ascii")

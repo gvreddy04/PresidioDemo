@@ -1,5 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <feedPolicies>
+  <!-- Binary field names match reference-layouts.xml aliases, not baseline byte offsets.
+       Confirmed top-level names match XDR strings; reference paths map nested optional fields.
+       Text/Identifier/Remark names remain where the exact business meaning is unconfirmed.
+       Names alone never change Keep/Mask decisions; every existing action is retained. -->
   <catalog>
     <!--Optional shared rules. Existing inline feed/field policies remain supported unchanged.-->
     <!-- maskCharacters="all" uses the actual value width, including punctuation and spaces.
@@ -21,11 +25,14 @@
     <policy id="MaskAddress" identification="Known" action="Mask" entity="ADDRESS" maskCharacters="all" maskCharacter="*" />
   </catalog>
   <feed type="ACI" configured="true">
+    <!-- Date-only Text fields retain original names because their exact roles are unconfirmed.
+         recordTime matches the time component of recordTimestamp.
+         seatNumber is a legacy alias with unconfirmed meaning and remains masked. -->
     <field name="/airlineCode" identification="None" action="Keep" />
     <field name="/Text0020" identification="None" action="Keep" />
     <field name="/origin" identification="None" action="Keep" />
     <field name="/Text0072" policy="MaskUnclassifiedIdentifier" />
-    <field name="/Text0088" identification="None" action="Keep" />
+    <field name="/recordTimestamp" identification="None" action="Keep" />
     <field name="/destination" identification="None" action="Keep" />
     <field name="/Text0144" policy="MaskUnclassifiedIdentifier" />
     <field name="/Text0152" policy="MaskUnclassifiedIdentifier" />
@@ -37,9 +44,9 @@
     <field name="/pnr" identification="None" action="Keep" />
     <field name="/rawPassengerName" policy="MaskPerson" />
     <field name="/Text0468" policy="MaskUnclassifiedIdentifier" />
-    <field name="/Text0492" identification="None" action="Keep" />
+    <field name="/secondaryAirlineCode" identification="None" action="Keep" />
     <field name="/Text0504" identification="None" action="Keep" />
-    <field name="/Text0792" identification="None" action="Keep" />
+    <field name="/recordTime" identification="None" action="Keep" />
     <field name="/Text0808" identification="None" action="Keep" />
     <field name="/Text0840" policy="MaskUnclassifiedIdentifier" />
     <field name="/RecordReference/Prefix" policy="MaskUnclassifiedIdentifier" />
@@ -49,6 +56,8 @@
     <field name="/OptionalGroupA_value_Counted138" policy="MaskUnclassifiedIdentifier" />
   </feed>
   <feed type="ETKT" configured="true">
+    <!-- ticketStatusRecord contains an uncertain prefix and readable status text.
+         Text0044/Text0072/Text0088 and both additional locators remain unconfirmed. -->
     <field name="/entryDate" identification="None" action="Keep" />
     <field name="/entryTime" identification="None" action="Keep" />
     <field name="/pnr" identification="None" action="Keep" />
@@ -56,8 +65,8 @@
     <field name="/Text0072" policy="MaskUnclassifiedIdentifier" />
     <field name="/Text0088" policy="MaskUnclassifiedIdentifier" />
     <field name="/ticketNumber" policy="MaskTicketReference" />
-    <field name="/Text0172/Prefix" policy="MaskUnclassifiedIdentifier" />
-    <field name="/Text0172/Remainder" identification="None" action="Keep" />
+    <field name="/ticketStatusRecord/Prefix" policy="MaskUnclassifiedIdentifier" />
+    <field name="/ticketStatusRecord/StatusText" identification="None" action="Keep" />
     <field name="/Flight1Airline" identification="None" action="Keep" />
     <field name="/Flight1Number" identification="None" action="Keep" />
     <field name="/Flight1Date" identification="None" action="Keep" />
@@ -78,6 +87,9 @@
     <field name="/UnconfirmedLocator2" policy="MaskUnclassifiedIdentifier" />
   </feed>
   <feed type="PNR" configured="true">
+    <!-- Record names follow identifiable DOCS/CTCE/CTCM, address, account and fare content.
+         Occurrence/record suffixes distinguish fields, not passenger associations.
+         Event dates, identifiers and general remarks retain existing names when roles are unclear. -->
     <field name="/EventDate0012" identification="None" action="Keep" />
     <field name="/EventTime0028" identification="None" action="Keep" />
     <field name="/EventDate0036" identification="None" action="Keep" />
@@ -88,19 +100,19 @@
     <field name="/EventDate0196" identification="None" action="Keep" />
     <field name="/Identifier0284" policy="MaskUnclassifiedIdentifier" />
     <field name="/FlightNumber0336" identification="None" action="Keep" />
-    <field name="/NameText0400" policy="MaskPerson" />
-    <field name="/NameText0440" policy="MaskPerson" />
-    <field name="/Docs0496/DateOfBirth1" policy="MaskDateOfBirth" />
-    <field name="/Docs0496/Gender1" policy="MaskGender" />
-    <field name="/Docs0496/PassengerName1" policy="MaskPerson" />
-    <field name="/Docs0496/PassengerName2" policy="MaskPerson" />
+    <field name="/passengerSurname" policy="MaskPerson" />
+    <field name="/passengerGivenName" policy="MaskPerson" />
+    <field name="/travelDocumentRecord/DateOfBirth1" policy="MaskDateOfBirth" />
+    <field name="/travelDocumentRecord/Gender1" policy="MaskGender" />
+    <field name="/travelDocumentRecord/PassengerName1" policy="MaskPerson" />
+    <field name="/travelDocumentRecord/PassengerName2" policy="MaskPerson" />
     <field name="/Remark0592" policy="MaskSensitiveAttribute" />
     <field name="/Remark0696" policy="MaskSensitiveAttribute" />
     <field name="/Remark0796" policy="MaskSensitiveAttribute" />
-    <field name="/ContactEmail0876/Email1" policy="MaskEmailAddress" />
-    <field name="/ContactEmail0876/PassengerName1" policy="MaskPerson" />
-    <field name="/ContactPhone0972/Phone1" policy="MaskPhoneNumber" />
-    <field name="/ContactPhone0972/PassengerName1" policy="MaskPerson" />
+    <field name="/emailContactRecord/EmailAddress" policy="MaskEmailAddress" />
+    <field name="/emailContactRecord/PassengerName1" policy="MaskPerson" />
+    <field name="/phoneContactRecord/PhoneNumber" policy="MaskPhoneNumber" />
+    <field name="/phoneContactRecord/PassengerName1" policy="MaskPerson" />
     <field name="/Remark1052" policy="MaskSensitiveAttribute" />
     <field name="/Remark1140" policy="MaskSensitiveAttribute" />
     <field name="/Remark1228" policy="MaskSensitiveAttribute" />
@@ -108,16 +120,16 @@
     <field name="/Remark1388" policy="MaskSensitiveAttribute" />
     <field name="/Remark1488" policy="MaskSensitiveAttribute" />
     <field name="/Remark1572" policy="MaskSensitiveAttribute" />
-    <field name="/Ticket1628/PassengerName1" policy="MaskPerson" />
-    <field name="/Ticket1628/TicketReference1" policy="MaskTicketReference" />
-    <field name="/Ticket1732/PassengerName1" policy="MaskPerson" />
-    <field name="/Ticket1732/TicketReference1" policy="MaskTicketReference" />
-    <field name="/Loyalty1860/Account1" policy="MaskLoyaltyNumber" />
-    <field name="/Loyalty1860/Status1" policy="MaskSensitiveAttribute" />
-    <field name="/NameText1880" policy="MaskPerson" />
-    <field name="/Loyalty1964/Account1" policy="MaskLoyaltyNumber" />
-    <field name="/Loyalty1964/Status1" policy="MaskSensitiveAttribute" />
-    <field name="/NameText1984" policy="MaskPerson" />
+    <field name="/ticketRecord1/PassengerName1" policy="MaskPerson" />
+    <field name="/ticketRecord1/TicketReference1" policy="MaskTicketReference" />
+    <field name="/ticketRecord2/PassengerName1" policy="MaskPerson" />
+    <field name="/ticketRecord2/TicketReference1" policy="MaskTicketReference" />
+    <field name="/loyaltyRecord1/Account1" policy="MaskLoyaltyNumber" />
+    <field name="/loyaltyRecord1/Status1" policy="MaskSensitiveAttribute" />
+    <field name="/passengerNameOccurrence1" policy="MaskPerson" />
+    <field name="/loyaltyRecord2/Account1" policy="MaskLoyaltyNumber" />
+    <field name="/loyaltyRecord2/Status1" policy="MaskSensitiveAttribute" />
+    <field name="/passengerNameOccurrence2" policy="MaskPerson" />
     <field name="/PhonePart2052" policy="MaskPhoneNumber" />
     <field name="/PhonePart2060" policy="MaskPhoneNumber" />
     <field name="/Remark2112" policy="MaskSensitiveAttribute" />
@@ -143,43 +155,43 @@
     <field name="/Remark2956" policy="MaskSensitiveAttribute" />
     <field name="/Remark3012" policy="MaskSensitiveAttribute" />
     <field name="/Remark3064" policy="MaskSensitiveAttribute" />
-    <field name="/Membership3100/PassengerName1" policy="MaskPerson" />
-    <field name="/Membership3100/Account1" policy="MaskLoyaltyNumber" />
-    <field name="/Membership3100/Status1" policy="MaskSensitiveAttribute" />
-    <field name="/Sponsor3172/Account1" policy="MaskLoyaltyNumber" />
-    <field name="/AccountBalance3228/Balance1" policy="MaskFinancialInformation" />
+    <field name="/loyaltyMembershipRecord/PassengerName1" policy="MaskPerson" />
+    <field name="/loyaltyMembershipRecord/Account1" policy="MaskLoyaltyNumber" />
+    <field name="/loyaltyMembershipRecord/Status1" policy="MaskSensitiveAttribute" />
+    <field name="/loyaltySponsorRecord/Account1" policy="MaskLoyaltyNumber" />
+    <field name="/accountBalanceRecord/Balance1" policy="MaskFinancialInformation" />
     <field name="/Mileage3308" identification="None" action="Keep" />
     <field name="/MileageQuote3384" identification="None" action="Keep" />
-    <field name="/OfficeReference3456/Identifier1" policy="MaskUnclassifiedIdentifier" />
-    <field name="/EmailRemark3508/Email1" policy="MaskEmailAddress" />
+    <field name="/iataMsoIdRecord/Identifier1" policy="MaskUnclassifiedIdentifier" />
+    <field name="/requestedEmailRecord/Email1" policy="MaskEmailAddress" />
     <field name="/FareRemark3576" identification="None" action="Keep" />
-    <field name="/QuoteReference3664/Reference1" policy="MaskOrderId" />
+    <field name="/fareQuoteReferenceRecord/Reference1" policy="MaskOrderId" />
     <field name="/Remark3740" policy="MaskSensitiveAttribute" />
-    <field name="/TicketOrder3816/Reference1" policy="MaskOrderId" />
-    <field name="/AddressName3896/Value1" policy="MaskPerson" />
-    <field name="/AddressStreet3940/Value1" policy="MaskAddress" />
-    <field name="/AddressCity3988/Value1" policy="MaskAddress" />
-    <field name="/AddressState4032/Value1" policy="MaskAddress" />
-    <field name="/AddressZip4072/Value1" policy="MaskAddress" />
-    <field name="/AddressText4116/Value1" policy="MaskAddress" />
-    <field name="/RviReference4168/Reference1" policy="MaskUnclassifiedIdentifier" />
+    <field name="/ticketOrderRecord/Reference1" policy="MaskOrderId" />
+    <field name="/addressRecipientRecord/RecipientName" policy="MaskPerson" />
+    <field name="/addressStreetRecord/Street" policy="MaskAddress" />
+    <field name="/addressCityRecord/City" policy="MaskAddress" />
+    <field name="/addressStateRecord/State" policy="MaskAddress" />
+    <field name="/addressPostalCodeRecord/PostalCode" policy="MaskAddress" />
+    <field name="/additionalAddressRecord/AdditionalText" policy="MaskAddress" />
+    <field name="/rviReferenceRecord/Reference1" policy="MaskUnclassifiedIdentifier" />
     <field name="/Remark4240" policy="MaskSensitiveAttribute" />
-    <field name="/PaymentRemark4316/ApprovalReference1" policy="MaskPaymentReference" />
-    <field name="/MileageOrder4384/Reference1" policy="MaskOrderId" />
+    <field name="/paymentApprovalRecord/ApprovalReference1" policy="MaskPaymentReference" />
+    <field name="/mileageOrderRecord/Reference1" policy="MaskOrderId" />
     <field name="/Remark4468" policy="MaskSensitiveAttribute" />
     <field name="/Remark4544" policy="MaskSensitiveAttribute" />
     <field name="/Remark4624" policy="MaskSensitiveAttribute" />
     <field name="/Remark4700" policy="MaskSensitiveAttribute" />
     <field name="/Remark4780" policy="MaskSensitiveAttribute" />
-    <field name="/FareTicket4860/Account1" policy="MaskLoyaltyNumber" />
-    <field name="/FareTicket4860/TicketReference1" policy="MaskTicketReference" />
-    <field name="/LoyaltyReference4944/Account1" policy="MaskLoyaltyNumber" />
+    <field name="/fareTicketRecord/Account1" policy="MaskLoyaltyNumber" />
+    <field name="/fareTicketRecord/TicketReference1" policy="MaskTicketReference" />
+    <field name="/loyaltyReferenceRecord/Account1" policy="MaskLoyaltyNumber" />
     <field name="/Remark5000" policy="MaskSensitiveAttribute" />
-    <field name="/FareQuote5036" identification="None" action="Keep" />
-    <field name="/PassengerCountText5088" identification="None" action="Keep" />
-    <field name="/FareAmounts5136" identification="None" action="Keep" />
-    <field name="/TotalFare5216" identification="None" action="Keep" />
-    <field name="/NameText5276" policy="MaskPerson" />
+    <field name="/fareQuote" identification="None" action="Keep" />
+    <field name="/passengerCountText" identification="None" action="Keep" />
+    <field name="/fareAmounts" identification="None" action="Keep" />
+    <field name="/totalFare" identification="None" action="Keep" />
+    <field name="/passengerNameOccurrence3" policy="MaskPerson" />
     <field name="/EventDate5344" identification="None" action="Keep" />
     <field name="/EventTime5356" identification="None" action="Keep" />
     <field name="/Identifier5364" policy="MaskUnclassifiedIdentifier" />

@@ -1,4 +1,4 @@
-"""Keep the single master schema and shared catalog aligned with reviewed samples."""
+"""Keep all three XML configurations aligned with reviewed samples."""
 import json
 import unittest
 import xml.etree.ElementTree as ET
@@ -10,6 +10,49 @@ from test_seats_feed import payload
 
 
 class ConfigurationCleanupTests(unittest.TestCase):
+    def test_binary_names_and_bindings_are_in_sync(self):
+        schemas = ET.parse(SCHEMA)
+        references = ET.parse(REFERENCE)
+        policies = ET.parse(CATALOG)
+
+        def string_paths(node, path):
+            if node.tag == "string":
+                return {path: node}
+            if node.tag == "struct":
+                result = {}
+                for child in node:
+                    result.update(string_paths(child, path + "/" + child.get("name")))
+                return result
+            if node.tag in {"optional", "array", "fixedArray"}:
+                suffix = "/value" if node.tag == "optional" else "/*"
+                return string_paths(node[0], path + suffix)
+            return {}
+
+        for feed in references.findall("feed"):
+            route = feed.get("type")
+            schema = schemas.find(f"feed[@type='{route}']")
+            policy = policies.find(f"feed[@type='{route}']")
+            self.assertEqual(schema.get("configured"), policy.get("configured"))
+            strings = {}
+            for node in schema:
+                strings.update(string_paths(node, "/" + node.get("name")))
+            mappings = {text.get("path", "/" + text.get("name")): text for text in feed}
+            self.assertEqual(set(strings), set(mappings), route + " must map every XDR string exactly once")
+            self.assertEqual(len(mappings), len(feed), route + " must not repeat a reference path")
+            expected = set()
+            for path, text in mappings.items():
+                alias = "/" + text.get("name")
+                if "/" not in path[1:]:
+                    self.assertEqual(alias, path, route + " top-level names must match across XML files")
+                    self.assertNotIn("path", text.attrib, "Matching top-level names need no alias path")
+                if len(text):
+                    expected.update(alias + "/" + part.get("name") for part in text if part.get("fixed") != "true")
+                else:
+                    expected.add(alias)
+            actual = [field.get("name") for field in policy]
+            self.assertEqual(len(actual), len(set(actual)), route + " must not repeat policy paths")
+            self.assertEqual(expected, set(actual), route + " policies must cover exactly the exposed fields")
+
     def test_original_three_formats_with_optional_extensions(self):
         master = ET.parse(SCHEMA).getroot()
         self.assertEqual(master.tag, "xdrLayouts")
