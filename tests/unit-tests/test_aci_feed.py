@@ -51,20 +51,20 @@ class AciFeedTests(unittest.TestCase):
 
     def test_actual_mq_export_preserves_all_bytes_except_configured_masks(self):
         original = (PROJECT / "docs/sample-docs/ACI.txt").read_bytes()
-        self.assertEqual(verify_output(original, self.deliver("original-aci.txt", original)), {"Keep": 14, "Mask": 9})
-        self.assertFalse(any("analyzed |" in line and "9 known | 0 analyzed" not in line
+        self.assertEqual(verify_output(original, self.deliver("original-aci.txt", original)), {"Keep": 20, "Mask": 3})
+        self.assertFalse(any("analyzed |" in line and "3 known | 0 analyzed" not in line
                              for line in self.listener.lines if "ACI" in line and "FIELDS" in line))
 
     def test_raw_payload_and_different_values_use_the_same_field_configuration(self):
         raw = bytearray(payload((PROJECT / "docs/sample-docs/ACI.txt").read_bytes()))
-        values = {"/rawPassengerName": "CARTER/EMMA", "/Text0840": "EMMAID00001",
-                  "/pnr": "K7QX2M", "/RecordReference/pnr": "K7QX2M", "/RecordReference/Prefix": "000000002"}
+        values = {"/passengerName": "CARTER/EMMA", "/unresolvedIdentifier": "EMMAID00001",
+                  "/pnr": "K7QX2M", "/unresolvedRecordReference/pnr": "K7QX2M", "/unresolvedRecordReference/Prefix": "000000002"}
         for name, start, length in field_spans():
             if name in values:
                 encoded = values[name].encode("ascii")
                 self.assertEqual(len(encoded), length)
                 raw[start:start + length] = encoded
-        self.assertEqual(verify_output(bytes(raw), self.deliver("changed-values.bin", raw), raw=True), {"Keep": 14, "Mask": 9})
+        self.assertEqual(verify_output(bytes(raw), self.deliver("changed-values.bin", raw), raw=True), {"Keep": 20, "Mask": 3})
 
     def test_changed_unclassified_binary_region_is_retained(self):
         raw = bytearray(payload((PROJECT / "docs/sample-docs/ACI.txt").read_bytes()))
@@ -80,9 +80,9 @@ class AciFeedTests(unittest.TestCase):
             original = (PROJECT / "docs/sample-docs/ACI.txt").read_bytes()
             (sources / "ACI.txt").write_bytes(original)
             schema = ET.parse(PROJECT / "src/config/feed-policies.xml")
-            field = schema.find("feed[@type='ACI']/field[@name='/Text0152']")
+            field = schema.find("feed[@type='ACI']/field[@name='/unresolvedIdentifier']")
             field.attrib.clear()
-            field.attrib.update(name="/Text0152", identification="None", action="Keep")
+            field.attrib.update(name="/unresolvedIdentifier", identification="None", action="Keep")
             schema_file = root / "schema.xml"
             schema.write(schema_file, encoding="utf-8", xml_declaration=True)
             docs = root / "docs"
@@ -94,7 +94,7 @@ class AciFeedTests(unittest.TestCase):
             report = json.loads(report_file.read_text())
             self.assertTrue(report["AllPublished"])
             output = Path(report["Items"][0]["OutputFile"]).read_bytes()
-            self.assertEqual(verify_reference_output("ACI", original, output, policy_file=schema_file), {"Keep": 15, "Mask": 8})
+            self.assertEqual(verify_reference_output("ACI", original, output, policy_file=schema_file), {"Keep": 21, "Mask": 2})
             self.assertEqual((sources / "ACI.txt").read_bytes(), original)
 
 

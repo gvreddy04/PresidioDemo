@@ -3,7 +3,7 @@
   <!-- Binary field names match reference-layouts.xml aliases, not baseline byte offsets.
        Confirmed top-level names match XDR strings; reference paths map nested optional fields.
        Text/Identifier/Remark names remain where the exact business meaning is unconfirmed.
-       Names alone never change Keep/Mask decisions; every existing action is retained. -->
+       ACI actions reflect the approved structure review; other feed actions are retained. -->
   <catalog>
     <!--Optional shared rules. Existing inline feed/field policies remain supported unchanged.-->
     <!-- maskCharacters="all" uses the actual value width, including punctuation and spaces.
@@ -25,35 +25,35 @@
     <policy id="MaskAddress" identification="Known" action="Mask" entity="ADDRESS" maskCharacters="all" maskCharacter="*" />
   </catalog>
   <feed type="ACI" configured="true">
-    <!-- Date-only Text fields retain original names because their exact roles are unconfirmed.
-         recordTime matches the time component of recordTimestamp.
-         seatNumber is a legacy alias with unconfirmed meaning and remains masked. -->
+    <!-- Confirmed operational values are kept. Passenger names, seat assignments,
+         loyalty numbers and unresolved identifiers stay masked. Numeric passenger IDs are
+         deliberately preserved and association-checked; tokenization is outside this rewrite. -->
     <field name="/airlineCode" identification="None" action="Keep" />
-    <field name="/Text0020" identification="None" action="Keep" />
-    <field name="/origin" identification="None" action="Keep" />
-    <field name="/Text0072" policy="MaskUnclassifiedIdentifier" />
-    <field name="/recordTimestamp" identification="None" action="Keep" />
-    <field name="/destination" identification="None" action="Keep" />
-    <field name="/Text0144" policy="MaskUnclassifiedIdentifier" />
-    <field name="/Text0152" policy="MaskUnclassifiedIdentifier" />
-    <field name="/seatNumber" policy="MaskUnclassifiedIdentifier" />
-    <field name="/Text0172" policy="MaskUnclassifiedIdentifier" />
-    <field name="/Text0188" identification="None" action="Keep" />
-    <field name="/Text0204" identification="None" action="Keep" />
-    <field name="/Text0220" identification="None" action="Keep" />
+    <field name="/flightDate" identification="None" action="Keep" />
+    <field name="/terminatingCity" identification="None" action="Keep" />
+    <field name="/flightProcessName" identification="None" action="Keep" />
+    <field name="/flightAciTimestamp" identification="None" action="Keep" />
+    <field name="/legCity" identification="None" action="Keep" />
+    <field name="/equipmentCode" identification="None" action="Keep" />
+    <field name="/aircraftNumber" identification="None" action="Keep" />
+    <field name="/departureGate" identification="None" action="Keep" />
+    <field name="/sectorNumber" identification="None" action="Keep" />
+    <field name="/estimatedDepartureDate" identification="None" action="Keep" />
+    <field name="/scheduledDepartureDate" identification="None" action="Keep" />
+    <field name="/boardingDate" identification="None" action="Keep" />
     <field name="/pnr" identification="None" action="Keep" />
-    <field name="/rawPassengerName" policy="MaskPerson" />
-    <field name="/Text0468" policy="MaskUnclassifiedIdentifier" />
-    <field name="/secondaryAirlineCode" identification="None" action="Keep" />
-    <field name="/Text0504" identification="None" action="Keep" />
-    <field name="/recordTime" identification="None" action="Keep" />
-    <field name="/Text0808" identification="None" action="Keep" />
-    <field name="/Text0840" policy="MaskUnclassifiedIdentifier" />
-    <field name="/RecordReference/Prefix" policy="MaskUnclassifiedIdentifier" />
-    <field name="/RecordReference/pnr" identification="None" action="Keep" />
-    <field name="/OptionalGroupB_value_Counted137" policy="MaskUnclassifiedIdentifier" />
-    <field name="/OptionalGroupA_value_Counted135" policy="MaskUnclassifiedIdentifier" />
-    <field name="/OptionalGroupA_value_Counted138" policy="MaskUnclassifiedIdentifier" />
+    <field name="/passengerName" policy="MaskPerson" />
+    <field name="/passengerProcessName" identification="None" action="Keep" />
+    <field name="/passengerFlightAirline" identification="None" action="Keep" />
+    <field name="/passengerFlightDate" identification="None" action="Keep" />
+    <field name="/aciTransactionTime" identification="None" action="Keep" />
+    <field name="/aciTransactionDate" identification="None" action="Keep" />
+    <field name="/unresolvedIdentifier" policy="MaskUnclassifiedIdentifier" />
+    <field name="/unresolvedRecordReference/Prefix" policy="MaskUnclassifiedIdentifier" />
+    <field name="/unresolvedRecordReference/pnr" identification="None" action="Keep" />
+    <field name="/frequentTravelerNumber" identification="Known" action="Mask" entity="LOYALTY_NUMBER" maskCharacters="all" maskCharacter="*" />
+    <field name="/passengerSeatNumber" policy="MaskUnclassifiedIdentifier" />
+    <field name="/unresolvedSeatString" policy="MaskUnclassifiedIdentifier" />
   </feed>
   <feed type="ETKT" configured="true">
     <!-- ticketStatusRecord contains an uncertain prefix and readable status text.

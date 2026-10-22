@@ -9,33 +9,35 @@
        Rename only content identified in the samples. Uncertain codes keep their legacy names.
        Numbered name occurrences identify wire order, not different passengers. Date-only
        fields retain original names when their business purpose cannot be established. -->
-  <feed type="ACI" name="AciReference888" referenceFile="../../docs/sample-docs/ACI.txt" referenceSha256="f038c05e590ade818748f6547c2a624d8d662a52c54d3596ad93649eafce022d" schemaDriven="true">
+  <feed type="ACI" name="AciReference888" referenceFile="../../docs/sample-docs/ACI.txt" referenceSha256="f038c05e590ade818748f6547c2a624d8d662a52c54d3596ad93649eafce022d" schemaDriven="true" aciStructures="true">
+    <!-- Business aliases verified against C-structure definitions and all six samples.
+         origin was actually terminating city; seatNumber was actually departure gate. -->
     <!--Offsets/lengths retain reviewed baseline values. schemaDriven uses XDR for actual positions/widths; referenceFile/hash are provenance only in this mode.-->
     <text name="airlineCode" offset="8" length="2" />
-    <text name="Text0020" offset="20" length="8" />
-    <text name="origin" offset="40" length="3" />
-    <text name="Text0072" offset="72" length="6" />
-    <text name="recordTimestamp" offset="88" length="21" />
-    <text name="destination" offset="124" length="3" />
-    <text name="Text0144" offset="144" length="3" />
-    <text name="Text0152" offset="152" length="4" />
-    <text name="seatNumber" offset="160" length="4" />
-    <text name="Text0172" offset="172" length="4" />
-    <text name="Text0188" offset="188" length="8" />
-    <text name="Text0204" offset="204" length="8" />
-    <text name="Text0220" offset="220" length="8" />
+    <text name="flightDate" offset="20" length="8" />
+    <text name="terminatingCity" offset="40" length="3" />
+    <text name="flightProcessName" offset="72" length="6" />
+    <text name="flightAciTimestamp" offset="88" length="21" />
+    <text name="legCity" offset="124" length="3" />
+    <text name="equipmentCode" offset="144" length="3" />
+    <text name="aircraftNumber" offset="152" length="4" />
+    <text name="departureGate" offset="160" length="4" />
+    <text name="sectorNumber" offset="172" length="4" />
+    <text name="estimatedDepartureDate" offset="188" length="8" />
+    <text name="scheduledDepartureDate" offset="204" length="8" />
+    <text name="boardingDate" offset="220" length="8" />
     <text name="pnr" offset="404" length="6" pattern="[A-Z0-9]{6}" />
-    <text name="rawPassengerName" offset="424" length="11" />
-    <text name="Text0468" offset="468" length="6" />
-    <text name="secondaryAirlineCode" offset="492" length="2" />
-    <text name="Text0504" offset="504" length="8" />
-    <text name="OptionalGroupA_value_Counted135" offset="672" length="3" path="/OptionalGroupA/value/Counted135" optional="true" />
-    <text name="OptionalGroupB_value_Counted137" offset="680" length="8" path="/OptionalGroupB/value/Counted137" optional="true" />
-    <text name="OptionalGroupA_value_Counted138" offset="688" length="1" path="/OptionalGroupA/value/Counted138" optional="true" />
-    <text name="recordTime" offset="792" length="12" />
-    <text name="Text0808" offset="808" length="8" />
-    <text name="Text0840" offset="840" length="11" />
-    <text name="RecordReference" offset="856" length="15" optional="true" pattern="(?&lt;Prefix&gt;[0-9*]*)(?&lt;pnr&gt;[A-Z0-9]{6})" allowEmpty="true">
+    <text name="passengerName" offset="424" length="11" />
+    <text name="passengerProcessName" offset="468" length="6" />
+    <text name="passengerFlightAirline" offset="492" length="2" />
+    <text name="passengerFlightDate" offset="504" length="8" />
+    <text name="passengerSeatNumber" offset="672" length="3" path="/OptionalGroupA/value/Counted135" optional="true" />
+    <text name="frequentTravelerNumber" offset="680" length="8" path="/OptionalGroupB/value/Counted137" optional="true" />
+    <text name="unresolvedSeatString" offset="688" length="1" path="/OptionalGroupA/value/Counted138" optional="true" />
+    <text name="aciTransactionTime" offset="792" length="12" />
+    <text name="aciTransactionDate" offset="808" length="8" />
+    <text name="unresolvedIdentifier" offset="840" length="11" />
+    <text name="unresolvedRecordReference" offset="856" length="15" optional="true" pattern="(?&lt;Prefix&gt;[0-9*]*)(?&lt;pnr&gt;[A-Z0-9]{6})" allowEmpty="true">
       <part name="Prefix" start="0" length="9" />
       <part name="pnr" start="9" length="6" equalTo="/pnr" />
     </text>

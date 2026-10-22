@@ -160,6 +160,7 @@ try
     ReferenceLayoutChecks.Run(projectRoot, docsRoot);
     PnrReferenceChecks.Run(projectRoot, docsRoot);
     XdrCodecChecks.Run(projectRoot, docsRoot);
+    await NoAnonymizationRoundTripChecks.RunAsync(projectRoot, Path.Combine(docsRoot, "round-trip-checks"));
     PythonHost.Start();
     started = true;
     var protector = new PresidioFeedProtector();

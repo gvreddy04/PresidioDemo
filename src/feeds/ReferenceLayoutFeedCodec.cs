@@ -18,6 +18,7 @@ public sealed class ReferenceFeedLayout
     private readonly bool[] _fieldBytes;
 
     internal XdrFeedSchema? Schema { get; }
+    internal bool UseAciStructures { get; init; }
     internal IReadOnlyDictionary<string, string> Aliases { get; } = new Dictionary<string, string>();
     internal IReadOnlySet<string> RequiredPaths { get; } = new HashSet<string>();
 
@@ -106,7 +107,7 @@ public static class ReferenceLayoutConfiguration
         var layouts = new Dictionary<FeedType, ReferenceFeedLayout>();
         foreach (var element in root.Elements())
         {
-            Check(element, "feed", ["type", "name", "referenceFile", "referenceSha256", "schemaDriven"]);
+            Check(element, "feed", ["type", "name", "referenceFile", "referenceSha256", "schemaDriven", "aciStructures"]);
             var feed = FeedCatalog.All.SingleOrDefault(item => item.FolderName == Required(element, "type"))
                 ?? throw new InvalidDataException("Unknown reference-layout feed route.");
             if (feed.Type is FeedType.Seats or FeedType.PnrLinking || layouts.ContainsKey(feed.Type))
@@ -115,6 +116,11 @@ public static class ReferenceLayoutConfiguration
             }
             string name = Identifier(Required(element, "name"));
             bool schemaDriven = Flag(element, "schemaDriven");
+            bool useAciStructures = Flag(element, "aciStructures");
+            if (useAciStructures && (feed.Type != FeedType.ACI || !schemaDriven))
+            {
+                throw new InvalidDataException("ACI structures require the ACI schema-driven route.");
+            }
             if (schemaDriven)
             {
                 if (schemas is null || !schemas.TryGetValue(feed.Type, out var schema))
@@ -182,7 +188,10 @@ public static class ReferenceLayoutConfiguration
             if (part.Attribute("equalTo") is { } target && !paths.Contains(target.Value))
                 throw new InvalidDataException("Reference PNR target is not a mapped scalar path.");
         return new(schema.Feed, name, schema with { Fields = mapped, PreserveWidths = true },
-            fields.AsReadOnly(), new ReadOnlyDictionary<string, string>(aliases), required);
+            fields.AsReadOnly(), new ReadOnlyDictionary<string, string>(aliases), required)
+        {
+            UseAciStructures = Flag(element, "aciStructures")
+        };
 
         XdrFieldDefinition Map(XdrFieldDefinition field, string path, bool conditional)
         {
@@ -377,6 +386,16 @@ public sealed class ReferenceLayoutFeedCodec(ReferenceFeedLayout layout) : IFeed
 {
     private readonly XdrFeedCodec? _schemaCodec = layout.Schema is null ? null : new(layout.Feed, layout.Schema);
     private sealed record ParsedLayout(FeedMessage Message, FeedEnvelope Envelope, ParsedFeed? SchemaFields = null);
+
+    internal static IReadOnlyDictionary<string, (int Offset, int Length)> TextLocations(ParsedFeed parsed)
+    {
+        var layout = (ParsedLayout)parsed.Layout;
+        if (layout.SchemaFields is null)
+        {
+            throw new InvalidDataException("ACI requires sequential schema-driven field mappings.");
+        }
+        return XdrFeedCodec.TextLocations(layout.SchemaFields);
+    }
 
     public ParsedFeed Parse(FeedMessage message)
     {

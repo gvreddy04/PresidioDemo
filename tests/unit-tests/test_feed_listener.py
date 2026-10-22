@@ -210,7 +210,7 @@ def main():
             aci_outputs = docs / "output-feeds" / "ACI"
             wait_for(lambda: len(list(aci_outputs.glob("finalized-aci.*.txt"))) == 1 and not aci_input.exists()
                      and not processing_files(docs, "ACI", aci_input.name), "ACI output and acknowledgment")
-            assert verify_aci_output(aci_original, next(aci_outputs.glob("finalized-aci.*.txt")).read_bytes()) == {"Keep": 14, "Mask": 9}
+            assert verify_aci_output(aci_original, next(aci_outputs.glob("finalized-aci.*.txt")).read_bytes()) == {"Keep": 20, "Mask": 3}
             check("the finalized ACI reference export is protected using configuration without NLP and preserves PNR and binary framing")
 
             from reference_feed_support import verify_output as verify_reference_output

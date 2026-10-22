@@ -143,6 +143,13 @@ public sealed class XdrFeedCodec(FeedType feed, XdrFeedSchema? schema) : IFeedCo
 {
     private sealed record Scalar(FeedField Field, string Kind, int Offset, int Length, int Maximum, int ValueLength = 0);
     private sealed record Layout(FeedMessage Message, FeedEnvelope Envelope, IReadOnlyList<Scalar> Scalars, IReadOnlyDictionary<string, string> Structure);
+    internal static IReadOnlyDictionary<string, (int Offset, int Length)> TextLocations(ParsedFeed parsed)
+    {
+        var layout = (Layout)parsed.Layout;
+        return layout.Scalars.Where(scalar => scalar.Kind is "string" or "capture")
+            .ToDictionary(scalar => scalar.Field.Id, scalar => scalar.Kind == "string"
+                ? (scalar.Offset + 4, scalar.ValueLength) : (scalar.Offset, scalar.Length));
+    }
     public ParsedFeed Parse(FeedMessage message)
     {
         if (message.Delivery.Feed != feed || schema is not null && schema.Feed != feed) throw new InvalidDataException("XDR codec, schema and delivery routes do not match.");

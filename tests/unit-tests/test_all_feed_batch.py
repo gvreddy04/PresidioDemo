@@ -95,8 +95,8 @@ class AllFeedBatchTests(unittest.TestCase):
                     output = Path(item["OutputFile"]).read_bytes()
                     if item["Feed"] in ("ACI", "ETKT", "PNR"):
                         keep, mask = {
-                            "ACI.txt": (14, 9), "ACI_02.txt": (14, 9), "ACI_03.txt": (13, 7),
-                            "ACI_04.txt": (13, 8), "ACI_05.txt": (13, 6), "ACI_06.txt": (13, 11),
+                            "ACI.txt": (20, 3), "ACI_02.txt": (20, 3), "ACI_03.txt": (19, 1),
+                            "ACI_04.txt": (19, 2), "ACI_05.txt": (18, 1), "ACI_06.txt": (19, 5),
                             "ETKT.txt": (4, 5), "ETKT_02.txt": (4, 5), "ETKT_03.txt": (20, 5),
                             "ETKT_04.txt": (4, 5), "ETKT_05.txt": (3, 7), "ETKT_06.txt": (4, 5),
                             "PNR.txt": (30, 76),

@@ -8,31 +8,27 @@ The application retains the three original XML formats: reference mappings, feed
 
 The examples use big-endian 32-bit words and counted ASCII strings padded to four bytes. A counted string consists of its byte length, that many text bytes and zero padding. An empty string is a length word of zero, with no value or padding. Missing text is therefore represented structurally, not by a special character. Actual `*` characters in populated fields are masked/placeholder content and are not universal missing-field markers.
 
-ACI has four groups guarded by observed 0/1 words. Zero omits the body; one includes it. The XDR layout expresses these as optional groups. Whether the producer intended an optional record or a collection with an observed maximum count of one remains unconfirmed. Values greater than one are retained without output pending reviewed configuration.
+The ACI declarations establish linked-list pointers guarded by XDR presence words, not array counts. The separate ACI decoder reconstructs their nested structures. The existing XML represents the reviewed sample family, including four variable list presences; it remains the field-policy projection. A broader decoded shape does not automatically have processing approval or policy coverage.
 
 The initial ACI/PNR word is two; ETKT's is five. The schema checks these individual observed discriminators. The old fixed sequence `000000020000000100000002` is removed: subsequent words and string counts are parsed separately, and offsets are calculated while reading each message.
 
-## ACI: one sequence, four optional groups
+## ACI: documented structures and a dedicated module
 
-The 832-byte ACI_03 payload provides the reference sequence for describing size differences below. These are analysis offsets, not runtime instructions.
+The C-structure definitions were checked against all six supplied ACI payloads. The new `src/feeds/ACI` folder separates the XDR reader, writer, decoder, parser, encoder, serializer, models, source definitions, indicators, readable reports and route adapter. The standard application route selects `AciFeedCodec` when the reviewed schema-driven ACI configuration is loaded.
 
-| Group | Presence-word position in ACI_03 | Body bytes in observed examples | Present in |
-| --- | ---: | ---: | --- |
-| A | 652 | 44 | ACI_06 |
-| B | 664 | 44 | ACI_04, ACI_06 |
-| C | 676 | 28 | ACI, ACI_02 |
-| D | 724 | 28 | ACI_06 |
+The decoder follows `seats_assigned` (ERROR=1 / DATA=2), flight/leg/compartment lists, passenger lists, passenger-flight items and nested seat, bag, registration, loyalty, profile, sequence, security, ticket, through-check-in, miscellaneous, history, consolidated-flight, codeshare, tier and transaction-time lists. Four-byte XDR scalar slots must not be confused with C memory sizes. Strings have length words and zero padding; null linked pointers have a zero presence word.
 
-Positions shift when earlier groups are present. The parser follows each presence word and body instead of applying those positions.
+The samples contain one passenger-list node each, including those with party count two. `nbr_prty` is not a node count. The parser checks each passenger-flight `pax_id` against its owning passenger `paxl_id`; names, PNR and node position are not used as unique passenger identity. Numeric IDs remain unchanged by the agreed scope. No tokenization was added.
 
-- ACI/ACI_02: 832 + 28 from C + 12 from a populated source reference + 16 from a populated trailing reference = 888 bytes.
-- ACI_04: 832 + 44 from B = 876 bytes.
-- ACI_06: 832 + 44 from A + 44 from B + 28 from D + 12 from the source reference = 960 bytes.
-- ACI_05: an empty reference saves four encoded bytes; the 13-character name, compared with the usual 11, adds four including padding. Total remains 832 bytes.
+The old `seatNumber` field is `leg_list.dept_gate`, now `departureGate`. The actual passenger seat is `seat_list.seat_nbr`. The old `origin` is `flight_list.trm_cty`, now `terminatingCity`; the leg city is `leg_list.cty_code`, now `legCity`. Confirmed equipment, aircraft number, gate, sector and process fields are kept. Passenger names, actual passenger seat assignments, loyalty numbers and unresolved identifiers retain masks. PNR copies stay unchanged and must agree with the owning passenger.
 
-Airlines, routes, reviewed dates and timestamps are kept. Passenger names, uncertain codes/text and reference-like values are masked. `seatNumber` (legacy field identifier) remains uncertain and masked; the old name alone was insufficient evidence that it was a seat. ACI and ACI_02 contain a PNR copy in a trailing reference. Named captures mask its prefix and require the copy to equal the main six-character PNR. Both PNR occurrences remain unchanged.
+All six samples contain an additional block after transaction times that is not defined in the available structure declarations. With explicit approval, it is represented as `unresolved_extension`: three observed scalar words, two counted strings and a next pointer. Its business meaning is unconfirmed. The first string stays masked; the second retains its reviewed numeric-prefix mask and optional unchanged PNR suffix.
 
-New name widths, empty strings, reference lengths and combinations of the defined optional groups can be read without code changes. New structural members need an XML review.
+Every supplied sample passes complete byte-exact decode/encode and original MQ-export round trips. A separate Python decoder agrees on every scalar value, path, offset and width. The serializer rebuilds the complete XDR payload with the ACI encoder rather than patching source bytes or calling the generic XDR writer. It preserves scalar values, lengths, pointer flags, padding, PNRs and MQ metadata.
+
+The existing XML sequence is retained as a conservative policy projection for this sample family. Every nonempty decoded string must be completely covered by a reviewed field rule. Unreviewed shapes are retained without publication. A synthetic two-passenger case verifies decoder identity links but is intentionally rejected by the current processing projection. No populated sample verifies some documented branches, including the unusual placement of `fcpr_list.next` before spare members. Updated producer XDR routines are still needed to establish wider production support.
+
+The immutable workspace review, decoded examples, searchable transcription, verification evidence are under `D:\Bala_Support\topics\aci\v2`.
 
 ## ETKT: one 136-slot sequence
 
@@ -64,12 +60,12 @@ Counts below describe populated binary text/capture fields. Fixed structural tag
 
 | Sample | Payload bytes | Kept | Masked / Replace |
 | --- | ---: | ---: | ---: |
-| ACI.txt | 888 | 14 | 9 Mask |
-| ACI_02.txt | 888 | 14 | 9 Mask |
-| ACI_03.txt | 832 | 13 | 7 Mask |
-| ACI_04.txt | 876 | 13 | 8 Mask |
-| ACI_05.txt | 832 | 13 | 6 Mask |
-| ACI_06.txt | 960 | 13 | 11 Mask |
+| ACI.txt | 888 | 20 | 3 Mask |
+| ACI_02.txt | 888 | 20 | 3 Mask |
+| ACI_03.txt | 832 | 19 | 1 Mask |
+| ACI_04.txt | 876 | 19 | 2 Mask |
+| ACI_05.txt | 832 | 18 | 1 Mask |
+| ACI_06.txt | 960 | 19 | 5 Mask |
 | ETKT.txt | 672 | 4 | 5 Mask |
 | ETKT_02.txt | 672 | 4 | 5 Mask |
 | ETKT_03.txt | 760 | 20 | 5 Mask |
@@ -96,22 +92,22 @@ The XDR file is not technically required as a separate physical file. However, i
 
 ## Reviewed field names
 
-Readable aliases replace 38 reference field names and 51 policy paths: three ACI, one ETKT and 34 PNR. Names describe content supported by the samples. Uncertain codes, date purposes, identifiers and general remarks retain their existing names and masking rules. JSON property paths are unchanged.
+ACI aliases now use the documented meanings described above. Earlier ETKT and PNR alias work is retained, with unresolved business meanings labeled accordingly. JSON property paths are unchanged.
 
 | Feed | Original field | Policy alias | Evidence and limits |
 | --- | --- | --- | --- |
-| ACI | `Text0088` | `recordTimestamp` | Date and time with fractional seconds |
-| ACI | `Text0792` | `recordTime` | Matches the time component of the timestamp across all six examples |
-| ACI | `Text0492` | `secondaryAirlineCode` | Second airline-code field, populated with UA in all six examples |
+| ACI | `recordTimestamp` | `flightAciTimestamp` | Structure `flight_list.flt_list_str3`, ACI timestamp in GMT |
+| ACI | `recordTime` | `aciTransactionTime` | Structure `trans_times_list.trans_time3` |
+| ACI | `secondaryAirlineCode` | `passengerFlightAirline` | Structure `paxflt_items.airline_code` |
 | ETKT | `Text0172` | `ticketStatusRecord` | Eight-character masked prefix followed by readable status text; the `StatusText` capture is kept |
 | PNR | `NameText0400`, `NameText0440` | `passengerSurname`, `passengerGivenName` | Match the surname/given-name pair in DOCS and contact records |
 | PNR | `Docs0496`, `ContactEmail0876`, `ContactPhone0972` | `travelDocumentRecord`, `emailContactRecord`, `phoneContactRecord` | Reviewed DOCS, CTCE and CTCM prefixes and named captures |
 | PNR | `NameText1880`, `NameText1984`, `NameText5276` | `passengerNameOccurrence1` through `passengerNameOccurrence3` | Repeated full-name occurrences; suffixes do not imply different passengers |
 | PNR | Address, membership, account, ticket and fare records with numeric offset suffixes | Descriptive record aliases such as `addressPostalCodeRecord`, `loyaltyMembershipRecord`, `accountBalanceRecord`, `ticketOrderRecord` and `totalFare` | Existing reviewed record syntax/content supports these names; actions and capture widths are unchanged |
 
-Confirmed top-level string names now agree across all three XML files. For example, XDR declares `<string name="recordTimestamp" max="4096" />`, the reference declares `<text name="recordTimestamp" offset="88" length="21" />`, and policies declare `<field name="/recordTimestamp" identification="None" action="Keep" />`. The 38 redundant alias paths are removed. The three nested ACI optional-string paths remain explicit because their reference aliases differ from their structural paths. Existing explicit path aliases remain supported by the loader.
+Confirmed top-level string names now agree across all three XML files. For example, XDR declares `<string name="flightAciTimestamp" max="4096" />`, the reference declares `<text name="flightAciTimestamp" offset="88" length="21" />`, and policies declare `<field name="/flightAciTimestamp" identification="None" action="Keep" />`. The 38 redundant alias paths are removed. The three nested ACI optional-string paths remain explicit because their reference aliases differ from their structural paths. Existing explicit path aliases remain supported by the loader.
 
-Only XDR string names change: field order, word counts, bounds, optional groups and width-preservation settings stay the same. Date-only fields such as ACI `Text0020` retain their names because the samples do not establish their exact business purpose. Existing custom configurations need matching name/path changes for renamed XDR keys and policies. `Text0132` remains a removed false string inference, not a renamed field. A configuration regression check requires every XDR string to have exactly one reference mapping and every exposed scalar/capture to have exactly one policy, with consistent top-level names and configured flags.
+The XML projection retains field order, word counts, bounds, optional groups and width-preservation settings. ACI `Text0020` is now `flightDate`, established by `flight_list.flt_date` in the structure declarations. The ACI module additionally validates semantic structure and passenger links. Existing custom configurations need matching name/path changes for renamed XDR keys and policies. `Text0132` remains a removed false string inference, not a renamed field. A configuration regression check requires every XDR string to have exactly one reference mapping and every exposed scalar/capture to have exactly one policy, with consistent top-level names and configured flags.
 
 ## Extensions to the original approach
 
@@ -131,7 +127,7 @@ The reference file keeps its original `name`, `offset` and `length` attributes:
         referenceFile="../../docs/sample-docs/ACI.txt"
         referenceSha256="f038c05e590ade818748f6547c2a624d8d662a52c54d3596ad93649eafce022d">
     <!-- Baseline positions for review; actual positions come from XDR. -->
-    <text name="rawPassengerName" offset="424" length="11" />
+    <text name="passengerName" offset="424" length="11" />
     <text name="pnr" offset="404" length="6" pattern="[A-Z0-9]{6}" />
   </feed>
 </referenceLayouts>
@@ -146,7 +142,7 @@ The XDR file keeps the original structural primitives:
   <feed type="ACI" configured="true" preserveWidths="true">
     <uint32 name="Word000" expected="2" />
     <!-- Other ordered fields appear here in the complete layout. -->
-    <string name="rawPassengerName" max="4096" />
+    <string name="passengerName" max="4096" />
   </feed>
 </xdrLayouts>
 ```
@@ -177,7 +173,7 @@ The policy file retains inline feed rules and optionally reuses catalog entries:
   </catalog>
   <feed type="ACI" configured="true">
     <field name="/pnr" identification="None" action="Keep" />
-    <field name="/rawPassengerName" policy="MaskPerson" />
+    <field name="/passengerName" policy="MaskPerson" />
   </feed>
 </feedPolicies>
 ```
@@ -187,7 +183,7 @@ The catalog contains 14 shared masking rules. Existing inline policies work with
 Mixed record mappings stay in the reference file:
 
 ```xml
-<text name="RecordReference" offset="856" length="15"
+<text name="unresolvedRecordReference" offset="856" length="15"
       optional="true" allowEmpty="true"
       pattern="(?&lt;Prefix&gt;[0-9*]*)(?&lt;pnr&gt;[A-Z0-9]{6})">
   <part name="Prefix" start="0" length="9" />
@@ -209,8 +205,8 @@ src/.venv/Scripts/python.exe tests/unit-tests/test_feed_listener.py
 src/.venv/Scripts/python.exe tests/run_sample_verification.py
 ```
 
-The verification command retains outputs, transaction logs and a value-free `verification.json` in a fresh `.test-runs/e2e-*` folder. Across the 15 supplied samples, 158 populated fields have Mask policies, 233 are kept, and 51 JSON scalars have Replace policies. Forty-three replacements changed; eight empty/null values remained unchanged. All 19 identified PNR occurrences, source hashes and binary framing were preserved.
+The verification command retains outputs, transaction logs and a value-free `verification.json` in a fresh `.test-runs/e2e-*` folder. After the approved ACI corrections, the 15 supplied samples have 123 populated Mask fields, 268 kept fields and 51 JSON scalars with Replace policies. Forty-three replacements changed; eight empty/null values remained unchanged. All 19 identified PNR occurrences, source hashes and binary framing were preserved.
 
-Latest run: **20 October 2026, 01:46:56 IST**, with 15 published, zero failures and zero pending inputs. [Verification evidence](../.test-runs/e2e-20261020-014656-f40d3f64/verification.json) and [outputs](../.test-runs/e2e-20261020-014656-f40d3f64/docs/output-feeds) are retained locally. The run folder is ignored by Git and contains original-value transaction logs. Regression checks cover equivalent original and compact word declarations across all 13 binary samples, invalid shorthand settings, changed string widths, legacy configuration compatibility, exact no-op round trips, idempotent real Presidio protection, malformed framing, startup validation and delivery/retention behavior.
+The application run published all 15 supplied feeds, with zero failures and zero pending inputs. Review evidence is retained in the workspace topic folder. The separate ACI checks cover exact XDR/MQ round trips, scalar-by-scalar independent decoder agreement, numeric passenger identity links, malformed framing, unmapped text, PNR preservation and a synthetic two-passenger decoder case. The .NET pipeline suite and 15 selected Python ACI/configuration/batch/layout regression tests passed.
 
-The synchronized XML configuration preserves all 15 output files byte-for-byte against the prior verified run. The [XML synchronization audit](../.test-runs/e2e-20261020-014656-f40d3f64/xml-sync-audit.json) records matching mapping counts, unchanged policy settings and configuration hashes without personal values. The clean build, .NET pipeline checks and all 39 Python tests passed, including the new cross-file synchronization check.
+ACI output differs from the earlier run where approved operational fields are now kept. Other feed rules remain unchanged. Earlier verification runs and historical artifacts are preserved. The new `aciStructures="true"` reference setting selects the ACI module; older custom configurations without the setting keep their existing codecs.

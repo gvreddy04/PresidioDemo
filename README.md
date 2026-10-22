@@ -10,7 +10,7 @@ Process airline feeds using configured field rules and local Presidio. PNR stays
 
 | Feed | Actual input result |
 | --- | --- |
-| ACI | All six samples use one sequential XML definition, including four optional groups |
+| ACI | Dedicated module decodes the documented structures and rebuilds all six samples; reviewed XML controls protection-field coverage |
 | ETKT | All six samples use one 136-slot definition; empty strings account for missing values |
 | Seats | Complete JSON with 39 existing policy field paths |
 | PNR | One reviewed sequential definition; 76 masked fields and 30 kept fields; structural tags preserved |
@@ -21,6 +21,22 @@ The three original XML formats remain: [reference mappings](src/config/reference
 XDR raw-word blocks use `<words name="..." count="..." />`, a compact alias for the original fixed array of `uint32` values. The loader supports both forms and expands the alias before processing; byte widths, field paths and validation remain unchanged.
 
 All 15 supplied samples pass actual local Presidio processing and independent byte checks: 19 identified PNR occurrences, source bytes and binary framing stay unchanged. The former ETKT `Text0132` mapping is corrected to two preserved raw words. See [verification results](docs/feed-analysis.md#reviewed-samples-and-results).
+
+## ACI module and structure review
+
+[src/feeds/ACI](src/feeds/ACI) contains separate XDR reader/writer, decoder, parser, encoder, serializer, models, structure definitions, indicators, report formatter and feed codec. The normal ACI route uses this module through `aciStructures="true"` on its schema-driven reference entry. Older custom configurations without this opt-in retain their existing codec. The decoder follows the supplied C-structure declaration order; the encoder rebuilds the complete payload. Existing XML remains the reviewed policy projection for the supplied sample family. Every populated string must have policy coverage, and unreviewed processing shapes are rejected.
+
+The structure review corrects `seatNumber` to `departureGate`, `origin` to `terminatingCity`, and offset-based names to documented fields. Operational equipment, aircraft, gate, sector and process values are kept. Passenger names, actual passenger seat assignments, loyalty numbers and unresolved identifiers remain masked. PNR and numeric passenger IDs stay unchanged; the parser checks the `paxl_id` / `pax_id` association. This rewrite does not introduce tokenization.
+
+An extra block after transaction times appears in all six samples but is not defined in the available structure declarations. It is explicitly named `unresolved_extension`, with observed layout and preserved masks. Its business meaning is unconfirmed. Some documented branches have no populated example; transcribing them does not establish a complete producer contract. Multiple-passenger decoding has a synthetic identity-link check; production processing still needs a reviewed XML projection for that shape.
+
+Run focused ACI checks and produce decoded JSON with field locations:
+
+```powershell
+dotnet run --project tests/ACI/AciChecks.csproj -- .test-runs/aci-checks
+```
+
+Decoded analysis files intentionally contain original supplied values. The immutable workspace review, transcription, verification evidence are in `D:\Bala_Support\topics\aci\v2`.
 
 ## Technology stack
 
@@ -132,6 +148,14 @@ All three XML files are loaded and validated together before input is claimed. R
 Restart after changes. The existing switches `--reference-layout-file <xml>`, `--xdr-layout-file <xml>` and `--policy-file <xml>` select alternate files. See the [feed analysis](docs/feed-analysis.md) for commented XML examples, empty/optional values, per-sample results and verification commands.
 
 ## Tests
+
+Run byte-exact round trips without anonymization for every feed type:
+
+```powershell
+dotnet run --project tests/FeedRoundTripChecks
+```
+
+These checks load the normal codecs and workflows, with an in-memory All-Keep policy for this test only. They compare complete input/output byte arrays, decoded payloads and field values over three cycles per example. Coverage includes all supplied samples as raw payloads and MQ exports, binary string widths and padding, JSON whitespace/property order/escapes/numeric spelling/empty/null values, MQ line endings, hex casing, row widths and complete diagnostic dumps. Synthetic variants test supported encoding shapes; they do not establish new producer contracts. No Python initialization or application configuration change is required. Results and execution logs are written to a fresh `.test-runs/round-trip-*` folder; supply a directory argument to choose another location. The same checks also run in `FeedPipelineChecks`.
 
 ```powershell
 src/.venv/Scripts/python.exe -m unittest discover -s tests/unit-tests -p test_*.py -v

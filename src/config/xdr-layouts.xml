@@ -13,41 +13,43 @@
        The loader expands words before processing, so paths, offsets and validation are unchanged.
        Keep strings, expected constants and optional boundaries explicit and in wire order. -->
   <feed type="ACI" configured="true" preserveWidths="true">
+    <!-- Reviewed policy projection for the supplied sample family. The ACI module owns
+         semantic linked-list decoding and full encoding; this sequence constrains policy coverage. -->
     <uint32 name="Word000" expected="2" />
     <uint32 name="Word001" />
     <string name="airlineCode" max="4096" />
     <uint32 name="Word003" />
-    <string name="Text0020" max="4096" />
+    <string name="flightDate" max="4096" />
     <words name="Words005" count="2" />
-    <string name="origin" max="4096" />
+    <string name="terminatingCity" max="4096" />
     <words name="Words008" count="6" />
-    <string name="Text0072" max="4096" />
+    <string name="flightProcessName" max="4096" />
     <uint32 name="Word015" />
-    <string name="recordTimestamp" max="4096" />
+    <string name="flightAciTimestamp" max="4096" />
     <words name="Words017" count="2" />
-    <string name="destination" max="4096" />
+    <string name="legCity" max="4096" />
     <words name="Words020" count="3" />
-    <string name="Text0144" max="4096" />
-    <string name="Text0152" max="4096" />
-    <string name="seatNumber" max="4096" />
+    <string name="equipmentCode" max="4096" />
+    <string name="aircraftNumber" max="4096" />
+    <string name="departureGate" max="4096" />
     <uint32 name="Word026" />
-    <string name="Text0172" max="4096" />
+    <string name="sectorNumber" max="4096" />
     <words name="Words028" count="2" />
-    <string name="Text0188" max="4096" />
+    <string name="estimatedDepartureDate" max="4096" />
     <uint32 name="Word031" />
-    <string name="Text0204" max="4096" />
+    <string name="scheduledDepartureDate" max="4096" />
     <uint32 name="Word033" />
-    <string name="Text0220" max="4096" />
+    <string name="boardingDate" max="4096" />
     <words name="Words035" count="43" />
     <string name="pnr" max="6" />
     <words name="Words079" count="2" />
-    <string name="rawPassengerName" max="4096" />
+    <string name="passengerName" max="4096" />
     <words name="Words082" count="7" />
-    <string name="Text0468" max="4096" />
+    <string name="passengerProcessName" max="4096" />
     <words name="Words090" count="3" />
-    <string name="secondaryAirlineCode" max="4096" />
+    <string name="passengerFlightAirline" max="4096" />
     <uint32 name="Word094" />
-    <string name="Text0504" max="4096" />
+    <string name="passengerFlightDate" max="4096" />
     <words name="Words096" count="34" />
     <optional name="OptionalGroupA">
       <struct name="Body">
@@ -79,11 +81,11 @@
       </struct>
     </optional>
     <words name="Words149" count="9" />
-    <string name="recordTime" max="4096" />
-    <string name="Text0808" max="4096" />
+    <string name="aciTransactionTime" max="4096" />
+    <string name="aciTransactionDate" max="4096" />
     <words name="Words160" count="5" />
-    <string name="Text0840" max="4096" />
-    <string name="RecordReference" max="4096" />
+    <string name="unresolvedIdentifier" max="4096" />
+    <string name="unresolvedRecordReference" max="4096" />
     <words name="Words167" count="3" />
   </feed>
   <feed type="ETKT" configured="true" preserveWidths="true">

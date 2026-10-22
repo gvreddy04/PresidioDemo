@@ -39,13 +39,15 @@ static class ReferenceLayoutChecks
             var codec = Codec(feed, config);
             byte[] source = File.ReadAllBytes(file);
             var parsed = codec.Parse(Message(feed, source, Path.GetFileName(file)));
-            Check(codec is ReferenceLayoutFeedCodec && codec.Serialize(parsed, parsed.Fields.ToDictionary(f => f.Id, f => f.Value)).AsSpan().SequenceEqual(source), Path.GetFileName(file) + " reference codec preserves every MQ byte");
+            Check((feed == FeedType.ACI ? codec is PresidioDemo.Feeds.ACI.AciFeedCodec : codec is ReferenceLayoutFeedCodec) &&
+                codec.Serialize(parsed, parsed.Fields.ToDictionary(f => f.Id, f => f.Value)).AsSpan().SequenceEqual(source),
+                Path.GetFileName(file) + " selected codec preserves every MQ byte");
             _ = ConfiguredPiiIdentifier.CreatePlan(parsed.Fields, config.Policies[feed]);
         }
         var aci = Codec(FeedType.ACI, config);
         byte[] raw = FeedPayloadReader.ReadPayload(Message(FeedType.ACI, File.ReadAllBytes(Path.Combine(root, "docs/sample-docs/ACI.txt")), "ACI.txt"));
         var original = aci.Parse(Message(FeedType.ACI, raw));
-        string name = original.Fields.Single(f => f.Name == "/rawPassengerName").Value;
+        string name = original.Fields.Single(f => f.Name == "/passengerName").Value;
         int offset = raw.AsSpan().IndexOf(Encoding.ASCII.GetBytes(name)) - 4;
         byte[] nextName = Encoding.ASCII.GetBytes("SMITH/ALEXANDRA");
         using var changed = new MemoryStream();
@@ -53,11 +55,11 @@ static class ReferenceLayoutChecks
         byte[] count = new byte[4]; BinaryPrimitives.WriteUInt32BigEndian(count, (uint)nextName.Length);
         changed.Write(count); changed.Write(nextName); changed.Write(new byte[(-nextName.Length) & 3]);
         changed.Write(raw.AsSpan(offset + 4 + name.Length + ((-name.Length) & 3)));
-        Check(aci.Parse(Message(FeedType.ACI, changed.ToArray())).Fields.Single(f => f.Name == "/rawPassengerName").Value == "SMITH/ALEXANDRA", "actual name width and following offsets vary without changing reference baseline or code");
+        Check(aci.Parse(Message(FeedType.ACI, changed.ToArray())).Fields.Single(f => f.Name == "/passengerName").Value == "SMITH/ALEXANDRA", "actual name width and following offsets vary without changing reference baseline or code");
         var values = original.Fields.ToDictionary(f => f.Id, f => f.Value);
-        values["/rawPassengerName"] = "X";
+        values["/passengerName"] = "X";
         Reject(() => aci.Serialize(original, values), "reference serialization rejects width changes");
-        values["/rawPassengerName"] = name; values["/pnr"] = "OTHER1";
+        values["/passengerName"] = name; values["/pnr"] = "OTHER1";
         Reject(() => aci.Serialize(original, values), "reference serialization rejects PNR changes");
         Reject(() => aci.Parse(Message(FeedType.ACI, [.. raw, 0, 0, 0, 0])), "unknown trailing binary regions are retained");
         byte[] broken = (byte[])raw.Clone(); broken[869] ^= 1;

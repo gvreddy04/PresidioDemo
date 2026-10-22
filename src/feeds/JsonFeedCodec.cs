@@ -112,6 +112,10 @@ public static class FeedCodecRegistry
         }
         if (references.TryGetValue(feed, out var dynamicReference) && dynamicReference.Schema is not null)
         {
+            if (feed == FeedType.ACI && dynamicReference.UseAciStructures)
+            {
+                return new ACI.AciFeedCodec(dynamicReference);
+            }
             return new ReferenceLayoutFeedCodec(dynamicReference);
         }
         if (schemas.TryGetValue(feed, out var schema))
