@@ -60,6 +60,15 @@ class EtktFeedTests(unittest.TestCase):
         (self.docs / "input-feeds/ETKT/changed-version.bin").write_bytes(raw)
         rejected(self.docs, "ETKT", "changed-version.bin", bytes(raw), "expected constant")
 
+    def test_divide_event_preserves_new_and_old_pnrs(self):
+        original = (PROJECT / "docs/sample-docs/ETKT_05.txt").read_bytes()
+        output = self.deliver("divide-etkt.txt", original)
+        self.assertEqual(verify_output("ETKT", original, output), {"Keep": 5, "Mask": 5})
+        fields = {name: payload(output)[start:start + length]
+                  for name, start, length in field_spans("ETKT", original)}
+        self.assertEqual(fields["/newPnr"], b"FWGXKN")
+        self.assertEqual(fields["/oldPnr"], b"FWDZRF")
+
     def test_etkt_rejects_truncated_reference(self):
         raw = payload((PROJECT / "docs/sample-docs/ETKT.txt").read_bytes())[:-4]
         (self.docs / "input-feeds/ETKT/truncated-etkt.bin").write_bytes(raw)

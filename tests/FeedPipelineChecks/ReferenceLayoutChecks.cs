@@ -39,7 +39,13 @@ static class ReferenceLayoutChecks
             var codec = Codec(feed, config);
             byte[] source = File.ReadAllBytes(file);
             var parsed = codec.Parse(Message(feed, source, Path.GetFileName(file)));
-            Check((feed == FeedType.ACI ? codec is PresidioDemo.Feeds.ACI.AciFeedCodec : codec is ReferenceLayoutFeedCodec) &&
+            bool expectedCodec = feed switch
+            {
+                FeedType.ACI => codec is PresidioDemo.Feeds.ACI.AciFeedCodec,
+                FeedType.ETKT => codec is PresidioDemo.Feeds.ETKT.EtktFeedCodec,
+                _ => codec is ReferenceLayoutFeedCodec
+            };
+            Check(expectedCodec &&
                 codec.Serialize(parsed, parsed.Fields.ToDictionary(f => f.Id, f => f.Value)).AsSpan().SequenceEqual(source),
                 Path.GetFileName(file) + " selected codec preserves every MQ byte");
             _ = ConfiguredPiiIdentifier.CreatePlan(parsed.Fields, config.Policies[feed]);
@@ -117,7 +123,7 @@ static class ReferenceLayoutChecks
             {
                 byte[] before = FeedPayloadReader.ReadPayload(message), after = FeedPayloadReader.ReadPayload(message with { Content = output });
                 Check(before.AsSpan(132, 8).SequenceEqual(after.AsSpan(132, 8)), "Text0132 remains two unchanged raw words");
-                Check(after.AsSpan(488, 6).SequenceEqual("******"u8) && after.AsSpan(500, 6).SequenceEqual("******"u8), "two additional codes remain masked");
+                Check(after.AsSpan(488, 6).SequenceEqual("FWGXKN"u8) && after.AsSpan(500, 6).SequenceEqual("FWDZRF"u8), "divide-event new and old PNRs remain unchanged");
             }
         }
     }

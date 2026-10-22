@@ -105,7 +105,7 @@ for item in batch["Items"]:
             pnrs = []
             for field_name, start, length in spans:
                 mutable.update(range(start, start + length))
-                if field_name.rsplit("/", 1)[-1].lower() == "pnr":
+                if field_name.rsplit("/", 1)[-1].lower() in {"pnr", "newpnr", "oldpnr"}:
                     require(before[start:start + length] == after[start:start + length], "Identified PNR changed")
                     pnrs.append(field_name)
             require(len(before) == len(after), "Binary payload size changed")
@@ -125,8 +125,8 @@ for item in batch["Items"]:
                                         "action": CATALOG[policy]["action"], "kind": kind}
                                        for n, o, length, policy, kind in fields]
             if name == "ETKT_05.txt":
-                require(after[488:494] == b"******" and after[500:506] == b"******", "Extra ETKT codes were not fully masked")
-                result["checks"]["additional_locator_like_codes_masked"] = True
+                require(after[488:494] == b"FWGXKN" and after[500:506] == b"FWDZRF", "ETKT divide-event PNRs were changed")
+                result["checks"]["divide_event_new_old_pnrs_unchanged"] = True
                 require(before[132:140] == after[132:140], "Text0132 structural words changed")
                 result["checks"]["text0132_structural_words_unchanged"] = True
         else:

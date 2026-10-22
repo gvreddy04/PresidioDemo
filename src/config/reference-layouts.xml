@@ -42,10 +42,15 @@
       <part name="pnr" start="9" length="6" equalTo="/pnr" />
     </text>
   </feed>
-  <feed type="ETKT" name="EtktReference672" referenceFile="../../docs/sample-docs/ETKT.txt" referenceSha256="6a0f5f65a53ff39fee57fdf8dbb870a28dc4fe136296ba4c151c277e99b78cfa" schemaDriven="true">
+  <feed type="ETKT" name="EtktReference672" referenceFile="../../docs/sample-docs/ETKT.txt" referenceSha256="6a0f5f65a53ff39fee57fdf8dbb870a28dc4fe136296ba4c151c277e99b78cfa" schemaDriven="true" etktStructures="true">
+    <!-- ETKT screenshot mapping: legacy pnr occupies h_aaa_lniata, the agent terminal
+         address. Its new display label is provisional; the legacy alias and Keep
+         treatment remain unchanged. This route supports the observed type-5 family. -->
     <!-- Text0132 is deliberately absent: the six samples identify raw words, not a string.
          Zero baseline lengths below describe strings empty in the reference, not fixed widths.
-         The two unconfirmed locator strings are masked; the main PNR remains unchanged. -->
+         Divide-event locators are provisionally mapped to newPnr/oldPnr and kept.
+         Their historical XDR path names remain as provenance. The legacy pnr
+         alias belongs to the provisional agent terminal address and is also kept. -->
     <!--Offsets/lengths retain reviewed baseline values. schemaDriven uses XDR for actual positions/widths; referenceFile/hash are provenance only in this mode.-->
     <text name="entryDate" offset="12" length="7" />
     <text name="entryTime" offset="24" length="4" />
@@ -74,8 +79,8 @@
     <text name="Flight2Origin" offset="452" length="0" />
     <text name="Flight2Destination" offset="456" length="0" />
     <text name="Flight2NumberRepeat" offset="476" length="0" />
-    <text name="UnconfirmedLocator1" offset="544" length="0" />
-    <text name="UnconfirmedLocator2" offset="548" length="0" />
+    <text name="newPnr" path="/UnconfirmedLocator1" offset="544" length="0" pattern="(?:[A-Z0-9]{6})?" />
+    <text name="oldPnr" path="/UnconfirmedLocator2" offset="548" length="0" pattern="(?:[A-Z0-9]{6})?" />
   </feed>
   <feed type="PNR" name="PnrReference5452" referenceFile="../../docs/sample-docs/PNR.txt" referenceSha256="75cc60895384395f8df28eff4c4abf6a0c58f1dc7960c5eee41cb294def0e4de" schemaDriven="true">
     <!--Offsets/lengths retain reviewed baseline values. schemaDriven uses XDR for actual positions/widths; referenceFile/hash are provenance only in this mode.-->

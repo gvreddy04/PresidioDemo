@@ -98,7 +98,7 @@ class AllFeedBatchTests(unittest.TestCase):
                             "ACI.txt": (20, 3), "ACI_02.txt": (20, 3), "ACI_03.txt": (19, 1),
                             "ACI_04.txt": (19, 2), "ACI_05.txt": (18, 1), "ACI_06.txt": (19, 5),
                             "ETKT.txt": (4, 5), "ETKT_02.txt": (4, 5), "ETKT_03.txt": (20, 5),
-                            "ETKT_04.txt": (4, 5), "ETKT_05.txt": (3, 7), "ETKT_06.txt": (4, 5),
+                            "ETKT_04.txt": (4, 5), "ETKT_05.txt": (5, 5), "ETKT_06.txt": (4, 5),
                             "PNR.txt": (30, 76),
                         }[Path(item["SourceFile"]).name]
                         expected = {"Keep": keep, "Mask": mask}
@@ -106,8 +106,8 @@ class AllFeedBatchTests(unittest.TestCase):
                         if Path(item["SourceFile"]).name == "ETKT_05.txt":
                             protected = payload(output)
                             self.assertEqual(protected[36:42], b"D7DF15")
-                            self.assertEqual(protected[488:494], b"******")
-                            self.assertEqual(protected[500:506], b"******")
+                            self.assertEqual(protected[488:494], b"FWGXKN")
+                            self.assertEqual(protected[500:506], b"FWDZRF")
                         if Path(item["SourceFile"]).name == "ACI_05.txt":
                             self.assertEqual(payload(output)[424:437], b"*" * 13)
                     else:

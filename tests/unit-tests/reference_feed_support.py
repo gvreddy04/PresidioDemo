@@ -127,7 +127,7 @@ def verify_output(feed, original, protected, policy_file=None, raw=False, schema
         # Count populated text fields separately from framing words and absent values.
         if kind == "text" and length:
             actions[rule["action"]] += 1
-        if name.rsplit("/", 1)[-1].lower() == "pnr":
+        if name.rsplit("/", 1)[-1].lower() in {"pnr", "newpnr", "oldpnr"}:
             assert before[start:start + length] == after[start:start + length], "PNR changed"
     for start, length in framing:
         assert before[start:start + length] == after[start:start + length], "String count or padding changed"

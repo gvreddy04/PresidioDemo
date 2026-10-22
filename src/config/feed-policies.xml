@@ -57,7 +57,8 @@
   </feed>
   <feed type="ETKT" configured="true">
     <!-- ticketStatusRecord contains an uncertain prefix and readable status text.
-         Text0044/Text0072/Text0088 and both additional locators remain unconfirmed. -->
+           Text0044/Text0072/Text0088 retain their existing policies.
+           Divide-event locators are approved provisional new/old PNRs and kept. -->
     <field name="/entryDate" identification="None" action="Keep" />
     <field name="/entryTime" identification="None" action="Keep" />
     <field name="/pnr" identification="None" action="Keep" />
@@ -83,8 +84,8 @@
     <field name="/Flight2Origin" identification="None" action="Keep" />
     <field name="/Flight2Destination" identification="None" action="Keep" />
     <field name="/Flight2NumberRepeat" identification="None" action="Keep" />
-    <field name="/UnconfirmedLocator1" policy="MaskUnclassifiedIdentifier" />
-    <field name="/UnconfirmedLocator2" policy="MaskUnclassifiedIdentifier" />
+    <field name="/newPnr" identification="None" action="Keep" />
+    <field name="/oldPnr" identification="None" action="Keep" />
   </feed>
   <feed type="PNR" configured="true">
     <!-- Record names follow identifiable DOCS/CTCE/CTCM, address, account and fare content.

@@ -116,6 +116,10 @@ public static class FeedCodecRegistry
             {
                 return new ACI.AciFeedCodec(dynamicReference);
             }
+            if (feed == FeedType.ETKT && dynamicReference.UseEtktStructures)
+            {
+                return new ETKT.EtktFeedCodec(dynamicReference);
+            }
             return new ReferenceLayoutFeedCodec(dynamicReference);
         }
         if (schemas.TryGetValue(feed, out var schema))

@@ -1,0 +1,71 @@
+namespace PresidioDemo.Feeds.ETKT;
+
+/// <summary>Shows source spellings, raw flags and character arrays without inventing enum meanings.</summary>
+public static class EtktReportFormatter
+{
+    public static object Format(EtktDocument document) => new
+    {
+        document.SampleType,
+        Profile = "Observed type-5 framing; screenshot history-field order",
+        document.PayloadLength,
+        FieldLabels = new[]
+        {
+            new
+            {
+                Path = "/history/h_aaa_lniata",
+                Label = "Agent terminal address — provisional mapping",
+                LegacyAlias = "/pnr",
+                Treatment = "Keep unchanged"
+            },
+            new
+            {
+                Path = "/history/h_new_recloc",
+                Label = "New PNR — provisional",
+                LegacyAlias = "/UnconfirmedLocator1",
+                Treatment = "Keep unchanged"
+            },
+            new
+            {
+                Path = "/history/h_old_recloc",
+                Label = "Old PNR — provisional",
+                LegacyAlias = "/UnconfirmedLocator2",
+                Treatment = "Keep unchanged"
+            }
+        },
+        Groups = document.Scalars.GroupBy(scalar => scalar.Definition.Group).ToDictionary(
+            group => group.Key, group => group.GroupBy(scalar => scalar.Definition.SourceName).ToDictionary(
+                members => members.Key, members => Value(members.ToArray()))),
+        Notes = new[]
+        {
+            "The source defines error=1, issue=2 and update=3. The meaning of observed type 5 is unconfirmed.",
+            "Names describe a provisional structural match; type-5 business meanings need producer confirmation.",
+            "Original sample values are intentionally visible in these local analysis artifacts.",
+            "Zero-only fields do not establish support for their populated variants.",
+            "Status labels use the approved provisional MSB-first convention; original numeric and hex values are retained.",
+            "No passenger identity or tokenization is inferred from names, PNRs or ticket numbers."
+        }
+    };
+
+    private static object Value(EtktScalar[] fields)
+    {
+        if (fields[0].Kind == EtktWireKind.String)
+        {
+            return fields[0].Text!;
+        }
+        if (fields[0].Kind == EtktWireKind.Character)
+        {
+            return new
+            {
+                Text = string.Concat(fields.Select(field => field.Number is >= 32 and <= 126
+                    ? ((char)field.Number.Value).ToString() : $"\\x{unchecked((byte)field.Number!.Value):X2}")),
+                Codes = fields.Select(field => field.Number!.Value).ToArray()
+            };
+        }
+        int number = fields[0].Number!.Value;
+        if (fields[0].Path == "/history/h_status")
+        {
+            return EtktIndicators.DescribeStatus(number);
+        }
+        return new { Number = number, Hex = $"0x{unchecked((uint)number):X8}" };
+    }
+}

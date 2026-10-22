@@ -30,7 +30,19 @@ The existing XML sequence is retained as a conservative policy projection for th
 
 The immutable workspace review, decoded examples, searchable transcription, verification evidence are under `D:\Bala_Support\topics\aci\v2`.
 
-## ETKT: one 136-slot sequence
+## ETKT: a dedicated module and one 136-slot sample profile
+
+`src/feeds/ETKT` now owns separate XDR reader/writer, decoder, parser, encoder, serializer, structure definitions, models, report formatter and route adapter. The supplied configuration selects this module with `etktStructures="true"`; custom reference entries without that setting keep their previous codec. The existing XML remains a reviewed protection projection. Every nonempty decoded string needs complete policy coverage, and unsupported populated shapes are retained without publication.
+
+The six samples begin with `5, 1, 0`. The screenshot union defines error=1, issue=2 and update=3. The agreed implementation supports an explicitly observed type-5 profile while leaving its discriminator meaning unconfirmed. All 136 scalar slots align with the screenshot history order. The encoder rebuilds the entire payload, including empty string slots and four-byte character slots. A separate Python reader agrees on every value, type, offset and encoded width.
+
+The approved decoded label for `h_aaa_lniata` is **Agent terminal address — provisional mapping**. The legacy `/pnr` alias and its unchanged value are retained. Legacy `Text0044` maps to AAA city, `Text0072` to agent sign-in number, `Text0088` to the ticket-number field, and `ticketNumber` to the global history sequence number. The `Flight1` and `Flight2` fields map to new and previous flight details, including operating flight numbers rather than unexplained repeats. The populated `ticketStatusRecord` occupies a field declared as spare, so its undocumented business semantics remain unresolved.
+
+The sample ticket-number field has 15 characters although the screenshot comment says 13; the implementation preserves its actual counted width. Type-5 field meanings remain provisional. The approved divide-event mapping uses provisional new/old PNR labels and `newPnr`/`oldPnr` Keep rules. The historical XDR path names remain for provenance; serializer guards protect these locators even if an older alias is used. No ticket, PNR, name or ordinal is treated as a stable passenger identity.
+
+The approved status report uses a provisional MSB-first convention, retains the original signed number and hex value, labels set documented flags, and exposes reserved set bits. `0x00002000` maps to Checked in, `0x00004000` to Divided ETKT, and `0x00010002` to Adjusted flight plus Re-accommodation. Exchange destination uses document bit 31 only when Exchanged is set. These are display interpretations, never serialization changes. ETKT_06's spare text says ADJUSTED while its status word maps to Checked in; the report retains both without assuming they describe the same event.
+
+The local review, searchable reference for all documented structures, history transcription and sample checks are retained under `D:\Bala_Support\topics\etkt\v4`; earlier versions remain immutable. The issue/reissue declarations remain documentary because there are no populated supplied examples and the source repeats `etkt_inds_2`. The active decoder supports the verified type-5 history sample family; it does not silently enable the other documented union arms.
 
 Every ETKT example fits the same 110 raw words and 26 counted-string slots. Sixteen flight-information strings are empty in most examples and populated in ETKT_03. Two additional locator-like strings are empty except in ETKT_05.
 
@@ -38,11 +50,11 @@ Every ETKT example fits the same 110 raw words and 26 counted-string slots. Sixt
 - ETKT_03 is 760 bytes: populated flight strings add 88 bytes to the same sequence.
 - ETKT_05 is 628 bytes: its status/reference text is eight rather than 65 characters, saving 60 encoded bytes including padding. Two newly populated six-character strings add 16 encoded bytes. Thus 672 - 60 + 16 = 628.
 
-Flight airlines/numbers, dates, departure/arrival times, routes, class and remaining status text are kept. Main PNR and event date/time stay unchanged. Ticket numbers, uncertain identifiers and the initial eight-character reference prefix are masked. ETKT_05's two additional six-character codes are masked; their PNR role is unconfirmed. Their current value offsets are 488 and 500, calculated from that input rather than stored in XML.
+Flight airlines/numbers, dates, departure/arrival times, routes, class and remaining status text are kept. The provisional agent terminal address (legacy `pnr`) and event date/time stay unchanged. Ticket numbers, uncertain identifiers and the initial eight-character reference prefix are masked. ETKT_05's new and old PNRs are now preserved: `FWGXKN` at value offset 488 and `FWDZRF` at value offset 500. Those positions are calculated from that input rather than stored as dynamic message offsets in XML. Comparing the old and new protected payloads shows exactly 12 changed bytes in these two approved spans; other sample outputs remain unchanged.
 
 ### Text0132 correction
 
-The word at offset 132 is respectively 2, 2, 3, 4, 1 and 9 across the six samples. ETKT_05 happens to contain `00000001 31000000`: a scanner can incorrectly read that as a length-one string containing `1` with three zero pad bytes. ETKT_06's value nine disproves that interpretation for the common sequence. These are two independent raw words at 132 and 136. The `Text0132` text field and its mask are removed; both words are preserved unchanged in every example. ETKT_05 therefore has seven populated masked fields, rather than the previous eight.
+The word at offset 132 is respectively 2, 2, 3, 4, 1 and 9 across the six samples. ETKT_05 happens to contain `00000001 31000000`: a scanner can incorrectly read that as a length-one string containing `1` with three zero pad bytes. ETKT_06's value nine disproves that interpretation for the common sequence. These are two independent raw words at 132 and 136, now aligned with the history sequence number and indicator fields. The `Text0132` text field and its mask are removed; both words are preserved unchanged in every example. After also preserving the two approved divide-event PNRs, ETKT_05 has five populated masked fields and five kept fields.
 
 ## PNR and JSON
 
@@ -70,7 +82,7 @@ Counts below describe populated binary text/capture fields. Fixed structural tag
 | ETKT_02.txt | 672 | 4 | 5 Mask |
 | ETKT_03.txt | 760 | 20 | 5 Mask |
 | ETKT_04.txt | 672 | 4 | 5 Mask |
-| ETKT_05.txt | 628 | 3 | 7 Mask |
+| ETKT_05.txt | 628 | 5 | 5 Mask |
 | ETKT_06.txt | 672 | 4 | 5 Mask |
 | PNR.txt | 5,452 | 30 | 76 Mask |
 | SEATS.txt | 1,362 | 30 | 29 Replace |

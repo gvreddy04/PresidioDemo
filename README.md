@@ -38,6 +38,26 @@ dotnet run --project tests/ACI/AciChecks.csproj -- .test-runs/aci-checks
 
 Decoded analysis files intentionally contain original supplied values. The immutable workspace review, transcription, verification evidence are in `D:\Bala_Support\topics\aci\v2`.
 
+## Dedicated ETKT module
+
+`src/feeds/ETKT` separates the XDR reader, writer, decoder, parser, encoder, serializer, models, structure definitions, readable report and route adapter. The normal ETKT route selects this module through `etktStructures="true"` on its schema-driven reference entry. Custom configurations without that setting retain their existing codec.
+
+All six supplied messages begin with the observed framing words `5, 1, 0`. The screenshot enum declares only error=1, issue=2 and update=3. The implementation preserves the observed sample type 5 without assigning it an undocumented business meaning. Its body aligns with all 136 scalar slots in the screenshot history order. The encoder reconstructs the complete payload and original MQ envelope; XML remains the reviewed protection projection.
+
+The legacy `pnr` field is displayed as **Agent terminal address — provisional mapping**, matching `h_aaa_lniata` in the screenshot. Its value and legacy alias remain unchanged. The screenshot maps legacy `Text0088` to the ticket-number field, `ticketNumber` to the global history sequence number, and the `Flight1`/`Flight2` blocks to new/previous flight details. These are provisional meanings for the observed type-5 family. The divide-event fields now use `newPnr` and `oldPnr` Keep rules, with provisional new/old PNR labels and serializer guards against changes. For example, ETKT_05 retains `FWGXKN` and `FWDZRF`; the other protected values keep their existing masks. No passenger identity or tokenization is inferred from these records.
+
+Focused checks generate readable decoded JSON and exact scalar locations:
+
+```powershell
+dotnet run --project tests/ETKT/EtktChecks.csproj -- .test-runs/etkt-checks
+```
+
+Status reports include provisional, most-significant-bit-first labels alongside the original signed number and hexadecimal word. For example, `0x00002000` is Checked in (provisional), and `0x00004000` is Divided ETKT (provisional). Reserved set bits remain visible. The report shows exchange destination only when Exchanged is set; displaying labels never changes payload values or protection rules. Other indicator words remain raw.
+
+The immutable ETKT review and evidence are under `D:\Bala_Support\topics\etkt\v4`. The searchable reference covers the documented input, history, coupon, payment, tax, exchange, fare, passenger and project structures, union arms and indicator comments. It records the repeated `etkt_inds_2` declaration in the issue branch as a source conflict. Populated issue/error branches and other unreviewed shapes still require producer evidence.
+
+Checks cover exact binary and MQ-export round trips, agreement with an independent reader, malformed inputs, policy coverage, kept-field integrity and compatibility of the route setting. The comparison with prior protection rules allows differences only in the approved divide-event PNR spans; status labels introduce no payload changes.
+
 ## Technology stack
 
 | Technology | Version |
