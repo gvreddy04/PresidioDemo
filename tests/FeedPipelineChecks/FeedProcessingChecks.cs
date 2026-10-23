@@ -1,16 +1,22 @@
 using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Transport;
 
+#region Classes
+
+/// <summary>
+/// Verifies claimed-file recovery, publication cleanup and legacy pending-file migration.
+/// </summary>
 static class FeedProcessingChecks
 {
-    private static void Require(bool condition, string message)
-    {
-        if (!condition)
-        {
-            throw new Exception(message);
-        }
-    }
 
+    #region Methods
+
+    /// <summary>
+    /// Executes asynchronous processing or verification using the supplied workspace and cancellation contract.
+    /// </summary>
+    /// <param name="workspace">The isolated directory used for runtime verification artifacts.</param>
+    /// <returns>A task that completes when the operation and required cleanup have finished.</returns>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
     public static async Task RunAsync(string workspace)
     {
         string docs = Path.Combine(workspace, "processing-lifecycle");
@@ -86,4 +92,22 @@ static class FeedProcessingChecks
         }
         Console.WriteLine("PASS legacy pending deliveries migrate with original bytes and IDs; conflicting files are both retained");
     }
+
+    /// <summary>
+    /// Asserts a regression condition and reports a successful check.
+    /// </summary>
+    /// <param name="condition">The regression condition that must hold.</param>
+    /// <param name="message">The diagnostic explanation identifying this verification condition.</param>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
+    private static void Require(bool condition, string message)
+    {
+        if (!condition)
+        {
+            throw new Exception(message);
+        }
+    }
+
+    #endregion
 }
+
+#endregion

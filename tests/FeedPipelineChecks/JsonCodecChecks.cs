@@ -3,20 +3,20 @@ using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
 using PresidioDemo.Protection;
 
+#region Classes
+
+/// <summary>
+/// Verifies JSON formatting, field coverage, transport framing and malformed-input rejection.
+/// </summary>
 static class JsonCodecChecks
 {
-    private static FeedMessage Message(string json, string name = "sample.bin", FeedType feed = FeedType.Seats) =>
-        new(new(feed, Guid.Empty, name, "fixture"), Encoding.UTF8.GetBytes(json));
-    private static void Require(bool condition, string label)
-    {
-        if (!condition) throw new Exception(label);
-        Console.WriteLine("PASS " + label);
-    }
-    private static void Reject(Action action, string label)
-    {
-        try { action(); } catch (InvalidDataException) { Console.WriteLine("PASS " + label); return; }
-        throw new Exception("Expected rejection: " + label);
-    }
+
+    #region Methods
+
+    /// <summary>
+    /// Executes the related regression cases against the supplied project and isolated workspace.
+    /// </summary>
+    /// <param name="root">The project root containing source configuration and immutable samples.</param>
     public static void Run(string root)
     {
         var codec = FeedCodecRegistry.Create(FeedType.Seats);
@@ -65,4 +65,46 @@ static class JsonCodecChecks
         var plan = ConfiguredPiiIdentifier.CreatePlan(link.Fields, policies[FeedType.PnrLinking]);
         Require(plan.Count == 5 && link.Fields.Single(f => f.Id.EndsWith("/DOB")).Value == "", "complete illustrative PNR Linking resolves exact configured paths and retains null values");
     }
+
+    /// <summary>
+    /// Creates a complete regression-test delivery with the requested feed and input bytes.
+    /// </summary>
+    /// <param name="json">The complete JSON fixture text.</param>
+    /// <param name="name">The declared member name, configuration setting or fixture filename.</param>
+    /// <param name="feed">The supported feed route.</param>
+    /// <returns>The complete fixture delivery and its original bytes.</returns>
+    private static FeedMessage Message(string json, string name = "sample.bin", FeedType feed = FeedType.Seats) =>
+            new(new(feed, Guid.Empty, name, "fixture"), Encoding.UTF8.GetBytes(json));
+
+    /// <summary>
+    /// Asserts that an invalid fixture or configuration is rejected by the expected validation contract.
+    /// </summary>
+    /// <param name="action">The operation expected to satisfy or reject the regression contract.</param>
+    /// <param name="label">The readable name identifying this fixture or assertion.</param>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
+    private static void Reject(Action action, string label)
+    {
+        try { action(); } catch (InvalidDataException) { Console.WriteLine("PASS " + label); return; }
+        throw new Exception("Expected rejection: " + label);
+    }
+
+    /// <summary>
+    /// Asserts a regression condition and reports a successful check.
+    /// </summary>
+    /// <param name="condition">The regression condition that must hold.</param>
+    /// <param name="label">The readable name identifying this fixture or assertion.</param>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
+    private static void Require(bool condition, string label)
+    {
+        if (!condition)
+        {
+            throw new Exception(label);
+        }
+
+        Console.WriteLine("PASS " + label);
+    }
+
+    #endregion
 }
+
+#endregion

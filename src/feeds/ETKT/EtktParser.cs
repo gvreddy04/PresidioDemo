@@ -2,9 +2,22 @@ using PresidioDemo.Feeds.Shared;
 
 namespace PresidioDemo.Feeds.ETKT;
 
-/// <summary>Separates structural decoding from reviewed protection-field bindings.</summary>
+#region Classes
+
+/// <summary>
+/// Separates structural decoding from reviewed protection-field bindings.
+/// </summary>
 public sealed class EtktParser
 {
+
+    #region Methods
+
+    /// <summary>
+    /// Parses the complete input, validates its supported shape and retains the layout required for reconstruction.
+    /// </summary>
+    /// <param name="payload">The complete decoded payload bytes without transport metadata.</param>
+    /// <returns>The validated ETKT document with its complete original scalar and structure values.</returns>
+    /// <exception cref="InvalidDataException">The supplied message, field set or configuration violates the reviewed processing contract.</exception>
     public EtktDocument Parse(ReadOnlyMemory<byte> payload)
     {
         var document = new EtktDecoder().Decode(payload);
@@ -19,8 +32,16 @@ public sealed class EtktParser
         return document;
     }
 
+    /// <summary>
+    /// Matches every reviewed protection field to exactly one decoded text span and verifies coverage.
+    /// </summary>
+    /// <param name="document">The decoded ETKT document containing original values and wire locations.</param>
+    /// <param name="fields">The complete extracted field set and its retained codec-specific serialization layout.</param>
+    /// <param name="locations">The exact reviewed payload offsets and lengths indexed by protection-field identifier.</param>
+    /// <returns>The validated bindings between reviewed protection fields and decoded text spans.</returns>
+    /// <exception cref="InvalidDataException">The supplied message, field set or configuration violates the reviewed processing contract.</exception>
     internal static IReadOnlyList<EtktTextBinding> Bind(EtktDocument document, ParsedFeed fields,
-        IReadOnlyDictionary<string, (int Offset, int Length)> locations)
+            IReadOnlyDictionary<string, (int Offset, int Length)> locations)
     {
         var bindings = new List<EtktTextBinding>();
         var coverage = new bool[document.PayloadLength];
@@ -64,4 +85,8 @@ public sealed class EtktParser
         }
         return bindings.AsReadOnly();
     }
+
+    #endregion
 }
+
+#endregion

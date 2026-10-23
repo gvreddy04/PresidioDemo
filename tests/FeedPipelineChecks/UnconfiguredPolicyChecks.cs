@@ -2,31 +2,21 @@ using System.Xml.Linq;
 using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Protection;
 
+#region Classes
+
+/// <summary>
+/// Verifies that unconfigured feed routes retain input without publication.
+/// </summary>
 static class UnconfiguredPolicyChecks
 {
-    private static void Check(bool condition, string message)
-    {
-        if (!condition)
-        {
-            throw new Exception(message);
-        }
-        Console.WriteLine("PASS " + message);
-    }
 
-    private static void Reject(Action action, string message)
-    {
-        try
-        {
-            action();
-        }
-        catch (InvalidDataException)
-        {
-            Console.WriteLine("PASS " + message);
-            return;
-        }
-        throw new Exception("Expected policy rejection: " + message);
-    }
+    #region Methods
 
+    /// <summary>
+    /// Executes the related regression cases against the supplied project and isolated workspace.
+    /// </summary>
+    /// <param name="root">The project root containing source configuration and immutable samples.</param>
+    /// <param name="workspace">The isolated directory used for runtime verification artifacts.</param>
     public static void Run(string root, string workspace)
     {
         string source = Path.Combine(root, "src", "Configuration", "feed-policies.xml");
@@ -77,4 +67,43 @@ static class UnconfiguredPolicyChecks
         Check(FeedPolicyConfiguration.Load(invalid)[FeedType.PnrLinking].IsConfigured,
             "explicit true keeps reviewed PNR-Linking policies valid");
     }
+
+    /// <summary>
+    /// Asserts that an unconfigured route retains its original input without publication.
+    /// </summary>
+    /// <param name="condition">The regression condition that must hold.</param>
+    /// <param name="message">The diagnostic explanation identifying this verification condition.</param>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
+    private static void Check(bool condition, string message)
+    {
+        if (!condition)
+        {
+            throw new Exception(message);
+        }
+        Console.WriteLine("PASS " + message);
+    }
+
+    /// <summary>
+    /// Asserts that an invalid fixture or configuration is rejected by the expected validation contract.
+    /// </summary>
+    /// <param name="action">The operation expected to satisfy or reject the regression contract.</param>
+    /// <param name="message">The diagnostic explanation identifying this verification condition.</param>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
+    private static void Reject(Action action, string message)
+    {
+        try
+        {
+            action();
+        }
+        catch (InvalidDataException)
+        {
+            Console.WriteLine("PASS " + message);
+            return;
+        }
+        throw new Exception("Expected policy rejection: " + message);
+    }
+
+    #endregion
 }
+
+#endregion

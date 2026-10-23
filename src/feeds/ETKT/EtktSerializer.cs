@@ -2,9 +2,23 @@ using PresidioDemo.Protection;
 
 namespace PresidioDemo.Feeds.ETKT;
 
-/// <summary>Applies reviewed spans and rebuilds XDR while preserving the MQ envelope.</summary>
+#region Classes
+
+/// <summary>
+/// Applies reviewed spans and rebuilds XDR while preserving the MQ envelope.
+/// </summary>
 public sealed class EtktSerializer
 {
+
+    #region Methods
+
+    /// <summary>
+    /// Reconstructs the original message representation using the complete protected field set.
+    /// </summary>
+    /// <param name="layout">The retained codec layout used for reconstruction or validation.</param>
+    /// <param name="protectedFields">The complete protected values indexed by original field identifier.</param>
+    /// <returns>The complete reconstructed message in its original transport representation.</returns>
+    /// <exception cref="InvalidDataException">The supplied message, field set or configuration violates the reviewed processing contract.</exception>
     internal byte[] Serialize(EtktParsedLayout layout, IReadOnlyDictionary<string, string> protectedFields)
     {
         if (protectedFields.Count != layout.Bindings.Count)
@@ -31,6 +45,12 @@ public sealed class EtktSerializer
         return layout.Envelope.Serialize(payload);
     }
 
+    /// <summary>
+    /// Rejects reconstructed data or settings that violate the preserved structure and protection contract.
+    /// </summary>
+    /// <param name="before">The original message or decoded layout retained before protection.</param>
+    /// <param name="after">The reconstructed message or decoded layout being validated.</param>
+    /// <exception cref="InvalidDataException">The supplied message, field set or configuration violates the reviewed processing contract.</exception>
     internal void Validate(EtktParsedLayout before, EtktParsedLayout after)
     {
         if (before.Envelope.Format != after.Envelope.Format || before.Envelope.Header != after.Envelope.Header ||
@@ -66,6 +86,15 @@ public sealed class EtktSerializer
         }
     }
 
+    /// <summary>
+    /// Determines whether an ETKT binding represents a PNR or another explicitly kept alias.
+    /// </summary>
+    /// <param name="binding">The reviewed association between a field and its containing scalar.</param>
+    /// <returns>True for a PNR or explicitly kept ETKT alias; otherwise, false.</returns>
     private static bool MustPreserve(EtktTextBinding binding) => FieldPolicy.IsPnr(binding.Field.Name) ||
-        binding.Scalar.Path is "/history/h_new_recloc" or "/history/h_old_recloc";
+            binding.Scalar.Path is "/history/h_new_recloc" or "/history/h_old_recloc";
+
+    #endregion
 }
+
+#endregion

@@ -2,9 +2,23 @@ using PresidioDemo.Protection;
 
 namespace PresidioDemo.Feeds.ACI;
 
-/// <summary>Applies reviewed text spans, rebuilds XDR and preserves the original MQ envelope.</summary>
+#region Classes
+
+/// <summary>
+/// Applies reviewed text spans, rebuilds XDR and preserves the original MQ envelope.
+/// </summary>
 public sealed class AciSerializer
 {
+
+    #region Methods
+
+    /// <summary>
+    /// Reconstructs the original message representation using the complete protected field set.
+    /// </summary>
+    /// <param name="layout">The retained codec layout used for reconstruction or validation.</param>
+    /// <param name="protectedFields">The complete protected values indexed by original field identifier.</param>
+    /// <returns>The complete reconstructed message in its original transport representation.</returns>
+    /// <exception cref="InvalidDataException">The supplied message, field set or configuration violates the reviewed processing contract.</exception>
     internal byte[] Serialize(AciParsedLayout layout, IReadOnlyDictionary<string, string> protectedFields)
     {
         if (protectedFields.Count != layout.Bindings.Count)
@@ -31,6 +45,12 @@ public sealed class AciSerializer
         return layout.Envelope.Serialize(payload);
     }
 
+    /// <summary>
+    /// Rejects reconstructed data or settings that violate the preserved structure and protection contract.
+    /// </summary>
+    /// <param name="before">The original message or decoded layout retained before protection.</param>
+    /// <param name="after">The reconstructed message or decoded layout being validated.</param>
+    /// <exception cref="InvalidDataException">The supplied message, field set or configuration violates the reviewed processing contract.</exception>
     internal void Validate(AciParsedLayout before, AciParsedLayout after)
     {
         if (before.Envelope.Format != after.Envelope.Format || before.Envelope.Header != after.Envelope.Header ||
@@ -64,4 +84,8 @@ public sealed class AciSerializer
             }
         }
     }
+
+    #endregion
 }
+
+#endregion

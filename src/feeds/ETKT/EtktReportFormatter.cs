@@ -1,15 +1,27 @@
 namespace PresidioDemo.Feeds.ETKT;
 
-/// <summary>Shows source spellings, raw flags and character arrays without inventing enum meanings.</summary>
+#region Classes
+
+/// <summary>
+/// Shows source spellings, raw flags and character arrays without inventing enum meanings.
+/// </summary>
 public static class EtktReportFormatter
 {
+
+    #region Methods
+
+    /// <summary>
+    /// Creates the readable local diagnostic representation of the supplied message or document.
+    /// </summary>
+    /// <param name="document">The decoded ETKT document containing original values and wire locations.</param>
+    /// <returns>The complete readable diagnostic report retaining supplied source values.</returns>
     public static object Format(EtktDocument document) => new
     {
         document.SampleType,
         Profile = "Observed type-5 framing; screenshot history-field order",
         document.PayloadLength,
         FieldLabels = new[]
-        {
+            {
             new
             {
                 Path = "/history/h_aaa_lniata",
@@ -33,10 +45,10 @@ public static class EtktReportFormatter
             }
         },
         Groups = document.Scalars.GroupBy(scalar => scalar.Definition.Group).ToDictionary(
-            group => group.Key, group => group.GroupBy(scalar => scalar.Definition.SourceName).ToDictionary(
-                members => members.Key, members => Value(members.ToArray()))),
+                group => group.Key, group => group.GroupBy(scalar => scalar.Definition.SourceName).ToDictionary(
+                    members => members.Key, members => Value(members.ToArray()))),
         Notes = new[]
-        {
+            {
             "The source defines error=1, issue=2 and update=3. The meaning of observed type 5 is unconfirmed.",
             "Names describe a provisional structural match; type-5 business meanings need producer confirmation.",
             "Original sample values are intentionally visible in these local analysis artifacts.",
@@ -46,6 +58,11 @@ public static class EtktReportFormatter
         }
     };
 
+    /// <summary>
+    /// Formats decoded ETKT text, character arrays or numeric words without changing their values.
+    /// </summary>
+    /// <param name="fields">The complete ordered parsed field set or reviewed field definitions.</param>
+    /// <returns>The readable text, character array or numeric-word representation.</returns>
     private static object Value(EtktScalar[] fields)
     {
         if (fields[0].Kind == EtktWireKind.String)
@@ -68,4 +85,8 @@ public static class EtktReportFormatter
         }
         return new { Number = number, Hex = $"0x{unchecked((uint)number):X8}" };
     }
+
+    #endregion
 }
+
+#endregion

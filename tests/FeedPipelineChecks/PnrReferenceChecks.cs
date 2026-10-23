@@ -4,29 +4,21 @@ using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
 using PresidioDemo.Protection;
 
+#region Classes
+
+/// <summary>
+/// Verifies the reviewed PNR projection and preserved structural bytes.
+/// </summary>
 static class PnrReferenceChecks
 {
-    private static void Check(bool condition, string message)
-    {
-        if (!condition)
-        {
-            throw new Exception(message);
-        }
-        Console.WriteLine("PASS " + message);
-    }
-    private static void Reject(Action action, string message)
-    {
-        try
-        {
-            action();
-        }
-        catch (InvalidDataException)
-        {
-            Console.WriteLine("PASS " + message);
-            return;
-        }
-        throw new Exception("Expected PNR reference rejection: " + message);
-    }
+
+    #region Methods
+
+    /// <summary>
+    /// Executes the related regression cases against the supplied project and isolated workspace.
+    /// </summary>
+    /// <param name="root">The project root containing source configuration and immutable samples.</param>
+    /// <param name="workspace">The isolated directory used for runtime verification artifacts.</param>
     public static void Run(string root, string workspace)
     {
         string config = Path.Combine(root, "src/Configuration/reference-layouts.xml");
@@ -93,4 +85,43 @@ static class PnrReferenceChecks
         Invalid(entry => entry.Elements("text").First(text => text.Elements("part").Count() > 1).Elements("part").ElementAt(1).SetAttributeValue("name", "Literal1"),
             "reference loader rejects duplicate names across fixed and mutable parts");
     }
+
+    /// <summary>
+    /// Asserts a reviewed PNR-layout condition and reports the successful check.
+    /// </summary>
+    /// <param name="condition">The regression condition that must hold.</param>
+    /// <param name="message">The diagnostic explanation identifying this verification condition.</param>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
+    private static void Check(bool condition, string message)
+    {
+        if (!condition)
+        {
+            throw new Exception(message);
+        }
+        Console.WriteLine("PASS " + message);
+    }
+
+    /// <summary>
+    /// Asserts that an invalid fixture or configuration is rejected by the expected validation contract.
+    /// </summary>
+    /// <param name="action">The operation expected to satisfy or reject the regression contract.</param>
+    /// <param name="message">The diagnostic explanation identifying this verification condition.</param>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
+    private static void Reject(Action action, string message)
+    {
+        try
+        {
+            action();
+        }
+        catch (InvalidDataException)
+        {
+            Console.WriteLine("PASS " + message);
+            return;
+        }
+        throw new Exception("Expected PNR reference rejection: " + message);
+    }
+
+    #endregion
 }
+
+#endregion

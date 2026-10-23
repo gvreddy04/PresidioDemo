@@ -5,38 +5,69 @@ using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
 using PresidioDemo.Protection;
 
+#region Classes
+
+/// <summary>
+/// Verifies XDR primitives, structures, schema validation and protection boundaries.
+/// </summary>
 static class XdrCodecChecks
 {
-    private static XdrFieldDefinition Text(string name, int max = 128) => new(name, "string", max);
+
+    #region Fields and Constants
+
+    /// <summary>
+    /// Creates reviewed fixture field policies for the requested feed route.
+    /// </summary>
     private static readonly XdrFieldDefinition[] Fields = [
-        new("Version", "uint32", Expected: 2), Text("pnr", 6),
+            new("Version", "uint32", Expected: 2), Text("pnr", 6),
         new("Passengers", "array", Limit: 10, Members: [new("Item", "struct", Members: [Text("PassengerId"), Text("Name"), Text("Email")])]),
         new("Accepted", "boolean"), new("Note", "optional", Members: [Text("Text")]),
         new("Choice", "union", Cases: new Dictionary<int, XdrFieldDefinition> { [7] = Text("Comment") }),
         new("Opaque", "fixedOpaque", Count: 5), new("Unsigned64", "uint64"), new("Signed64", "int64"),
         new("Float32", "float32"), new("Float64", "float64")
-    ];
-    private static byte[] Fixture()
+        ];
+
+    #endregion
+
+    #region Methods
+
+    /// <summary>
+    /// Verifies that configured protection changes only the reviewed payload spans.
+    /// </summary>
+    /// <param name="protector">The local configured field-protection service.</param>
+    /// <returns>A task that completes when the operation and required cleanup have finished.</returns>
+    public static async Task CheckProtection(PresidioFeedProtector protector)
     {
-        using var stream = new MemoryStream();
-        void Number(uint n) { byte[] b = new byte[4]; BinaryPrimitives.WriteUInt32BigEndian(b, n); stream.Write(b); }
-        void Wide(ulong n) { byte[] b = new byte[8]; BinaryPrimitives.WriteUInt64BigEndian(b, n); stream.Write(b); }
-        void String(string value) { byte[] b = Encoding.ASCII.GetBytes(value); Number((uint)b.Length); stream.Write(b); for (int i = 0; i < ((-b.Length) & 3); i++) stream.WriteByte(0); }
-        Number(2); String("K7QX2M"); Number(2);
-        foreach (var passenger in new[] { new[] { "PAX-1001", "Emily Carter", "emily.carter@example.com" }, new[] { "PAX-1002", "Michael Brooks", "michael.brooks@example.com" } })
-            foreach (string value in passenger) String(value);
-        Number(1); Number(1); String("Operational note"); Number(7); String("Keep this comment");
-        stream.Write(new byte[] { 1, 2, 3, 4, 5, 0, 0, 0 });
-        Wide(ulong.MaxValue); Wide(unchecked((ulong)-42L)); Number(0x7FC00001); Wide(0x8000000000000000);
-        return stream.ToArray();
+        foreach (var feed in new[] { FeedType.ACI, FeedType.PNR, FeedType.ETKT })
+        {
+            var codec = new XdrFeedCodec(feed, new(feed, Fields));
+            var message = Message(Fixture(), feed);
+            var parsed = codec.Parse(message);
+            var rules = parsed.Fields.GroupBy(f => f.Name).Select(group =>
+                group.Key.EndsWith("/Name") ? new FieldPolicy(group.Key, FieldIdentification.Known, FieldAction.Replace, "PERSON", "[PASSENGER_NAME]") :
+                group.Key.EndsWith("/Email") ? new FieldPolicy(group.Key, FieldIdentification.Known, FieldAction.Replace, "EMAIL_ADDRESS", "[EMAIL_ADDRESS]") :
+                group.Key.EndsWith("/PassengerId") ? new FieldPolicy(group.Key, FieldIdentification.Known, FieldAction.Replace, "PASSENGER_ID", "[PASSENGER_ID]") :
+                new FieldPolicy(group.Key, FieldIdentification.None, FieldAction.Keep)).ToArray();
+            var policy = new FeedPolicy(feed, rules);
+            IFeedWorkflow workflow = feed switch
+            {
+                FeedType.ACI => new AciWorkflow(protector, codec, policy),
+                FeedType.PNR => new PnrWorkflow(protector, codec, policy),
+                _ => new EtktWorkflow(protector, codec, policy)
+            };
+            var result = await workflow.ProcessAsync(message, CancellationToken.None);
+            var check = codec.Parse(message with { Content = result.Content });
+            Check(check.Fields.Single(f => f.Id == "/pnr").Value == "K7QX2M" && check.Fields.Count(f => f.Value == "[PASSENGER_NAME]") == 2 &&
+                !Encoding.ASCII.GetString(result.Content.Span).Contains("Emily"), FeedCatalog.Get(feed).FolderName + " workflow applies actual local Presidio and XDR serialization using a clearly test-only schema");
+        }
     }
-    private static FeedMessage Message(byte[] bytes, FeedType feed = FeedType.ACI) => new(new(feed, Guid.Empty, "test-only-xdr.bin", "fixture"), bytes);
-    private static void Check(bool okay, string text) { if (!okay) throw new Exception(text); Console.WriteLine("PASS " + text); }
-    private static void Reject(Action action, string text)
-    {
-        try { action(); } catch (InvalidDataException) { Console.WriteLine("PASS " + text); return; }
-        throw new Exception("Expected XDR rejection: " + text);
-    }
+
+    /// <summary>
+    /// Executes the related regression cases against the supplied project and isolated workspace.
+    /// </summary>
+    /// <param name="root">The project root containing source configuration and immutable samples.</param>
+    /// <param name="workspace">The isolated directory used for runtime verification artifacts.</param>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
     public static void Run(string root, string workspace)
     {
         Directory.CreateDirectory(workspace);
@@ -102,6 +133,20 @@ static class XdrCodecChecks
         try { XdrLayoutConfiguration.Load(config); throw new Exception("XDR DTD accepted"); }
         catch (System.Xml.XmlException) { Console.WriteLine("PASS XDR configuration rejects DTD and external entities"); }
     }
+
+    /// <summary>
+    /// Asserts an XDR fixture condition and reports the successful check.
+    /// </summary>
+    /// <param name="okay">The regression condition that must hold.</param>
+    /// <param name="text">The complete MQ-export text or decoded fixture text.</param>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
+    private static void Check(bool okay, string text) { if (!okay) { throw new Exception(text); } Console.WriteLine("PASS " + text); }
+
+    /// <summary>
+    /// Verifies that raw-word shorthand expands to the original fixed-array representation.
+    /// </summary>
+    /// <param name="root">The project root containing source configuration and immutable samples.</param>
+    /// <param name="workspace">The isolated directory used for runtime verification artifacts.</param>
     private static void CheckWordsShorthand(string root, string workspace)
     {
         string active = Path.Combine(root, "src", "Configuration", "xdr-layouts.xml");
@@ -110,9 +155,12 @@ static class XdrCodecChecks
         var blocks = expanded.Descendants("words").ToArray();
         Check(blocks.Length > 0, "production XDR configuration uses words shorthand");
         foreach (var block in blocks)
+        {
             block.ReplaceWith(new XElement("fixedArray", new XAttribute("name", block.Attribute("name")!.Value),
-                new XAttribute("count", block.Attribute("count")!.Value),
-                new XElement("uint32", new XAttribute("name", "Value"))));
+                        new XAttribute("count", block.Attribute("count")!.Value),
+                        new XElement("uint32", new XAttribute("name", "Value"))));
+        }
+
         string legacyFile = Path.Combine(workspace, "expanded-original-xdr.xml");
         expanded.Save(legacyFile);
         var legacy = XdrLayoutConfiguration.Load(legacyFile);
@@ -122,9 +170,13 @@ static class XdrCodecChecks
             string name = Path.GetFileNameWithoutExtension(source);
             FeedType? feed = name.StartsWith("ACI", StringComparison.Ordinal) ? FeedType.ACI :
                 name.StartsWith("ETKT", StringComparison.Ordinal) ? FeedType.ETKT : name == "PNR" ? FeedType.PNR : null;
-            if (feed is null) continue;
+            if (feed is null)
+            {
+                continue;
+            }
+
             var message = new FeedMessage(new(feed.Value, Guid.Empty, Path.GetFileName(source), "supplied-sample"),
-                File.ReadAllBytes(source));
+                            File.ReadAllBytes(source));
             var codec = new XdrFeedCodec(feed.Value, compact[feed.Value]);
             var originalCodec = new XdrFeedCodec(feed.Value, legacy[feed.Value]);
             var parsed = codec.Parse(message);
@@ -149,29 +201,63 @@ static class XdrCodecChecks
             Reject(() => XdrLayoutConfiguration.Load(invalid), "invalid words declaration rejected: " + declaration);
         }
     }
-    public static async Task CheckProtection(PresidioFeedProtector protector)
+
+    /// <summary>
+    /// Builds an independent binary or message fixture for the requested verification case.
+    /// </summary>
+    /// <returns>The complete independently encoded regression-fixture payload.</returns>
+    private static byte[] Fixture()
     {
-        foreach (var feed in new[] { FeedType.ACI, FeedType.PNR, FeedType.ETKT })
+        using (var stream = new MemoryStream())
         {
-            var codec = new XdrFeedCodec(feed, new(feed, Fields));
-            var message = Message(Fixture(), feed);
-            var parsed = codec.Parse(message);
-            var rules = parsed.Fields.GroupBy(f => f.Name).Select(group =>
-                group.Key.EndsWith("/Name") ? new FieldPolicy(group.Key, FieldIdentification.Known, FieldAction.Replace, "PERSON", "[PASSENGER_NAME]") :
-                group.Key.EndsWith("/Email") ? new FieldPolicy(group.Key, FieldIdentification.Known, FieldAction.Replace, "EMAIL_ADDRESS", "[EMAIL_ADDRESS]") :
-                group.Key.EndsWith("/PassengerId") ? new FieldPolicy(group.Key, FieldIdentification.Known, FieldAction.Replace, "PASSENGER_ID", "[PASSENGER_ID]") :
-                new FieldPolicy(group.Key, FieldIdentification.None, FieldAction.Keep)).ToArray();
-            var policy = new FeedPolicy(feed, rules);
-            IFeedWorkflow workflow = feed switch
+            void Number(uint n) { byte[] b = new byte[4]; BinaryPrimitives.WriteUInt32BigEndian(b, n); stream.Write(b); }
+            void Wide(ulong n) { byte[] b = new byte[8]; BinaryPrimitives.WriteUInt64BigEndian(b, n); stream.Write(b); }
+            void String(string value) { byte[] b = Encoding.ASCII.GetBytes(value); Number((uint)b.Length); stream.Write(b); for (int i = 0; i < ((-b.Length) & 3); i++) { stream.WriteByte(0); } }
+            Number(2); String("K7QX2M"); Number(2);
+            foreach (var passenger in new[] { new[] { "PAX-1001", "Emily Carter", "emily.carter@example.com" }, new[] { "PAX-1002", "Michael Brooks", "michael.brooks@example.com" } })
             {
-                FeedType.ACI => new AciWorkflow(protector, codec, policy),
-                FeedType.PNR => new PnrWorkflow(protector, codec, policy),
-                _ => new EtktWorkflow(protector, codec, policy)
-            };
-            var result = await workflow.ProcessAsync(message, CancellationToken.None);
-            var check = codec.Parse(message with { Content = result.Content });
-            Check(check.Fields.Single(f => f.Id == "/pnr").Value == "K7QX2M" && check.Fields.Count(f => f.Value == "[PASSENGER_NAME]") == 2 &&
-                !Encoding.ASCII.GetString(result.Content.Span).Contains("Emily"), FeedCatalog.Get(feed).FolderName + " workflow applies actual local Presidio and XDR serialization using a clearly test-only schema");
+                foreach (string value in passenger)
+                {
+                    String(value);
+                }
+            }
+
+            Number(1); Number(1); String("Operational note"); Number(7); String("Keep this comment");
+            stream.Write(new byte[] { 1, 2, 3, 4, 5, 0, 0, 0 });
+            Wide(ulong.MaxValue); Wide(unchecked((ulong)-42L)); Number(0x7FC00001); Wide(0x8000000000000000);
+            return stream.ToArray();
         }
     }
+
+    /// <summary>
+    /// Creates a complete regression-test delivery with the requested feed and input bytes.
+    /// </summary>
+    /// <param name="bytes">The complete payload or fixture bytes to read, encode or compare.</param>
+    /// <param name="feed">The supported feed route.</param>
+    /// <returns>The complete fixture delivery and its original bytes.</returns>
+    private static FeedMessage Message(byte[] bytes, FeedType feed = FeedType.ACI) => new(new(feed, Guid.Empty, "test-only-xdr.bin", "fixture"), bytes);
+
+    /// <summary>
+    /// Asserts that an invalid fixture or configuration is rejected by the expected validation contract.
+    /// </summary>
+    /// <param name="action">The operation expected to satisfy or reject the regression contract.</param>
+    /// <param name="text">The complete MQ-export text or decoded fixture text.</param>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
+    private static void Reject(Action action, string text)
+    {
+        try { action(); } catch (InvalidDataException) { Console.WriteLine("PASS " + text); return; }
+        throw new Exception("Expected XDR rejection: " + text);
+    }
+
+    /// <summary>
+    /// Creates a bounded counted-string declaration for an independent XDR fixture.
+    /// </summary>
+    /// <param name="name">The declared member name, configuration setting or fixture filename.</param>
+    /// <param name="max">The maximum supported length for the counted value.</param>
+    /// <returns>The bounded counted-string declaration used by the independent XDR fixture.</returns>
+    private static XdrFieldDefinition Text(string name, int max = 128) => new(name, "string", max);
+
+    #endregion
 }
+
+#endregion

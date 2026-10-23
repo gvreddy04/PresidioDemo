@@ -4,12 +4,55 @@ using PresidioDemo.Pipeline;
 
 namespace PresidioDemo.Transport;
 
+#region Classes
+
+/// <summary>
+/// Coordinates independent per-feed processing with durable retry and quarantine handling.
+/// </summary>
+/// <param name="transport">The durable input, output, rejection and acknowledgment service.</param>
+/// <param name="router">The registry resolving a workflow for each supported feed route.</param>
 public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRouter router) : IDisposable
 {
+
+    #region Fields and Constants
+
+    /// <summary>
+    /// Signals ready-input rescans without starting multiple workers for the same feed.
+    /// </summary>
     private readonly SemaphoreSlim _wake = new(0, 1);
+
+    /// <summary>
+    /// The owned file-system watchers that signal feed-folder changes.
+    /// </summary>
     private readonly List<FileSystemWatcher> _watchers = [];
+
+    /// <summary>
+    /// Tracks the earliest retry time for each retained processing file.
+    /// </summary>
     private readonly ConcurrentDictionary<string, DateTime> _retryAfter = new(StringComparer.OrdinalIgnoreCase);
 
+    #endregion
+
+    #region Methods
+
+    /// <summary>
+    /// Releases the owned streams, file watchers, synchronization objects or workspace lock.
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var watcher in _watchers)
+        {
+            watcher.Dispose();
+        }
+
+        _wake.Dispose();
+    }
+
+    /// <summary>
+    /// Watches the exchange folders and drains active per-feed workers before shutdown.
+    /// </summary>
+    /// <param name="cancellationToken">The token used to interrupt processing while retaining recoverable input.</param>
+    /// <returns>A task that completes when the operation and required cleanup have finished.</returns>
     public async Task RunAsync(CancellationToken cancellationToken)
     {
         foreach (var feed in FeedCatalog.All)
@@ -47,8 +90,16 @@ public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRou
                 foreach (var delivery in transport.ClaimReadyDeliveries(running.Keys.ToHashSet()))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (running.ContainsKey(delivery.Feed)) continue; // Retained on disk until this feed is idle.
-                    if (_retryAfter.TryGetValue(delivery.WorkingPath, out var after) && DateTime.UtcNow < after) continue;
+                    if (running.ContainsKey(delivery.Feed))
+                    {
+                        continue; // Retained on disk until this feed is idle.
+                    }
+
+                    if (_retryAfter.TryGetValue(delivery.WorkingPath, out var after) && DateTime.UtcNow < after)
+                    {
+                        continue;
+                    }
+
                     running.Add(delivery.Feed, Task.Run(() => ProcessAsync(delivery, cancellationToken)));
                 }
                 await _wake.WaitAsync(TimeSpan.FromMilliseconds(500), cancellationToken);
@@ -57,13 +108,31 @@ public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRou
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
         finally
         {
-            foreach (var watcher in _watchers) watcher.EnableRaisingEvents = false;
+            foreach (var watcher in _watchers)
+            {
+                watcher.EnableRaisingEvents = false;
+            }
             // Drain all workers before disposing transport or shutting down embedded Python.
             try { await Task.WhenAll(running.Values); }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
         }
     }
 
+    /// <summary>
+    /// Writes a transaction stage and message to the listener&apos;s progress output.
+    /// </summary>
+    /// <param name="feed">The supported feed route.</param>
+    /// <param name="stage">The listener&apos;s current transaction-stage label.</param>
+    /// <param name="detail">The diagnostic detail included when a regression assertion fails.</param>
+    private static void Log(FeedType feed, string stage, string detail) =>
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {FeedCatalog.Get(feed).FolderName,-12} {stage,-10} {detail}");
+
+    /// <summary>
+    /// Parses, protects, reconstructs and validates one complete delivery before a durable outcome.
+    /// </summary>
+    /// <param name="delivery">The claimed input and its stable feed-route and transaction metadata.</param>
+    /// <param name="cancellationToken">The token used to interrupt processing while retaining recoverable input.</param>
+    /// <returns>A task that completes when the operation and required cleanup have finished.</returns>
     private async Task ProcessAsync(FeedDelivery delivery, CancellationToken cancellationToken)
     {
         byte[] content;
@@ -145,6 +214,13 @@ public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRou
         }
     }
 
+    /// <summary>
+    /// Persists a rejected message and its reason before removing its processing file.
+    /// </summary>
+    /// <param name="message">The complete input delivery and its retained message bytes.</param>
+    /// <param name="reason">The validated explanation for retaining or rejecting the complete input.</param>
+    /// <param name="cancellationToken">The token used to interrupt processing while retaining recoverable input.</param>
+    /// <returns>A task that completes when the operation and required cleanup have finished.</returns>
     private async Task RetainFailedAsync(FeedMessage message, string reason, CancellationToken cancellationToken)
     {
         var delivery = message.Delivery;
@@ -166,12 +242,20 @@ public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRou
         }
     }
 
+    /// <summary>
+    /// Schedules a later attempt while retaining the original claimed input and transaction identifier.
+    /// </summary>
+    /// <param name="delivery">The claimed input and its stable feed-route and transaction metadata.</param>
+    /// <param name="reason">The validated explanation for retaining or rejecting the complete input.</param>
     private void Retry(FeedDelivery delivery, string reason)
     {
         _retryAfter[delivery.WorkingPath] = DateTime.UtcNow.AddSeconds(5);
         Log(delivery.Feed, "PENDING", $"{delivery.OriginalName} | {reason}");
     }
 
+    /// <summary>
+    /// Signals the listener to rescan for ready or recoverable input.
+    /// </summary>
     private void Wake()
     {
         try { _wake.Release(); }
@@ -179,12 +263,7 @@ public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRou
         catch (ObjectDisposedException) { }
     }
 
-    private static void Log(FeedType feed, string stage, string detail) =>
-        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {FeedCatalog.Get(feed).FolderName,-12} {stage,-10} {detail}");
-
-    public void Dispose()
-    {
-        foreach (var watcher in _watchers) watcher.Dispose();
-        _wake.Dispose();
-    }
+    #endregion
 }
+
+#endregion

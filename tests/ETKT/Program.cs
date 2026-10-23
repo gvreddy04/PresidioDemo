@@ -7,6 +7,8 @@ using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
 using PresidioDemo.Protection;
 
+#region Execution
+
 string project = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../"));
 string output = args.Length == 1 ? Path.GetFullPath(args[0]) : Path.Combine(project, ".test-runs/etkt-checks");
 Directory.CreateDirectory(output);
@@ -58,9 +60,17 @@ foreach (string file in Directory.GetFiles(Path.Combine(project, "docs/sample-do
     File.WriteAllText(Path.Combine(output, Path.GetFileNameWithoutExtension(file) + ".decoded.json"),
         JsonSerializer.Serialize(new { Source = Path.GetFileName(file), Decoded = EtktReportFormatter.Format(decoded), Scalars = decoded.Scalars }, options) + "\n");
     File.WriteAllBytes(Path.Combine(output, Path.GetFileNameWithoutExtension(file) + ".protected.txt"), protectedBytes);
-    results.Add(new { Sample = Path.GetFileName(file), SourceSha256 = Convert.ToHexString(SHA256.HashData(original)),
-        PayloadBytes = decoded.PayloadLength, ScalarCount = decoded.Scalars.Count,
-        DecodeEncodeExact = true, MqExportExact = true, ProjectionOutputExact = true, DividePnrsUnchanged = true });
+    results.Add(new
+    {
+        Sample = Path.GetFileName(file),
+        SourceSha256 = Convert.ToHexString(SHA256.HashData(original)),
+        PayloadBytes = decoded.PayloadLength,
+        ScalarCount = decoded.Scalars.Count,
+        DecodeEncodeExact = true,
+        MqExportExact = true,
+        ProjectionOutputExact = true,
+        DividePnrsUnchanged = true
+    });
     Console.WriteLine($"PASS {Path.GetFileName(file)}: {decoded.PayloadLength} bytes, {decoded.Scalars.Count} fields, exact binary and export round trips");
 }
 
@@ -157,7 +167,8 @@ Check(EtktIndicators.DescribeStatus(0x01000000).ExchangeDestination == "ETKT (pr
 File.WriteAllText(Path.Combine(output, "verification.json"), JsonSerializer.Serialize(new
 {
     Scope = "Configured ETKT route uses the dedicated module; provisional new/old PNRs remain unchanged",
-    Samples = results, MalformedAndPolicyChecksPassed = true
+    Samples = results,
+    MalformedAndPolicyChecksPassed = true
 }, options) + "\n");
 Console.WriteLine("PASS malformed-input, coverage, width, metadata and kept-field checks");
 
@@ -195,3 +206,5 @@ void InvalidConfiguration(Action<XDocument> mutate, string message)
     document.Save(configurationFile);
     Reject(() => ReferenceLayoutConfiguration.Load(configurationFile, schemas), message);
 }
+
+#endregion

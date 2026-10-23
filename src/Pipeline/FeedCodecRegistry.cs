@@ -6,15 +6,41 @@ using PresidioDemo.Feeds.Shared;
 
 namespace PresidioDemo.Pipeline;
 
+#region Classes
+
+/// <summary>
+/// Selects the configured feed-specific or shared codec for a delivery route.
+/// </summary>
 public static class FeedCodecRegistry
 {
+
+    #region Methods
+
+    /// <summary>
+    /// Selects the reviewed feed-specific or shared codec from the available configuration.
+    /// </summary>
+    /// <param name="feed">The supported feed route.</param>
+    /// <returns>The configured codec for the requested feed route.</returns>
     public static IFeedCodec Create(FeedType feed) => Create(feed, new Dictionary<FeedType, XdrFeedSchema>());
 
+    /// <summary>
+    /// Selects the reviewed feed-specific or shared codec from the available configuration.
+    /// </summary>
+    /// <param name="feed">The supported feed route.</param>
+    /// <param name="schemas">The reviewed XDR schemas indexed by feed route.</param>
+    /// <returns>The configured codec for the requested feed route.</returns>
     public static IFeedCodec Create(FeedType feed, IReadOnlyDictionary<FeedType, XdrFeedSchema> schemas) =>
-        Create(feed, schemas, new Dictionary<FeedType, ReferenceFeedLayout>());
+            Create(feed, schemas, new Dictionary<FeedType, ReferenceFeedLayout>());
 
+    /// <summary>
+    /// Selects the reviewed feed-specific or shared codec from the available configuration.
+    /// </summary>
+    /// <param name="feed">The supported feed route.</param>
+    /// <param name="schemas">The reviewed XDR schemas indexed by feed route.</param>
+    /// <param name="references">The reviewed reference projections indexed by feed route.</param>
+    /// <returns>The configured codec for the requested feed route.</returns>
     public static IFeedCodec Create(FeedType feed, IReadOnlyDictionary<FeedType, XdrFeedSchema> schemas,
-        IReadOnlyDictionary<FeedType, ReferenceFeedLayout> references)
+            IReadOnlyDictionary<FeedType, ReferenceFeedLayout> references)
     {
         if (feed == FeedType.Seats)
         {
@@ -46,4 +72,8 @@ public static class FeedCodecRegistry
         }
         return new XdrFeedCodec(feed, null);
     }
+
+    #endregion
 }
+
+#endregion

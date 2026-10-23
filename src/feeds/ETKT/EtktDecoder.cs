@@ -1,8 +1,21 @@
 namespace PresidioDemo.Feeds.ETKT;
 
-/// <summary>Decodes the supplied type-5 family; does not reinterpret 5 as the documented enum 3.</summary>
+#region Classes
+
+/// <summary>
+/// Decodes the supplied type-5 family; does not reinterpret 5 as the documented enum 3.
+/// </summary>
 public sealed class EtktDecoder
 {
+
+    #region Methods
+
+    /// <summary>
+    /// Decodes a complete payload into the feed&apos;s reviewed structural representation.
+    /// </summary>
+    /// <param name="payload">The complete decoded payload bytes without transport metadata.</param>
+    /// <returns>The complete decoded document with original values and wire locations.</returns>
+    /// <exception cref="InvalidDataException">The supplied message, field set or configuration violates the reviewed processing contract.</exception>
     public EtktDocument Decode(ReadOnlyMemory<byte> payload)
     {
         if (payload.Length == 0 || payload.Length > 4 * 1024 * 1024 || payload.Length % 4 != 0)
@@ -33,4 +46,8 @@ public sealed class EtktDecoder
         }
         return new(scalars.AsReadOnly(), payload.Length);
     }
+
+    #endregion
 }
+
+#endregion

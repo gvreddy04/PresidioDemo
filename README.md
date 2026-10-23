@@ -28,6 +28,14 @@ Namespaces follow these folders: `PresidioDemo.Feeds.Shared`, `PresidioDemo.Pipe
 
 [Editable Excalidraw diagram](topics/feeds-demo/v14/presidio-feed-workflow-v3.excalidraw)
 
+## C# conventions
+
+Types and members include XML summaries. Parameters, return values and property values are documented where applicable, including positional record values and non-public helpers. The application build generates XML documentation.
+
+Declarations use regions for fields and constants, constructors, methods, properties and indexers, and nested types. Methods and properties are ordered by accessibility and then name; overloads stay together. Fields without runtime initializers are sorted by name, while initialized fields retain their construction order. Enum declarations retain their existing numeric and wire order. Control-flow and scoped resource statements use explicit blocks. Documentation does not add runtime annotation attributes.
+
+The root [.editorconfig](.editorconfig) shares C# formatting preferences with Visual Studio. See [C# formatting and cleanup](docs/code-cleanup.md) for the cleanup profile, terminal commands and rules that still require review.
+
 ## Current feed status
 
 | Feed | Actual input result |

@@ -1,11 +1,13 @@
 using System.Security.Cryptography;
-using System.Text.Json;
 using System.Text;
+using System.Text.Json;
 using PresidioDemo.Feeds.PNRLinking;
 using PresidioDemo.Feeds.Seats;
 using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
 using PresidioDemo.Protection;
+
+#region Execution
 
 string project = AppContext.BaseDirectory;
 while (!File.Exists(Path.Combine(project, "PresidioDemo.csproj")))
@@ -49,49 +51,59 @@ foreach (FeedType feed in new[] { FeedType.PnrLinking, FeedType.Seats })
         byte[] raw = envelope.Payload;
         var rawParsed = codec.Parse(Message(feed, raw));
         Check(codec.Serialize(rawParsed, unchanged).SequenceEqual(raw), "exact raw JSON round trip");
-        using var document = JsonDocument.Parse(raw);
-        object report = new
+        using (var document = JsonDocument.Parse(raw))
         {
-            Feed = FeedCatalog.Get(feed).FolderName,
-            Format = "UTF-8 JSON",
-            PayloadBytes = raw.Length,
-            Payload = document.RootElement.Clone(),
-            Fields = parsed.Fields
-        };
-        if (linking)
-        {
-            Check(document.RootElement.GetArrayLength() >= 1 &&
-                document.RootElement[0].GetProperty("Customers").GetArrayLength() == 2,
-                "link records retain both customers in the original JSON structure");
+            object report = new
+            {
+                Feed = FeedCatalog.Get(feed).FolderName,
+                Format = "UTF-8 JSON",
+                PayloadBytes = raw.Length,
+                Payload = document.RootElement.Clone(),
+                Fields = parsed.Fields
+            };
+            if (linking)
+            {
+                Check(document.RootElement.GetArrayLength() >= 1 &&
+                    document.RootElement[0].GetProperty("Customers").GetArrayLength() == 2,
+                    "link records retain both customers in the original JSON structure");
+            }
+            else
+            {
+                var customers = document.RootElement.GetProperty("OrderChangeNotif").GetProperty("Old").GetProperty("Customers");
+                Check(customers.GetArrayLength() >= 1 && customers[0].GetProperty("ServiceItems").GetArrayLength() >= 1,
+                    "notification, customer and service-item locations remain associated");
+            }
+            var plan = ConfiguredPiiIdentifier.CreatePlan(parsed.Fields, policies[feed]);
+            var replacements = plan.ToDictionary(item => item.Field.Id, item =>
+                item.Rule.Action == FieldAction.Keep || item.Field.Value.Length == 0 ? item.Field.Value : item.Rule.Replacement);
+            byte[] protectedBytes = codec.Serialize(parsed, replacements);
+            codec.Validate(parsed, protectedBytes);
+            var afterEnvelope = FeedPayloadReader.Read(message with { Content = protectedBytes });
+            var independentAfter = Independent(afterEnvelope.Payload);
+            Check(independentAfter.Count == independent.Count && independentAfter.All(field => field.Value == replacements[field.Id]),
+                "independent reader confirms all configured replacements and kept values");
+            Check(independent.Where(field => FieldPolicy.IsPnr(field.Name)).All(before =>
+                independentAfter.Single(after => after.Id == before.Id).Value == before.Value), "all PNRs remain unchanged");
+            Check(sample.Expected == 0 || plan.Select(item => item.Field.Name).Distinct().Count() == (linking ? 49 : 39),
+                "supplied feed retains its existing XML policy coverage");
+            var reparsed = codec.Parse(message with { Content = protectedBytes });
+            Check(codec.Serialize(reparsed, reparsed.Fields.ToDictionary(field => field.Id, field => field.Value)).SequenceEqual(protectedBytes),
+                "protected export parses and re-encodes exactly");
+            File.WriteAllText(Path.Combine(output, Path.GetFileNameWithoutExtension(sample.Name) + ".decoded.json"),
+                JsonSerializer.Serialize(report, options) + "\n");
+            File.WriteAllBytes(Path.Combine(output, Path.GetFileNameWithoutExtension(sample.Name) + ".protected.txt"), protectedBytes);
+            results.Add(new
+            {
+                Sample = sample.Name,
+                SourceSha256 = Convert.ToHexString(SHA256.HashData(original)),
+                ScalarCount = parsed.Fields.Count,
+                PolicyPaths = plan.Select(item => item.Field.Name).Distinct().Count(),
+                PayloadBytes = raw.Length,
+                ExactRawRoundTrip = true,
+                ExactMqRoundTrip = true,
+                IndependentReaderAgreement = true
+            });
         }
-        else
-        {
-            var customers = document.RootElement.GetProperty("OrderChangeNotif").GetProperty("Old").GetProperty("Customers");
-            Check(customers.GetArrayLength() >= 1 && customers[0].GetProperty("ServiceItems").GetArrayLength() >= 1,
-                "notification, customer and service-item locations remain associated");
-        }
-        var plan = ConfiguredPiiIdentifier.CreatePlan(parsed.Fields, policies[feed]);
-        var replacements = plan.ToDictionary(item => item.Field.Id, item =>
-            item.Rule.Action == FieldAction.Keep || item.Field.Value.Length == 0 ? item.Field.Value : item.Rule.Replacement);
-        byte[] protectedBytes = codec.Serialize(parsed, replacements);
-        codec.Validate(parsed, protectedBytes);
-        var afterEnvelope = FeedPayloadReader.Read(message with { Content = protectedBytes });
-        var independentAfter = Independent(afterEnvelope.Payload);
-        Check(independentAfter.Count == independent.Count && independentAfter.All(field => field.Value == replacements[field.Id]),
-            "independent reader confirms all configured replacements and kept values");
-        Check(independent.Where(field => FieldPolicy.IsPnr(field.Name)).All(before =>
-            independentAfter.Single(after => after.Id == before.Id).Value == before.Value), "all PNRs remain unchanged");
-        Check(sample.Expected == 0 || plan.Select(item => item.Field.Name).Distinct().Count() == (linking ? 49 : 39),
-            "supplied feed retains its existing XML policy coverage");
-        var reparsed = codec.Parse(message with { Content = protectedBytes });
-        Check(codec.Serialize(reparsed, reparsed.Fields.ToDictionary(field => field.Id, field => field.Value)).SequenceEqual(protectedBytes),
-            "protected export parses and re-encodes exactly");
-        File.WriteAllText(Path.Combine(output, Path.GetFileNameWithoutExtension(sample.Name) + ".decoded.json"),
-            JsonSerializer.Serialize(report, options) + "\n");
-        File.WriteAllBytes(Path.Combine(output, Path.GetFileNameWithoutExtension(sample.Name) + ".protected.txt"), protectedBytes);
-        results.Add(new { Sample = sample.Name, SourceSha256 = Convert.ToHexString(SHA256.HashData(original)),
-            ScalarCount = parsed.Fields.Count, PolicyPaths = plan.Select(item => item.Field.Name).Distinct().Count(),
-            PayloadBytes = raw.Length, ExactRawRoundTrip = true, ExactMqRoundTrip = true, IndependentReaderAgreement = true });
     }
 
     string Wrap(string json) => linking ? "[" + json + "]" : json;
@@ -151,8 +163,11 @@ foreach (FeedType feed in new[] { FeedType.PnrLinking, FeedType.Seats })
     Reject(() => other.Serialize(lexical, lexical.Fields.ToDictionary(field => field.Id, field => field.Value)), "cross-feed serializer layout");
     File.WriteAllText(Path.Combine(output, "verification.json"), JsonSerializer.Serialize(new
     {
-        Feed = FeedCatalog.Get(feed).FolderName, Codec = codec.GetType().Name, Samples = results,
-        ProtectionPolicyChanged = false, NewIdentityOrTokenization = false
+        Feed = FeedCatalog.Get(feed).FolderName,
+        Codec = codec.GetType().Name,
+        Samples = results,
+        ProtectionPolicyChanged = false,
+        NewIdentityOrTokenization = false
     }, options) + "\n");
 }
 Console.WriteLine($"PASS {checks} shared System.Text.Json checks");
@@ -188,34 +203,38 @@ static FeedMessage Message(FeedType feed, byte[] bytes, string name = "fixture.b
 // This reader uses the independent DOM API and has no dependency on production JSON span code.
 static IReadOnlyList<FeedField> Independent(byte[] payload)
 {
-    using var document = JsonDocument.Parse(payload);
-    var fields = new List<FeedField>();
-    Walk(document.RootElement, "", "");
-    return fields;
-
-    void Walk(JsonElement element, string id, string policy)
+    using (var document = JsonDocument.Parse(payload))
     {
-        if (element.ValueKind == JsonValueKind.Object)
+        var fields = new List<FeedField>();
+        Walk(document.RootElement, "", "");
+        return fields;
+
+        void Walk(JsonElement element, string id, string policy)
         {
-            foreach (var property in element.EnumerateObject())
+            if (element.ValueKind == JsonValueKind.Object)
             {
-                string name = property.Name.Replace("~", "~0").Replace("/", "~1");
-                Walk(property.Value, id + "/" + name, policy + "/" + name);
+                foreach (var property in element.EnumerateObject())
+                {
+                    string name = property.Name.Replace("~", "~0").Replace("/", "~1");
+                    Walk(property.Value, id + "/" + name, policy + "/" + name);
+                }
             }
-        }
-        else if (element.ValueKind == JsonValueKind.Array)
-        {
-            int index = 0;
-            foreach (var child in element.EnumerateArray())
+            else if (element.ValueKind == JsonValueKind.Array)
             {
-                Walk(child, id + "/" + index++, policy + "/*");
+                int index = 0;
+                foreach (var child in element.EnumerateArray())
+                {
+                    Walk(child, id + "/" + index++, policy + "/*");
+                }
             }
-        }
-        else
-        {
-            string value = element.ValueKind == JsonValueKind.String ? element.GetString()! :
-                element.ValueKind == JsonValueKind.Null ? "" : element.GetRawText();
-            fields.Add(new(id, policy, value));
+            else
+            {
+                string value = element.ValueKind == JsonValueKind.String ? element.GetString()! :
+                    element.ValueKind == JsonValueKind.Null ? "" : element.GetRawText();
+                fields.Add(new(id, policy, value));
+            }
         }
     }
 }
+
+#endregion

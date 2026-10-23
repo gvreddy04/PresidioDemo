@@ -2,11 +2,20 @@ using System.Collections.ObjectModel;
 
 namespace PresidioDemo.Feeds.ETKT;
 
-/// <summary>Screenshot history order, with a separately identified observed type-5 prefix.</summary>
+#region Classes
+
+/// <summary>
+/// Screenshot history order, with a separately identified observed type-5 prefix.
+/// </summary>
 public static class EtktStructureDefinitions
 {
-    public static IReadOnlyList<EtktFieldDefinition> SampleHistory { get; } = Build();
 
+    #region Methods
+
+    /// <summary>
+    /// Constructs the reviewed field declarations in their required wire order.
+    /// </summary>
+    /// <returns>The complete reviewed declarations in their required wire order.</returns>
     private static IReadOnlyList<EtktFieldDefinition> Build()
     {
         var fields = new List<EtktFieldDefinition>
@@ -46,4 +55,18 @@ public static class EtktStructureDefinitions
             }
         }
     }
+
+    #endregion
+
+    #region Properties, Indexers
+
+    /// <summary>
+    /// Gets the reviewed ETKT history declarations in wire order.
+    /// </summary>
+    /// <value>The reviewed ETKT history declarations in wire order.</value>
+    public static IReadOnlyList<EtktFieldDefinition> SampleHistory { get; } = Build();
+
+    #endregion
 }
+
+#endregion

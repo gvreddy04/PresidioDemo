@@ -1,8 +1,18 @@
 namespace PresidioDemo.Feeds.ACI;
 
-/// <summary>Documented byte/bit meanings. Byte 0 is the first byte of the big-endian word.</summary>
+#region Classes
+
+/// <summary>
+/// Documented byte/bit meanings. Byte 0 is the first byte of the big-endian word.
+/// </summary>
 public static class AciIndicators
 {
+
+    #region Fields and Constants
+
+    /// <summary>
+    /// the documented ACI indicator-label definitions
+    /// </summary>
     private static readonly IReadOnlyDictionary<string, string> Definitions = new Dictionary<string, string>
     {
         ["flt_ind"] = "2.0=Common map assigned;2.1=Ship assigned;2.2=Advance seat assignment;2.3=Landing cancel at terminating city;2.4=Date change flight;2.5=Outbound PNL sent;2.6=PNL process complete;2.7=Partial seat selection/open seating;3.0=Hardblock flight;3.1=OA operational flight;3.2=OA check-in flight;3.3=OA shared flight;3.4=APIS flight;3.5=APIS sent;3.6=APIS manually set off;3.7=Marketing check-in flight",
@@ -21,13 +31,28 @@ public static class AciIndicators
         ["codeshr_ind"] = "0.0=TTY booking;0.1=PNL/ADL booking;1.0=Codeshare passenger"
     };
 
+    #endregion
+
+    #region Methods
+
+    /// <summary>
+    /// Returns readable labels for the documented indicator values without changing their bits.
+    /// </summary>
+    /// <param name="name">The declared member name, configuration setting or fixture filename.</param>
+    /// <param name="value">The scalar value to inspect, format, encode or protect.</param>
+    /// <returns>The readable documented flags, or null when this indicator has no reviewed definition.</returns>
     public static object? Describe(string name, int value)
     {
         uint raw = unchecked((uint)value);
         if (name == "seq_nbr")
         {
-            return new { Hex = raw.ToString("X8"), SequenceNumber = raw & 0x00FFFFFF,
-                BoardingStatusByte = raw >> 24, Note = "Byte-0 0x80 reconciled is documented as unused in ACI." };
+            return new
+            {
+                Hex = raw.ToString("X8"),
+                SequenceNumber = raw & 0x00FFFFFF,
+                BoardingStatusByte = raw >> 24,
+                Note = "Byte-0 0x80 reconciled is documented as unused in ACI."
+            };
         }
         if (name == "fqtv_ind")
         {
@@ -42,11 +67,15 @@ public static class AciIndicators
                 }
             }
             string[] alternate = ["Preferred class 7/platinum UA1K", "Preferred class 6/gold UA premier executive", "Preferred class 5/silver UA premier"];
-            return new { Hex = raw.ToString("X8"), LowThreeBits = raw & 7,
+            return new
+            {
+                Hex = raw.ToString("X8"),
+                LowThreeBits = raw & 7,
                 IfGlobalServicesPremier1KMode = eliteLevels[raw & 7],
                 IfLegacyMode = alternate.Where((_, bit) => (raw & (1u << bit)) != 0).ToArray(),
                 CommonSetFlags = common,
-                Note = "Alternative low-bit interpretations depend on producer configuration; neither mode is selected here." };
+                Note = "Alternative low-bit interpretations depend on producer configuration; neither mode is selected here."
+            };
         }
         if (!Definitions.TryGetValue(name, out var definition))
         {
@@ -66,7 +95,16 @@ public static class AciIndicators
                 setFlags.Add(parts[1]);
             }
         }
-        return new { Hex = raw.ToString("X8"), SetDocumentedFlags = setFlags, UnassignedSetBits = (raw & ~documented).ToString("X8"),
-            Note = name == "leg_ind" ? "Byte 1 bit 7 distinguishes boarding adjustment ETD/STD; raw value retained." : "Spare/unused bits are retained without inferred meaning." };
+        return new
+        {
+            Hex = raw.ToString("X8"),
+            SetDocumentedFlags = setFlags,
+            UnassignedSetBits = (raw & ~documented).ToString("X8"),
+            Note = name == "leg_ind" ? "Byte 1 bit 7 distinguishes boarding adjustment ETD/STD; raw value retained." : "Spare/unused bits are retained without inferred meaning."
+        };
     }
+
+    #endregion
 }
+
+#endregion

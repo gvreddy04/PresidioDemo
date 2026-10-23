@@ -5,6 +5,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <DefaultItemExcludes>$(DefaultItemExcludes);src/.venv/**;.runtime/**;.test-runs/**</DefaultItemExcludes>
   </PropertyGroup>
 

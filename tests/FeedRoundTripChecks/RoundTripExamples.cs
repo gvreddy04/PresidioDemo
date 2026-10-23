@@ -2,11 +2,39 @@ using System.Buffers.Binary;
 using System.Text;
 using PresidioDemo.Feeds.Shared;
 
+#region Models
+
+/// <summary>
+/// Describes one named raw or MQ-encoded round-trip fixture.
+/// </summary>
+/// <param name="Feed">The supported feed route.</param>
+/// <param name="Name">The declared field name or reviewed layout identifier.</param>
+/// <param name="SourceSample">The supplied sample used to construct this independent fixture.</param>
+/// <param name="Category">The diagnostic category assigned to this fixture.</param>
+/// <param name="Extension">The file extension identifying the fixture&apos;s transport representation.</param>
+/// <param name="Bytes">The complete raw or transport-encoded fixture bytes.</param>
 internal sealed record RoundTripExample(FeedType Feed, string Name, string SourceSample,
     string Category, string Extension, byte[] Bytes);
 
+#endregion
+
+#region Classes
+
+/// <summary>
+/// Builds supplied and synthetic encoding cases for complete-message round-trip checks.
+/// </summary>
 internal static class RoundTripExamples
 {
+
+    #region Methods
+
+    /// <summary>
+    /// Builds supplied and synthetic raw-payload and MQ-encoded round-trip fixtures.
+    /// </summary>
+    /// <param name="root">The project root containing source configuration and immutable samples.</param>
+    /// <param name="codecFactory">The factory that selects the reviewed codec for each feed route.</param>
+    /// <returns>The complete independently generated fixture collection.</returns>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
     public static IReadOnlyList<RoundTripExample> Create(string root, Func<FeedType, IFeedCodec> codecFactory)
     {
         var examples = new List<RoundTripExample>();
@@ -89,21 +117,49 @@ internal static class RoundTripExamples
         }
     }
 
+    /// <summary>
+    /// Creates a complete regression-test delivery with the requested feed and input bytes.
+    /// </summary>
+    /// <param name="feed">The supported feed route.</param>
+    /// <param name="name">The declared member name, configuration setting or fixture filename.</param>
+    /// <param name="bytes">The complete payload or fixture bytes to read, encode or compare.</param>
+    /// <returns>The complete fixture delivery and its original bytes.</returns>
     internal static FeedMessage Message(FeedType feed, string name, byte[] bytes) =>
-        new(new(feed, Guid.Empty, name, "round-trip-test-only"), bytes);
+            new(new(feed, Guid.Empty, name, "round-trip-test-only"), bytes);
 
-    private static FeedType Route(string sample) => sample switch
+    /// <summary>
+    /// Builds a complete diagnostic MQ dump with the requested encoding variation.
+    /// </summary>
+    /// <param name="payload">The complete decoded payload bytes without transport metadata.</param>
+    /// <returns>The complete independently rebuilt fixture bytes.</returns>
+    private static byte[] Diagnostic(byte[] payload)
     {
-        "SEATS.txt" => FeedType.Seats,
-        "PNR_LINKING.txt" => FeedType.PnrLinking,
-        "PNR.txt" => FeedType.PNR,
-        _ when sample.StartsWith("ACI", StringComparison.Ordinal) => FeedType.ACI,
-        _ when sample.StartsWith("ETKT", StringComparison.Ordinal) => FeedType.ETKT,
-        _ => throw new Exception("Unmapped sample feed: " + sample)
-    };
+        var output = new StringBuilder($"AMQSBCG0\r\nlength - {payload.Length} bytes\r\n");
+        for (int offset = 0; offset < payload.Length; offset += 16)
+        {
+            output.Append(offset.ToString("X8")).Append(": ");
+            foreach (byte value in payload.AsSpan(offset, Math.Min(16, payload.Length - offset)))
+            {
+                output.Append(value.ToString("x2")).Append(' ');
+            }
+            output.Append("'fixture'\r\n");
+        }
+        return Encoding.ASCII.GetBytes(output.ToString());
+    }
 
+    /// <summary>
+    /// Builds an MQ text export with the requested line endings, row width and hexadecimal case.
+    /// </summary>
+    /// <param name="source">The original fixture or source bytes retained for comparison.</param>
+    /// <param name="payload">The complete decoded payload bytes without transport metadata.</param>
+    /// <param name="newline">The line-ending sequence used by the generated text fixture.</param>
+    /// <param name="finalNewline">Whether the generated fixture ends with its selected line-ending sequence.</param>
+    /// <param name="lowercase">Whether the generated MQ fixture uses lowercase hexadecimal digits.</param>
+    /// <param name="rowWidth">The number of payload bytes represented by each generated MQ row.</param>
+    /// <param name="irregular">Whether the fixture uses deliberately varied supported encoding widths.</param>
+    /// <returns>The complete independently rebuilt fixture bytes.</returns>
     private static byte[] Export(FeedEnvelope source, byte[] payload, string newline, bool finalNewline,
-        bool lowercase, int rowWidth, bool irregular = false)
+            bool lowercase, int rowWidth, bool irregular = false)
     {
         string header = source.Header.Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\n", newline, StringComparison.Ordinal);
         var output = new StringBuilder(header);
@@ -122,21 +178,14 @@ internal static class RoundTripExamples
         return Encoding.UTF8.GetBytes(output.ToString());
     }
 
-    private static byte[] Diagnostic(byte[] payload)
-    {
-        var output = new StringBuilder($"AMQSBCG0\r\nlength - {payload.Length} bytes\r\n");
-        for (int offset = 0; offset < payload.Length; offset += 16)
-        {
-            output.Append(offset.ToString("X8")).Append(": ");
-            foreach (byte value in payload.AsSpan(offset, Math.Min(16, payload.Length - offset)))
-            {
-                output.Append(value.ToString("x2")).Append(' ');
-            }
-            output.Append("'fixture'\r\n");
-        }
-        return Encoding.ASCII.GetBytes(output.ToString());
-    }
-
+    /// <summary>
+    /// Changes one fixture XDR string while independently rebuilding its length and padding.
+    /// </summary>
+    /// <param name="payload">The complete decoded payload bytes without transport metadata.</param>
+    /// <param name="original">The complete input or retained parsed representation before protection.</param>
+    /// <param name="replacement">The replacement text used to vary the independent fixture.</param>
+    /// <returns>The complete independently rebuilt fixture bytes.</returns>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
     private static byte[] ReplaceCountedString(byte[] payload, string original, string replacement)
     {
         static byte[] Counted(string value)
@@ -155,4 +204,24 @@ internal static class RoundTripExamples
         }
         return [.. payload.AsSpan(0, start), .. target, .. payload.AsSpan(start + source.Length)];
     }
+
+    /// <summary>
+    /// Resolves a supplied sample filename to its supported feed route.
+    /// </summary>
+    /// <param name="sample">The reviewed sample filename or complete source bytes.</param>
+    /// <returns>The supported feed route identified by the supplied sample name.</returns>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
+    private static FeedType Route(string sample) => sample switch
+    {
+        "SEATS.txt" => FeedType.Seats,
+        "PNR_LINKING.txt" => FeedType.PnrLinking,
+        "PNR.txt" => FeedType.PNR,
+        _ when sample.StartsWith("ACI", StringComparison.Ordinal) => FeedType.ACI,
+        _ when sample.StartsWith("ETKT", StringComparison.Ordinal) => FeedType.ETKT,
+        _ => throw new Exception("Unmapped sample feed: " + sample)
+    };
+
+    #endregion
 }
+
+#endregion

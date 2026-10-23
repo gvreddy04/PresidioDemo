@@ -6,6 +6,8 @@ using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
 using PresidioDemo.Protection;
 
+#region Execution
+
 string project = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../"));
 string output = args.Length == 1 ? Path.GetFullPath(args[0]) : Path.Combine(project, ".test-runs", "aci-checks");
 Directory.CreateDirectory(output);
@@ -43,12 +45,25 @@ foreach (string file in Directory.GetFiles(Path.Combine(project, "docs/sample-do
     int masksCount = parsed.Fields.Count(field => field.Value.Length > 0 && policies[FeedType.ACI].Get(field.Name).Action == FieldAction.Mask);
     int keptCount = parsed.Fields.Count(field => field.Value.Length > 0 && policies[FeedType.ACI].Get(field.Name).Action == FieldAction.Keep);
     File.WriteAllText(Path.Combine(output, Path.GetFileNameWithoutExtension(file) + ".decoded.json"),
-        JsonSerializer.Serialize(new { Source = Path.GetFileName(file), SourceSha256 = Convert.ToHexString(SHA256.HashData(original)),
-            Decoded = AciReportFormatter.Format(decoded), Scalars = decoded.Scalars }, options) + Environment.NewLine);
+        JsonSerializer.Serialize(new
+        {
+            Source = Path.GetFileName(file),
+            SourceSha256 = Convert.ToHexString(SHA256.HashData(original)),
+            Decoded = AciReportFormatter.Format(decoded),
+            Scalars = decoded.Scalars
+        }, options) + Environment.NewLine);
     File.WriteAllBytes(Path.Combine(output, Path.GetFileNameWithoutExtension(file) + ".protected.txt"), protectedBytes);
-    results.Add(new { Sample = Path.GetFileName(file), PayloadBytes = decoded.PayloadLength, ScalarCount = decoded.Scalars.Count,
-        KeptFields = keptCount, MaskedFields = masksCount,
-        DecodeEncodeExact = true, MqExportExact = true, NumericValuesUnchanged = true });
+    results.Add(new
+    {
+        Sample = Path.GetFileName(file),
+        PayloadBytes = decoded.PayloadLength,
+        ScalarCount = decoded.Scalars.Count,
+        KeptFields = keptCount,
+        MaskedFields = masksCount,
+        DecodeEncodeExact = true,
+        MqExportExact = true,
+        NumericValuesUnchanged = true
+    });
     Console.WriteLine($"PASS {Path.GetFileName(file)} | {decoded.PayloadLength} bytes | {masksCount} masks");
 }
 
@@ -90,16 +105,25 @@ Reject(() => codec.Parse(rawMessage with { Content = addedText }), "unmapped non
 var passenger = baselineDocument.PassengerList!;
 AciNode ChangeId(AciNode node, int id)
 {
-    return node with { Members = node.Members.Select(member => member.Definition.Name is "paxl_id" or "pax_id"
+    return node with
+    {
+        Members = node.Members.Select(member => member.Definition.Name is "paxl_id" or "pax_id"
         ? member with { Scalar = member.Scalar! with { Number = id } }
-        : member.Child is not null ? member with { Child = ChangeId(member.Child, id) } : member).ToArray() };
+        : member.Child is not null ? member with { Child = ChangeId(member.Child, id) } : member).ToArray()
+    };
 }
 var second = ChangeId(passenger, 186);
-second = second with { Members = second.Members.Select(member => member.Definition.Name == "pax_name"
-    ? member with { Scalar = member.Scalar! with { Text = "BROOKS/MICHAEL" } } : member).ToArray() };
-var first = passenger with { Members = passenger.Members.Select(member => member.Definition.Name == "pax_name"
+second = second with
+{
+    Members = second.Members.Select(member => member.Definition.Name == "pax_name"
+    ? member with { Scalar = member.Scalar! with { Text = "BROOKS/MICHAEL" } } : member).ToArray()
+};
+var first = passenger with
+{
+    Members = passenger.Members.Select(member => member.Definition.Name == "pax_name"
     ? member with { Scalar = member.Scalar! with { Text = "CARTER/EMILY" } }
-    : member.Definition.Name == "next" ? member with { Child = second } : member).ToArray() };
+    : member.Definition.Name == "next" ? member with { Child = second } : member).ToArray()
+};
 byte[] multiple = new AciEncoder().Encode(baselineDocument with { PassengerList = first });
 var multipleParsed = new AciParser().Parse(multiple);
 var passengers = AciParser.EnumerateList(multipleParsed.PassengerList).ToArray();
@@ -115,8 +139,12 @@ using (var writer = new AciXdrWriter())
     Check(new AciEncoder().Encode(error).SequenceEqual(writer.ToArray()), "ERROR union decode/encode");
     Reject(() => new AciParser().Parse(writer.ToArray()), "ERROR record publication");
 }
-File.WriteAllText(Path.Combine(output, "verification.json"), JsonSerializer.Serialize(new { AllPassed = true, Samples = results,
-    Checks = "Round trip, real route selection, masks, numeric IDs, malformed data, unmapped text, PNRs and multi-passenger decoder association" }, options) + Environment.NewLine);
+File.WriteAllText(Path.Combine(output, "verification.json"), JsonSerializer.Serialize(new
+{
+    AllPassed = true,
+    Samples = results,
+    Checks = "Round trip, real route selection, masks, numeric IDs, malformed data, unmapped text, PNRs and multi-passenger decoder association"
+}, options) + Environment.NewLine);
 Console.WriteLine("PASS ACI checks complete");
 
 static void Check(bool condition, string label)
@@ -145,3 +173,5 @@ void MutateReject(int offset, int value, string label, bool semantic = false)
     BinaryPrimitives.WriteInt32BigEndian(bytes.AsSpan(offset, 4), value);
     Reject(() => { if (semantic) { _ = new AciParser().Parse(bytes); } else { _ = new AciDecoder().Decode(bytes); } }, label);
 }
+
+#endregion

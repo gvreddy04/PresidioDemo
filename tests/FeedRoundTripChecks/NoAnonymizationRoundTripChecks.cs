@@ -5,10 +5,32 @@ using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
 using PresidioDemo.Protection;
 
+#region Classes
+
+/// <summary>
+/// Runs all-keep workflow cycles and records byte-exact verification evidence.
+/// </summary>
 public static class NoAnonymizationRoundTripChecks
 {
+
+    #region Fields and Constants
+
+    /// <summary>
+    /// The number of all-keep parse-and-rebuild cycles executed for each round-trip fixture.
+    /// </summary>
     private const int CycleCount = 3;
 
+    #endregion
+
+    #region Methods
+
+    /// <summary>
+    /// Runs three all-keep cycles per fixture and records exact-byte and malformed-input results.
+    /// </summary>
+    /// <param name="root">The project root containing source configuration and immutable samples.</param>
+    /// <param name="outputDirectory">The isolated directory receiving verification reports and generated fixture output.</param>
+    /// <returns>A task that completes when the operation and required cleanup have finished.</returns>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
     public static async Task RunAsync(string root, string outputDirectory)
     {
         Directory.CreateDirectory(outputDirectory);
@@ -82,12 +104,24 @@ public static class NoAnonymizationRoundTripChecks
                     }
                     results.Add(new
                     {
-                        Feed = FeedCatalog.Get(example.Feed).FolderName, example.Name, example.SourceSample, example.Category,
+                        Feed = FeedCatalog.Get(example.Feed).FolderName,
+                        example.Name,
+                        example.SourceSample,
+                        example.Category,
                         Format = example.Extension == ".bin" ? "Raw payload" : "MQ text container",
-                        Codec = codec.GetType().Name, InputBytes = expected.Length, OutputBytes = current.Length,
-                        InputSha256 = Hash(expected), OutputSha256 = Hash(current), PayloadSha256 = Hash(expectedPayload),
-                        ParsedFields = fieldCount, Cycles = CycleCount, DirectCodecExact = true,
-                        WorkflowExact = true, PayloadExact = true, FieldsUnchanged = true, InputBufferUnchanged = true
+                        Codec = codec.GetType().Name,
+                        InputBytes = expected.Length,
+                        OutputBytes = current.Length,
+                        InputSha256 = Hash(expected),
+                        OutputSha256 = Hash(current),
+                        PayloadSha256 = Hash(expectedPayload),
+                        ParsedFields = fieldCount,
+                        Cycles = CycleCount,
+                        DirectCodecExact = true,
+                        WorkflowExact = true,
+                        PayloadExact = true,
+                        FieldsUnchanged = true,
+                        InputBufferUnchanged = true
                     });
                 }
                 foreach (var feed in FeedCatalog.All)
@@ -137,11 +171,17 @@ public static class NoAnonymizationRoundTripChecks
         }).ToArray();
         var report = new
         {
-            AllPassed = true, Mode = "No anonymization: in-memory All-Keep policies through production codecs and workflows",
+            AllPassed = true,
+            Mode = "No anonymization: in-memory All-Keep policies through production codecs and workflows",
             GuaranteeScope = "Supported, valid examples tested; malformed and unsupported inputs are rejected, not passed through",
-            PositiveCases = results.Count, CyclesPerCase = CycleCount, MalformedCasesRejected = rejected.Count,
-            SourceFilesUnchanged = sourceFiles.Count, InitializesPython = false,
-            FeedSummary = counts, Cases = results, Rejections = rejected
+            PositiveCases = results.Count,
+            CyclesPerCase = CycleCount,
+            MalformedCasesRejected = rejected.Count,
+            SourceFilesUnchanged = sourceFiles.Count,
+            InitializesPython = false,
+            FeedSummary = counts,
+            Cases = results,
+            Rejections = rejected
         };
         File.WriteAllText(reportPath, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine);
         foreach (var count in counts)
@@ -152,6 +192,13 @@ public static class NoAnonymizationRoundTripChecks
         Console.WriteLine("Evidence: " + reportPath);
     }
 
+    /// <summary>
+    /// Asserts that complete expected and actual byte sequences are identical.
+    /// </summary>
+    /// <param name="expected">The original bytes, parsed fields or expected regression result.</param>
+    /// <param name="actual">The actual output bytes, parsed fields or observed result.</param>
+    /// <param name="label">The readable name identifying this fixture or assertion.</param>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
     private static void Equal(ReadOnlySpan<byte> expected, ReadOnlySpan<byte> actual, string label)
     {
         if (!expected.SequenceEqual(actual))
@@ -165,6 +212,13 @@ public static class NoAnonymizationRoundTripChecks
         }
     }
 
+    /// <summary>
+    /// Asserts that parsed field identities, policy paths and values remain unchanged.
+    /// </summary>
+    /// <param name="before">The original message or decoded layout retained before protection.</param>
+    /// <param name="after">The reconstructed message or decoded layout being validated.</param>
+    /// <param name="label">The readable name identifying this fixture or assertion.</param>
+    /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
     private static void EqualFields(IReadOnlyList<FeedField> before, IReadOnlyList<FeedField> after, string label)
     {
         if (!before.SequenceEqual(after))
@@ -173,5 +227,14 @@ public static class NoAnonymizationRoundTripChecks
         }
     }
 
+    /// <summary>
+    /// Computes the SHA-256 digest used to identify preserved fixture bytes.
+    /// </summary>
+    /// <param name="bytes">The complete payload or fixture bytes to read, encode or compare.</param>
+    /// <returns>The SHA-256 digest of the complete input bytes.</returns>
     private static string Hash(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+
+    #endregion
 }
+
+#endregion

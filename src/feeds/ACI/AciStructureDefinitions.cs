@@ -2,11 +2,20 @@ using System.Collections.ObjectModel;
 
 namespace PresidioDemo.Feeds.ACI;
 
-/// <summary>Structure declarations, in wire order. The extension is sample-observed only.</summary>
+#region Classes
+
+/// <summary>
+/// Structure declarations, in wire order. The extension is sample-observed only.
+/// </summary>
 public static class AciStructureDefinitions
 {
-    public static IReadOnlyDictionary<string, AciStructureDefinition> All { get; } = Build();
 
+    #region Methods
+
+    /// <summary>
+    /// Constructs the reviewed field declarations in their required wire order.
+    /// </summary>
+    /// <returns>The complete reviewed declarations in their required wire order.</returns>
     private static IReadOnlyDictionary<string, AciStructureDefinition> Build()
     {
         var structures = new Dictionary<string, AciStructureDefinition>(StringComparer.Ordinal);
@@ -45,4 +54,18 @@ public static class AciStructureDefinitions
             structures.Add(name, new(name, Array.AsReadOnly(fields), observed));
         }
     }
+
+    #endregion
+
+    #region Properties, Indexers
+
+    /// <summary>
+    /// Gets the reviewed ACI structure declarations indexed by source structure name.
+    /// </summary>
+    /// <value>The reviewed definitions in their required declaration order.</value>
+    public static IReadOnlyDictionary<string, AciStructureDefinition> All { get; } = Build();
+
+    #endregion
 }
+
+#endregion

@@ -1,8 +1,21 @@
 namespace PresidioDemo.Feeds.ACI;
 
-/// <summary>Decodes declared field order, recursive list pointers and the reviewed extension.</summary>
+#region Classes
+
+/// <summary>
+/// Decodes declared field order, recursive list pointers and the reviewed extension.
+/// </summary>
 public sealed class AciDecoder
 {
+
+    #region Methods
+
+    /// <summary>
+    /// Decodes a complete payload into the feed&apos;s reviewed structural representation.
+    /// </summary>
+    /// <param name="payload">The complete decoded payload bytes without transport metadata.</param>
+    /// <returns>The complete decoded document with original values and wire locations.</returns>
+    /// <exception cref="InvalidDataException">The supplied message, field set or configuration violates the reviewed processing contract.</exception>
     public AciDocument Decode(ReadOnlyMemory<byte> payload)
     {
         if (payload.Length == 0 || payload.Length > 4 * 1024 * 1024 || payload.Length % 4 != 0)
@@ -78,4 +91,8 @@ public sealed class AciDecoder
             return (presence, new(type, path, members.AsReadOnly()));
         }
     }
+
+    #endregion
 }
+
+#endregion

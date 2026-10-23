@@ -3,9 +3,35 @@ using PresidioDemo.Feeds.Shared;
 
 namespace PresidioDemo.Feeds.ACI;
 
-/// <summary>Checks passenger links and binds configured protection fields to decoded strings.</summary>
+#region Classes
+
+/// <summary>
+/// Checks passenger links and binds configured protection fields to decoded strings.
+/// </summary>
 public sealed class AciParser
 {
+
+    #region Methods
+
+    /// <summary>
+    /// Enumerates decoded linked-list nodes in their original structure order.
+    /// </summary>
+    /// <param name="head">The optional decoded linked-list head.</param>
+    /// <returns>The linked-list nodes in their original decoded order.</returns>
+    public static IEnumerable<AciNode> EnumerateList(AciNode? head)
+    {
+        for (var current = head; current is not null; current = current.Child("next"))
+        {
+            yield return current;
+        }
+    }
+
+    /// <summary>
+    /// Parses the complete input, validates its supported shape and retains the layout required for reconstruction.
+    /// </summary>
+    /// <param name="payload">The complete decoded payload bytes without transport metadata.</param>
+    /// <returns>The validated ACI document with its complete original scalar and structure values.</returns>
+    /// <exception cref="InvalidDataException">The supplied message, field set or configuration violates the reviewed processing contract.</exception>
     public AciDocument Parse(ReadOnlyMemory<byte> payload)
     {
         var document = new AciDecoder().Decode(payload);
@@ -39,16 +65,16 @@ public sealed class AciParser
         return document;
     }
 
-    public static IEnumerable<AciNode> EnumerateList(AciNode? head)
-    {
-        for (var current = head; current is not null; current = current.Child("next"))
-        {
-            yield return current;
-        }
-    }
-
+    /// <summary>
+    /// Matches every reviewed protection field to exactly one decoded text span and verifies coverage.
+    /// </summary>
+    /// <param name="document">The decoded ACI document containing original values and wire locations.</param>
+    /// <param name="fields">The complete extracted field set and its retained codec-specific serialization layout.</param>
+    /// <param name="locations">The exact reviewed payload offsets and lengths indexed by protection-field identifier.</param>
+    /// <returns>The validated bindings between reviewed protection fields and decoded text spans.</returns>
+    /// <exception cref="InvalidDataException">The supplied message, field set or configuration violates the reviewed processing contract.</exception>
     internal static IReadOnlyList<AciTextBinding> Bind(AciDocument document, ParsedFeed fields,
-        IReadOnlyDictionary<string, (int Offset, int Length)> locations)
+            IReadOnlyDictionary<string, (int Offset, int Length)> locations)
     {
         var bindings = new List<AciTextBinding>();
         var coverage = new bool[document.PayloadLength];
@@ -92,4 +118,8 @@ public sealed class AciParser
         }
         return bindings.AsReadOnly();
     }
+
+    #endregion
 }
+
+#endregion
