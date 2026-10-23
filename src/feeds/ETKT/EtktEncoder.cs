@@ -1,7 +1,5 @@
 namespace PresidioDemo.Feeds.ETKT;
 
-#region Classes
-
 /// <summary>
 /// Rebuilds every declared field; never patches byte offsets in the original payload.
 /// </summary>
@@ -65,5 +63,3 @@ public sealed class EtktEncoder
 
     #endregion
 }
-
-#endregion

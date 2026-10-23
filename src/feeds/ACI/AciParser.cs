@@ -3,8 +3,6 @@ using PresidioDemo.Feeds.Shared;
 
 namespace PresidioDemo.Feeds.ACI;
 
-#region Classes
-
 /// <summary>
 /// Checks passenger links and binds configured protection fields to decoded strings.
 /// </summary>
@@ -121,5 +119,3 @@ public sealed class AciParser
 
     #endregion
 }
-
-#endregion

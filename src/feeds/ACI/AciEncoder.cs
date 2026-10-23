@@ -1,7 +1,5 @@
 namespace PresidioDemo.Feeds.ACI;
 
-#region Classes
-
 /// <summary>
 /// Rebuilds the complete payload in declaration order; no offset patching.
 /// </summary>
@@ -91,5 +89,3 @@ public sealed class AciEncoder
 
     #endregion
 }
-
-#endregion

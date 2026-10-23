@@ -1,8 +1,6 @@
 using System.Text;
 using System.Text.Json;
 
-#region Classes
-
 /// <summary>
 /// Builds independent JSON lexical variations for exact-byte round-trip checks.
 /// </summary>
@@ -154,5 +152,3 @@ internal static class JsonRoundTripExamples
 
     #endregion
 }
-
-#endregion

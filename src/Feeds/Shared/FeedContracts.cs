@@ -42,8 +42,6 @@ public sealed record FeedDefinition(FeedType Type, string FolderName);
 
 #endregion
 
-#region Classes
-
 /// <summary>
 /// Provides the supported feed routes and their exchange-folder names.
 /// </summary>
@@ -78,8 +76,6 @@ public static class FeedCatalog
 
     #endregion
 }
-
-#endregion
 
 #region Models
 

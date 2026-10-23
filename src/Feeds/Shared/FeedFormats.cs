@@ -120,8 +120,6 @@ public sealed record FeedEnvelope(byte[] Payload, byte[] Original, string Format
 
 #endregion
 
-#region Classes
-
 /// <summary>
 /// Separates transport metadata from payload without interpreting proprietary binary records.
 /// </summary>
@@ -289,5 +287,3 @@ public static class FeedPayloadReader
 
     #endregion
 }
-
-#endregion

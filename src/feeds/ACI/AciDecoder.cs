@@ -1,7 +1,5 @@
 namespace PresidioDemo.Feeds.ACI;
 
-#region Classes
-
 /// <summary>
 /// Decodes declared field order, recursive list pointers and the reviewed extension.
 /// </summary>
@@ -94,5 +92,3 @@ public sealed class AciDecoder
 
     #endregion
 }
-
-#endregion

@@ -3,8 +3,6 @@ using System.Text;
 
 namespace PresidioDemo.Feeds.ETKT;
 
-#region Classes
-
 /// <summary>
 /// Bounded local XDR primitives, independent of transport and field policies.
 /// </summary>
@@ -86,5 +84,3 @@ public sealed class EtktXdrReader(ReadOnlyMemory<byte> payload)
 
     #endregion
 }
-
-#endregion

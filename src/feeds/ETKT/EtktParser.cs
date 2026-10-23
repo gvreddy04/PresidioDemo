@@ -2,8 +2,6 @@ using PresidioDemo.Feeds.Shared;
 
 namespace PresidioDemo.Feeds.ETKT;
 
-#region Classes
-
 /// <summary>
 /// Separates structural decoding from reviewed protection-field bindings.
 /// </summary>
@@ -88,5 +86,3 @@ public sealed class EtktParser
 
     #endregion
 }
-
-#endregion

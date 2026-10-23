@@ -2,8 +2,6 @@ using System.Collections.ObjectModel;
 
 namespace PresidioDemo.Feeds.ETKT;
 
-#region Classes
-
 /// <summary>
 /// Screenshot history order, with a separately identified observed type-5 prefix.
 /// </summary>
@@ -68,5 +66,3 @@ public static class EtktStructureDefinitions
 
     #endregion
 }
-
-#endregion

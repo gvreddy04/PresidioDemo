@@ -20,12 +20,12 @@ For whitespace formatting only, use **Ctrl+K, Ctrl+D**. For cleanup on save, ena
 | Four spaces, CRLF, UTF-8, final newline, trailing whitespace | EditorConfig text settings and formatting |
 | Opening braces on a new line; standard indentation and spacing | Formatting |
 | Braces around one-statement control-flow bodies | `IDE0011`; include the brace fixer in cleanup |
-| Prefer scoped `using (...) { ... }` blocks | `IDE0063` preference; verify resource scopes during review because reverse conversion support depends on the installed Roslyn version |
+| Prefer scoped `using (...) { ... }` blocks | `IDE0063` preference; the installed .NET 10 formatter leaves existing `using var` declarations unchanged, so converting those back to blocks requires review |
 | System imports first; imports outside namespaces | Sort-usings fixer and `IDE0065` |
 | File-scoped namespaces | `IDE0161` and its namespace fixer |
 | Missing visible API documentation, malformed XML and mismatched parameter tags | Compiler warnings where XML documentation generation is enabled; the application already enables it |
 | Meaningful XML descriptions for every member, including private helpers | Review; compiler checks do not cover this completely |
-| Required regions and alphabetical/accessibility member order | Review; built-in cleanup does not insert regions or reorder members |
+| Member regions and alphabetical/accessibility member order; omit the outer `Classes` region for a file with one top-level class | Review; built-in cleanup does not insert/remove regions or reorder members |
 | Keep initialized fields and enum numeric/wire order stable | Review before any manual member movement |
 | No new annotation attributes | Review; no cleanup setting inserts them |
 

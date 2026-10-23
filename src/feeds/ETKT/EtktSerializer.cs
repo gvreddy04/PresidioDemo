@@ -2,8 +2,6 @@ using PresidioDemo.Protection;
 
 namespace PresidioDemo.Feeds.ETKT;
 
-#region Classes
-
 /// <summary>
 /// Applies reviewed spans and rebuilds XDR while preserving the MQ envelope.
 /// </summary>
@@ -96,5 +94,3 @@ public sealed class EtktSerializer
 
     #endregion
 }
-
-#endregion

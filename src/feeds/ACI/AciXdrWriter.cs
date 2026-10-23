@@ -3,8 +3,6 @@ using System.Text;
 
 namespace PresidioDemo.Feeds.ACI;
 
-#region Classes
-
 /// <summary>
 /// Writes XDR primitives, counted strings and four-byte zero padding.
 /// </summary>
@@ -65,5 +63,3 @@ public sealed class AciXdrWriter : IDisposable
 
     #endregion
 }
-
-#endregion

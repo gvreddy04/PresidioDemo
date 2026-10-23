@@ -1,8 +1,6 @@
 using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Transport;
 
-#region Classes
-
 /// <summary>
 /// Verifies claimed-file recovery, publication cleanup and legacy pending-file migration.
 /// </summary>
@@ -109,5 +107,3 @@ static class FeedProcessingChecks
 
     #endregion
 }
-
-#endregion

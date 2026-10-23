@@ -5,8 +5,6 @@ using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
 using PresidioDemo.Protection;
 
-#region Classes
-
 /// <summary>
 /// Verifies XDR primitives, structures, schema validation and protection boundaries.
 /// </summary>
@@ -259,5 +257,3 @@ static class XdrCodecChecks
 
     #endregion
 }
-
-#endregion

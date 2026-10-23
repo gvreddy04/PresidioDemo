@@ -1,7 +1,5 @@
 namespace PresidioDemo.Feeds.ACI;
 
-#region Classes
-
 /// <summary>
 /// Documented byte/bit meanings. Byte 0 is the first byte of the big-endian word.
 /// </summary>
@@ -106,5 +104,3 @@ public static class AciIndicators
 
     #endregion
 }
-
-#endregion

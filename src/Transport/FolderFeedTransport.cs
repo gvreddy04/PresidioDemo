@@ -3,8 +3,6 @@ using PresidioDemo.Feeds.Shared;
 
 namespace PresidioDemo.Transport;
 
-#region Classes
-
 /// <summary>
 /// Folder adapter: receive, publish, reject and acknowledge a delivery.
 /// </summary>
@@ -409,5 +407,3 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
 
     #endregion
 }
-
-#endregion

@@ -28,8 +28,6 @@ public sealed record EtktStatusInterpretation(int Number, string Hex, string Bit
 
 #endregion
 
-#region Classes
-
 /// <summary>
 /// Read-only status interpretation using the agreed provisional MSB-first convention.
 /// </summary>
@@ -109,5 +107,3 @@ public static class EtktIndicators
 
     #endregion
 }
-
-#endregion

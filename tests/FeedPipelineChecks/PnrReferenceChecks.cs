@@ -4,8 +4,6 @@ using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
 using PresidioDemo.Protection;
 
-#region Classes
-
 /// <summary>
 /// Verifies the reviewed PNR projection and preserved structural bytes.
 /// </summary>
@@ -123,5 +121,3 @@ static class PnrReferenceChecks
 
     #endregion
 }
-
-#endregion

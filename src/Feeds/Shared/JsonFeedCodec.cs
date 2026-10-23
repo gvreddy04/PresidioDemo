@@ -4,8 +4,6 @@ using PresidioDemo.Protection;
 
 namespace PresidioDemo.Feeds.Shared;
 
-#region Classes
-
 /// <summary>
 /// Shared System.Text.Json processing for PNR-Linking and Seats, with exact unselected bytes.
 /// </summary>
@@ -254,5 +252,3 @@ public abstract class JsonFeedCodec(FeedType feed, JsonTokenType rootKind) : IFe
 
     #endregion
 }
-
-#endregion

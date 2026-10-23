@@ -3,8 +3,6 @@ using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
 using PresidioDemo.Protection;
 
-#region Classes
-
 /// <summary>
 /// Verifies JSON formatting, field coverage, transport framing and malformed-input rejection.
 /// </summary>
@@ -106,5 +104,3 @@ static class JsonCodecChecks
 
     #endregion
 }
-
-#endregion

@@ -2,8 +2,6 @@ using PresidioDemo.Feeds.Shared;
 
 namespace PresidioDemo.Feeds.ETKT;
 
-#region Classes
-
 /// <summary>
 /// Complete type-5 reconstruction using the existing XML protection projection.
 /// </summary>
@@ -91,5 +89,3 @@ public sealed class EtktFeedCodec : IFeedCodec
 
     #endregion
 }
-
-#endregion

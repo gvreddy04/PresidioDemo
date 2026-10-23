@@ -2,8 +2,6 @@ using System.Text;
 using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Transport;
 
-#region Classes
-
 /// <summary>
 /// Verifies complete diagnostic ordering and durable transaction-log behavior.
 /// </summary>
@@ -120,5 +118,3 @@ static class FeedTransactionLogChecks
 
     #endregion
 }
-
-#endregion

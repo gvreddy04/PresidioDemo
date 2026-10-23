@@ -2,8 +2,6 @@ using System.Xml.Linq;
 using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Protection;
 
-#region Classes
-
 /// <summary>
 /// Verifies that unconfigured feed routes retain input without publication.
 /// </summary>
@@ -105,5 +103,3 @@ static class UnconfiguredPolicyChecks
 
     #endregion
 }
-
-#endregion

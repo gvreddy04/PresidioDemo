@@ -2,8 +2,6 @@ using PresidioDemo.Feeds.Shared;
 
 namespace PresidioDemo.Feeds.ACI;
 
-#region Classes
-
 /// <summary>
 /// ACI route: semantic decoding and full encoding, with existing XML policy projection.
 /// </summary>
@@ -91,5 +89,3 @@ public sealed class AciFeedCodec : IFeedCodec
 
     #endregion
 }
-
-#endregion

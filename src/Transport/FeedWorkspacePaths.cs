@@ -1,7 +1,5 @@
 namespace PresidioDemo.Transport;
 
-#region Classes
-
 /// <summary>
 /// Locates feed input, processing, output, logs and private listener state.
 /// </summary>
@@ -83,5 +81,3 @@ public sealed class FeedWorkspacePaths
 
     #endregion
 }
-
-#endregion

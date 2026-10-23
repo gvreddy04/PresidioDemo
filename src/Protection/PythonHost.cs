@@ -2,8 +2,6 @@ using Python.Runtime;
 
 namespace PresidioDemo.Protection;
 
-#region Classes
-
 /// <summary>
 /// Starts embedded CPython using the project's src/.venv and calls src/Protection/python/presidio_demo.py.
 /// </summary>
@@ -131,5 +129,3 @@ public static class PythonHost
 
     #endregion
 }
-
-#endregion

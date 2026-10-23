@@ -22,7 +22,8 @@ csharp_new_line_between_query_expression_clauses = true
 csharp_preserve_single_line_blocks = true
 csharp_preserve_single_line_statements = false
 
-# Explicit blocks also apply to one-statement bodies and scoped resource use.
+# Require braces for statement bodies and prefer scoped resource blocks.
+# Current Roslyn does not automatically convert using declarations back to blocks.
 csharp_prefer_braces = true:warning
 csharp_prefer_simple_using_statement = false:warning
 dotnet_diagnostic.IDE0011.severity = warning
@@ -80,6 +81,7 @@ dotnet_diagnostic.CS1591.severity = warning
 # Keep readable expression bodies and existing var/explicit-type choices.
 # Regions, meaningful XML descriptions, member ordering and the ban on new
 # annotation attributes require review; built-in cleanup cannot enforce them.
+# Omit the outer Classes region in files with one top-level class; keep member regions.
 
 [*.{g,g.i,generated,Designer}.cs]
 generated_code = true

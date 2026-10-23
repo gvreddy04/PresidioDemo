@@ -3,8 +3,6 @@ using System.Text;
 
 namespace PresidioDemo.Feeds.ACI;
 
-#region Classes
-
 /// <summary>
 /// Bounded big-endian XDR primitives. No transport or business-field logic.
 /// </summary>
@@ -101,5 +99,3 @@ public sealed class AciXdrReader(ReadOnlyMemory<byte> payload)
 
     #endregion
 }
-
-#endregion

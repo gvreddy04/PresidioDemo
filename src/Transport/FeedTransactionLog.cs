@@ -4,8 +4,6 @@ using PresidioDemo.Feeds.Shared;
 
 namespace PresidioDemo.Transport;
 
-#region Classes
-
 /// <summary>
 /// Reports complete input, decoded payload, plain text and parsed fields, followed by output payload and complete feed data.
 /// </summary>
@@ -212,5 +210,3 @@ public static class FeedTransactionLog
 
     #endregion
 }
-
-#endregion

@@ -1,7 +1,5 @@
 namespace PresidioDemo.Feeds.ACI;
 
-#region Classes
-
 /// <summary>
 /// A readable source-data view alongside exact scalar values and offsets.
 /// </summary>
@@ -111,5 +109,3 @@ public static class AciReportFormatter
 
     #endregion
 }
-
-#endregion

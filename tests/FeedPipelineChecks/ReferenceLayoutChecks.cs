@@ -7,8 +7,6 @@ using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
 using PresidioDemo.Protection;
 
-#region Classes
-
 /// <summary>
 /// Verifies reference projections, policy coverage and preserved binary payload bytes.
 /// </summary>
@@ -220,5 +218,3 @@ static class ReferenceLayoutChecks
 
     #endregion
 }
-
-#endregion

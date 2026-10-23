@@ -18,8 +18,6 @@ internal sealed record RoundTripExample(FeedType Feed, string Name, string Sourc
 
 #endregion
 
-#region Classes
-
 /// <summary>
 /// Builds supplied and synthetic encoding cases for complete-message round-trip checks.
 /// </summary>
@@ -223,5 +221,3 @@ internal static class RoundTripExamples
 
     #endregion
 }
-
-#endregion

@@ -5,8 +5,6 @@ using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
 using PresidioDemo.Protection;
 
-#region Classes
-
 /// <summary>
 /// Runs all-keep workflow cycles and records byte-exact verification evidence.
 /// </summary>
@@ -236,5 +234,3 @@ public static class NoAnonymizationRoundTripChecks
 
     #endregion
 }
-
-#endregion

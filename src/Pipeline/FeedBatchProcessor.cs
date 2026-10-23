@@ -44,8 +44,6 @@ public sealed record FeedBatchResult(string RunId, string ReportFile, IReadOnlyL
 
 #endregion
 
-#region Classes
-
 /// <summary>
 /// Copies actual source files into the normal listener and records every terminal outcome.
 /// </summary>
@@ -181,5 +179,3 @@ public static class FeedBatchProcessor
 
     #endregion
 }
-
-#endregion

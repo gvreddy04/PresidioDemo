@@ -2,8 +2,6 @@ using System.Collections.ObjectModel;
 
 namespace PresidioDemo.Feeds.ACI;
 
-#region Classes
-
 /// <summary>
 /// Structure declarations, in wire order. The extension is sample-observed only.
 /// </summary>
@@ -67,5 +65,3 @@ public static class AciStructureDefinitions
 
     #endregion
 }
-
-#endregion

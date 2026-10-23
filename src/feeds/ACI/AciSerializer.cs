@@ -2,8 +2,6 @@ using PresidioDemo.Protection;
 
 namespace PresidioDemo.Feeds.ACI;
 
-#region Classes
-
 /// <summary>
 /// Applies reviewed text spans, rebuilds XDR and preserves the original MQ envelope.
 /// </summary>
@@ -87,5 +85,3 @@ public sealed class AciSerializer
 
     #endregion
 }
-
-#endregion

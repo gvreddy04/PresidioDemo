@@ -1,7 +1,5 @@
 namespace PresidioDemo.Feeds.ETKT;
 
-#region Classes
-
 /// <summary>
 /// Shows source spellings, raw flags and character arrays without inventing enum meanings.
 /// </summary>
@@ -88,5 +86,3 @@ public static class EtktReportFormatter
 
     #endregion
 }
-
-#endregion

@@ -6,8 +6,6 @@ using PresidioDemo.Feeds.Shared;
 
 namespace PresidioDemo.Pipeline;
 
-#region Classes
-
 /// <summary>
 /// Selects the configured feed-specific or shared codec for a delivery route.
 /// </summary>
@@ -75,5 +73,3 @@ public static class FeedCodecRegistry
 
     #endregion
 }
-
-#endregion

@@ -3,8 +3,6 @@ using System.Text;
 
 namespace PresidioDemo.Feeds.ETKT;
 
-#region Classes
-
 /// <summary>
 /// Writes counted ASCII strings and big-endian scalar slots.
 /// </summary>
@@ -65,5 +63,3 @@ public sealed class EtktXdrWriter : IDisposable
 
     #endregion
 }
-
-#endregion

@@ -4,8 +4,6 @@ using PresidioDemo.Pipeline;
 
 namespace PresidioDemo.Transport;
 
-#region Classes
-
 /// <summary>
 /// Coordinates independent per-feed processing with durable retry and quarantine handling.
 /// </summary>
@@ -265,5 +263,3 @@ public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRou
 
     #endregion
 }
-
-#endregion

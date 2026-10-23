@@ -1,7 +1,5 @@
 namespace PresidioDemo.Feeds.ETKT;
 
-#region Classes
-
 /// <summary>
 /// Decodes the supplied type-5 family; does not reinterpret 5 as the documented enum 3.
 /// </summary>
@@ -49,5 +47,3 @@ public sealed class EtktDecoder
 
     #endregion
 }
-
-#endregion
