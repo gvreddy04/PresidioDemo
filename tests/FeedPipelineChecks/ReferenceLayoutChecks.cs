@@ -1,7 +1,11 @@
 using System.Buffers.Binary;
 using System.Text;
 using System.Xml.Linq;
-using PresidioDemo.Feeds;
+using PresidioDemo.Feeds.ACI;
+using PresidioDemo.Feeds.ETKT;
+using PresidioDemo.Feeds.Shared;
+using PresidioDemo.Pipeline;
+using PresidioDemo.Protection;
 
 static class ReferenceLayoutChecks
 {
@@ -9,9 +13,9 @@ static class ReferenceLayoutChecks
         IReadOnlyDictionary<FeedType, ReferenceFeedLayout> References, IReadOnlyDictionary<FeedType, FeedPolicy> Policies);
     private static Configuration Load(string root, string? policy = null, string? reference = null)
     {
-        var schemas = XdrLayoutConfiguration.Load(Path.Combine(root, "src/config/xdr-layouts.xml"));
-        return new(schemas, ReferenceLayoutConfiguration.Load(reference ?? Path.Combine(root, "src/config/reference-layouts.xml"), schemas),
-            FeedPolicyConfiguration.Load(policy ?? Path.Combine(root, "src/config/feed-policies.xml")));
+        var schemas = XdrLayoutConfiguration.Load(Path.Combine(root, "src/Configuration/xdr-layouts.xml"));
+        return new(schemas, ReferenceLayoutConfiguration.Load(reference ?? Path.Combine(root, "src/Configuration/reference-layouts.xml"), schemas),
+            FeedPolicyConfiguration.Load(policy ?? Path.Combine(root, "src/Configuration/feed-policies.xml")));
     }
     private static FeedMessage Message(FeedType feed, byte[] bytes, string name = "fixture.bin") => new(new(feed, Guid.Empty, name, "test"), bytes);
     private static void Check(bool condition, string message)
@@ -73,7 +77,7 @@ static class ReferenceLayoutChecks
 
         string referenceFile = Path.Combine(workspace, "isolated-reference.xml");
         string policyFile = Path.Combine(workspace, "isolated-policies.xml");
-        var baseline = XDocument.Load(Path.Combine(root, "src/config/reference-layouts.xml"));
+        var baseline = XDocument.Load(Path.Combine(root, "src/Configuration/reference-layouts.xml"));
         foreach (var feed in baseline.Root!.Elements("feed")) feed.SetAttributeValue("referenceFile", "missing-review-only-sample.txt");
         baseline.Save(referenceFile);
         Check(Load(root, reference: referenceFile).References.Count == 3, "schema-driven mode never opens referenceFile provenance");
@@ -86,7 +90,7 @@ static class ReferenceLayoutChecks
         Invalid(doc => doc.Descendants("text").First().SetAttributeValue("pattern", "["), "invalid reference pattern fails startup");
         Invalid(doc => doc.Root!.Add(new XElement(doc.Root.Elements("feed").First())), "duplicate reference feed fails startup");
         Invalid(doc => doc.Descendants("part").First(p => p.Attribute("equalTo") is not null).SetAttributeValue("equalTo", "/Missing"), "unknown PNR reference target fails startup");
-        var policies = XDocument.Load(Path.Combine(root, "src/config/feed-policies.xml"));
+        var policies = XDocument.Load(Path.Combine(root, "src/Configuration/feed-policies.xml"));
         policies.Descendants("field").First().SetAttributeValue("policy", "Missing"); policies.Save(policyFile);
         Reject(() => FeedPolicyConfiguration.Load(policyFile), "unknown shared policy fails startup");
 

@@ -2,6 +2,28 @@
 
 Process airline feeds using configured field rules and local Presidio. PNR stays unchanged. Output is validated before publication; failed input is retained.
 
+## Solution organization
+
+The application remains one .NET project. Source folders and namespaces group files by responsibility:
+
+```text
+src/
+├── Program.cs
+├── Configuration/        Three XML configuration files
+├── Feeds/
+│   ├── ACI/              ACI binary processing
+│   ├── ETKT/             ETKT binary processing
+│   ├── PNRLinking/       PNR-Linking JSON route
+│   ├── Seats/            Seats JSON route
+│   └── Shared/           Contracts, formats and shared codecs
+├── Pipeline/             Workflows, codec registry and batch processing
+├── Protection/           Field policies and embedded Presidio bridge
+│   └── python/           presidio_demo.py
+└── Transport/            Folder listener, transport, runtime paths and logs
+```
+
+Namespaces follow these folders: `PresidioDemo.Feeds.Shared`, `PresidioDemo.Pipeline`, `PresidioDemo.Protection` and `PresidioDemo.Transport`. Existing per-feed namespaces remain under `PresidioDemo.Feeds`. The Python environment stays at `src/.venv`; its setup commands are unchanged. Default configuration paths now use `src/Configuration`, and embedded Python loads `src/Protection/python/presidio_demo.py`. Custom configuration switches remain available.
+
 ![Feed protection workflow](topics/feeds-demo/v14/presidio-feed-workflow-v3.svg)
 
 [Editable Excalidraw diagram](topics/feeds-demo/v14/presidio-feed-workflow-v3.excalidraw)
@@ -12,11 +34,11 @@ Process airline feeds using configured field rules and local Presidio. PNR stays
 | --- | --- |
 | ACI | Dedicated module decodes the documented structures and rebuilds all six samples; reviewed XML controls protection-field coverage |
 | ETKT | All six samples use one 136-slot definition; empty strings account for missing values |
-| Seats | Complete JSON with 39 existing policy field paths |
+| Seats | Feed-specific codec with shared System.Text.Json processing; 39 existing policy paths |
 | PNR | One reviewed sequential definition; 76 masked fields and 30 kept fields; structural tags preserved |
-| PNR-Linking | Complete JSON with 49 existing policy field paths |
+| PNR-Linking | Feed-specific codec with shared System.Text.Json processing; 49 existing policy paths |
 
-The three original XML formats remain: [reference mappings](src/config/reference-layouts.xml), [feed policies](src/config/feed-policies.xml), and [XDR structures](src/config/xdr-layouts.xml). Each binary feed has one common structural definition. Optional extensions enable variable widths, optional groups, named capture mappings and 14 shared masking rules without replacing the original roots or feed sections. New structures use reviewed XML changes and a restart. Unsupported structures are retained without publication. `TKT.txt` routes to ETKT.
+The three original XML formats remain: [reference mappings](src/Configuration/reference-layouts.xml), [feed policies](src/Configuration/feed-policies.xml), and [XDR structures](src/Configuration/xdr-layouts.xml). Each binary feed has one common structural definition. Optional extensions enable variable widths, optional groups, named capture mappings and 14 shared masking rules without replacing the original roots or feed sections. New structures use reviewed XML changes and a restart. Unsupported structures are retained without publication. `TKT.txt` routes to ETKT.
 
 XDR raw-word blocks use `<words name="..." count="..." />`, a compact alias for the original fixed array of `uint32` values. The loader supports both forms and expands the alias before processing; byte widths, field paths and validation remain unchanged.
 
@@ -24,7 +46,7 @@ All 15 supplied samples pass actual local Presidio processing and independent by
 
 ## ACI module and structure review
 
-[src/feeds/ACI](src/feeds/ACI) contains separate XDR reader/writer, decoder, parser, encoder, serializer, models, structure definitions, indicators, report formatter and feed codec. The normal ACI route uses this module through `aciStructures="true"` on its schema-driven reference entry. Older custom configurations without this opt-in retain their existing codec. The decoder follows the supplied C-structure declaration order; the encoder rebuilds the complete payload. Existing XML remains the reviewed policy projection for the supplied sample family. Every populated string must have policy coverage, and unreviewed processing shapes are rejected.
+[src/Feeds/ACI](src/Feeds/ACI) contains separate XDR reader/writer, decoder, parser, encoder, serializer, models, structure definitions, indicators, report formatter and feed codec. The normal ACI route uses this module through `aciStructures="true"` on its schema-driven reference entry. Older custom configurations without this opt-in retain their existing codec. The decoder follows the supplied C-structure declaration order; the encoder rebuilds the complete payload. Existing XML remains the reviewed policy projection for the supplied sample family. Every populated string must have policy coverage, and unreviewed processing shapes are rejected.
 
 The structure review corrects `seatNumber` to `departureGate`, `origin` to `terminatingCity`, and offset-based names to documented fields. Operational equipment, aircraft, gate, sector and process values are kept. Passenger names, actual passenger seat assignments, loyalty numbers and unresolved identifiers remain masked. PNR and numeric passenger IDs stay unchanged; the parser checks the `paxl_id` / `pax_id` association. This rewrite does not introduce tokenization.
 
@@ -40,7 +62,7 @@ Decoded analysis files intentionally contain original supplied values. The immut
 
 ## Dedicated ETKT module
 
-`src/feeds/ETKT` separates the XDR reader, writer, decoder, parser, encoder, serializer, models, structure definitions, readable report and route adapter. The normal ETKT route selects this module through `etktStructures="true"` on its schema-driven reference entry. Custom configurations without that setting retain their existing codec.
+`src/Feeds/ETKT` separates the XDR reader, writer, decoder, parser, encoder, serializer, models, structure definitions, readable report and route adapter. The normal ETKT route selects this module through `etktStructures="true"` on its schema-driven reference entry. Custom configurations without that setting retain their existing codec.
 
 All six supplied messages begin with the observed framing words `5, 1, 0`. The screenshot enum declares only error=1, issue=2 and update=3. The implementation preserves the observed sample type 5 without assigning it an undocumented business meaning. Its body aligns with all 136 scalar slots in the screenshot history order. The encoder reconstructs the complete payload and original MQ envelope; XML remains the reviewed protection projection.
 
@@ -57,6 +79,22 @@ Status reports include provisional, most-significant-bit-first labels alongside 
 The immutable ETKT review and evidence are under `D:\Bala_Support\topics\etkt\v4`. The searchable reference covers the documented input, history, coupon, payment, tax, exchange, fare, passenger and project structures, union arms and indicator comments. It records the repeated `etkt_inds_2` declaration in the issue branch as a source conflict. Populated issue/error branches and other unreviewed shapes still require producer evidence.
 
 Checks cover exact binary and MQ-export round trips, agreement with an independent reader, malformed inputs, policy coverage, kept-field integrity and compatibility of the route setting. The comparison with prior protection rules allows differences only in the approved divide-event PNR spans; status labels introduce no payload changes.
+
+## PNR-Linking and Seats JSON processing
+
+`src/Feeds/PNRLinking/PnrLinkingFeedCodec.cs` and `src/Feeds/Seats/SeatsFeedCodec.cs` keep the per-feed folders and own each feed's route and root contract: PNR-Linking requires a JSON array, and Seats requires a JSON object. Both inherit the common `src/Feeds/Shared/JsonFeedCodec.cs`. JSON processing uses only `System.Text.Json`; no additional JSON package is required.
+
+The shared implementation reads named JSON fields, resolves their existing wildcard XML policy paths, replaces selected string values and validates the rebuilt message. JSON supplies its own structure, so these feeds do not need separate structure definitions, domain models, decoders, encoders, parsers, serializers or report formatters. Four former JSON helper files are folded into the same shared class. Eighteen redundant source files were removed from the active project.
+
+The implementation keeps the original UTF-8 JSON and scalar byte locations internally. It copies unchanged bytes and edits selected string values only, preserving property order, escapes, number spelling, nulls and empty containers. Serialization preserves the MQ envelope; validation checks PNRs, JSON types and every unselected payload byte, including empty-container structure. Parsed layouts cannot cross feed routes. Unknown populated paths still reject the whole message through policy resolution. Protection settings, replacement values and passenger grouping are unchanged.
+
+Run the JSON checks and generate reports with the decoded payload and field paths:
+
+```powershell
+dotnet run --project tests/JsonFeeds
+```
+
+Reports include original supplied values and are saved under `.test-runs/json-feeds`. Immutable source snapshots, the removed-file inventory and verification evidence are in `D:\Bala_Support\topics\pnr-linking\v2` and `D:\Bala_Support\topics\seats\v2`. Earlier delivered folders retain the previous implementation.
 
 ## Technology stack
 
@@ -149,7 +187,7 @@ A batch succeeds only when every input is published and acknowledged. Batch file
 
 ## Folders and configuration
 
-- `src/`: C# worker, `feeds/`, `python/`, `config/` and `.venv/`.
+- `src/`: startup, `Configuration/`, `Feeds/`, `Pipeline/`, `Protection/`, `Transport/` and `.venv/`.
 - `tests/unit-tests/`: Python tests; `tests/FeedPipelineChecks/`: .NET checks.
 - `docs/sample-docs/`: immutable source TXT files for review and testing; not required at runtime.
 - `docs/input-feeds/`, `output-feeds/`, `failed-feeds/`: one subfolder per feed.

@@ -1,8 +1,10 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using PresidioDemo.Feeds.Shared;
+using PresidioDemo.Transport;
 
-namespace PresidioDemo.Feeds;
+namespace PresidioDemo.Pipeline;
 
 public sealed record FeedBatchItem(string SourceFile, string Feed, string SourceSha256, int SourceBytes,
     string Status, string? OutputFile, string? RetainedFile, string? ErrorReport);

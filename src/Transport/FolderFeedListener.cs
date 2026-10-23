@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
+using PresidioDemo.Feeds.Shared;
+using PresidioDemo.Pipeline;
 
-namespace PresidioDemo.Feeds;
+namespace PresidioDemo.Transport;
 
 public sealed class FolderFeedListener(IFeedTransport transport, FeedWorkflowRouter router) : IDisposable
 {

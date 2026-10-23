@@ -1,7 +1,8 @@
 using System.Diagnostics;
 using System.Globalization;
+using PresidioDemo.Feeds.Shared;
 
-namespace PresidioDemo.Feeds;
+namespace PresidioDemo.Protection;
 
 public interface IFeedProtector
 {

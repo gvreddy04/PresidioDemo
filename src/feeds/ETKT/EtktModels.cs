@@ -1,3 +1,5 @@
+using PresidioDemo.Feeds.Shared;
+
 namespace PresidioDemo.Feeds.ETKT;
 
 public enum EtktWireKind { Int32, Character, String }

@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
-using PresidioDemo.Feeds;
+using PresidioDemo.Feeds.Shared;
 
 internal sealed record RoundTripExample(FeedType Feed, string Name, string SourceSample,
     string Category, string Extension, byte[] Bytes);

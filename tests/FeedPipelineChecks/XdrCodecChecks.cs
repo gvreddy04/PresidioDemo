@@ -1,7 +1,9 @@
 using System.Buffers.Binary;
 using System.Text;
 using System.Xml.Linq;
-using PresidioDemo.Feeds;
+using PresidioDemo.Feeds.Shared;
+using PresidioDemo.Pipeline;
+using PresidioDemo.Protection;
 
 static class XdrCodecChecks
 {
@@ -102,7 +104,7 @@ static class XdrCodecChecks
     }
     private static void CheckWordsShorthand(string root, string workspace)
     {
-        string active = Path.Combine(root, "src", "config", "xdr-layouts.xml");
+        string active = Path.Combine(root, "src", "Configuration", "xdr-layouts.xml");
         var compact = XdrLayoutConfiguration.Load(active);
         var expanded = XDocument.Load(active);
         var blocks = expanded.Descendants("words").ToArray();

@@ -43,8 +43,15 @@ class ConfigurationCleanupTests(unittest.TestCase):
             for path, text in mappings.items():
                 alias = "/" + text.get("name")
                 if "/" not in path[1:]:
-                    self.assertEqual(alias, path, route + " top-level names must match across XML files")
-                    self.assertNotIn("path", text.attrib, "Matching top-level names need no alias path")
+                    # Reviewed divide-event labels retain their historical XDR paths as provenance.
+                    reviewed_aliases = {
+                        ("ETKT", "/UnconfirmedLocator1"): "/newPnr",
+                        ("ETKT", "/UnconfirmedLocator2"): "/oldPnr",
+                    }
+                    self.assertEqual(alias, reviewed_aliases.get((route, path), path),
+                                     route + " top-level names must match reviewed XML bindings")
+                    if (route, path) not in reviewed_aliases:
+                        self.assertNotIn("path", text.attrib, "Matching top-level names need no alias path")
                 if len(text):
                     expected.update(alias + "/" + part.get("name") for part in text if part.get("fixed") != "true")
                 else:

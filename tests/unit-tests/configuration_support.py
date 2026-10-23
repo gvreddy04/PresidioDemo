@@ -3,9 +3,9 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 PROJECT = Path(__file__).resolve().parents[2]
-SCHEMA = PROJECT / "src/config/xdr-layouts.xml"
-CATALOG = PROJECT / "src/config/feed-policies.xml"
-REFERENCE = PROJECT / "src/config/reference-layouts.xml"
+SCHEMA = PROJECT / "src/Configuration/xdr-layouts.xml"
+CATALOG = PROJECT / "src/Configuration/feed-policies.xml"
+REFERENCE = PROJECT / "src/Configuration/reference-layouts.xml"
 
 def catalog(path=None):
     entry = ET.parse(path or CATALOG).find("catalog")

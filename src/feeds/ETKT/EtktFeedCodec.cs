@@ -1,3 +1,5 @@
+using PresidioDemo.Feeds.Shared;
+
 namespace PresidioDemo.Feeds.ETKT;
 
 /// <summary>Complete type-5 reconstruction using the existing XML protection projection.</summary>

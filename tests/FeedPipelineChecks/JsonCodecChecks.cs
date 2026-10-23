@@ -1,5 +1,7 @@
 using System.Text;
-using PresidioDemo.Feeds;
+using PresidioDemo.Feeds.Shared;
+using PresidioDemo.Pipeline;
+using PresidioDemo.Protection;
 
 static class JsonCodecChecks
 {
@@ -17,7 +19,7 @@ static class JsonCodecChecks
     }
     public static void Run(string root)
     {
-        var codec = new JsonFeedCodec(FeedType.Seats);
+        var codec = FeedCodecRegistry.Create(FeedType.Seats);
         string json = " {\"UARecloc\":\"K7QX2M\", \"Customers\":[{\"FirstName\":\"Emily\",\"Count\":1e2,\"Active\":true,\"Optional\":null},{\"FirstName\":\"Michael\"}]} \n";
         var message = Message(json);
         var parsed = codec.Parse(message);
@@ -37,7 +39,7 @@ static class JsonCodecChecks
         Reject(() => codec.Parse(Message("{\"x\":\"a\"} {}")), "trailing JSON content rejects the complete message");
         Reject(() => codec.Parse(Message("{\"x\":\"unfinished")), "truncated JSON rejects the complete message");
         Reject(() => codec.Parse(Message("[]")), "incorrect feed root is rejected");
-        var policies = FeedPolicyConfiguration.Load(Path.Combine(root, "src", "config", "feed-policies.xml"));
+        var policies = FeedPolicyConfiguration.Load(Path.Combine(root, "src", "Configuration", "feed-policies.xml"));
         Reject(() => ConfiguredPiiIdentifier.CreatePlan(codec.Parse(Message("{\"UnknownPersonalField\":\"Emily\"}")).Fields, policies[FeedType.Seats]), "unknown schema paths fail before anonymization");
         Reject(() => policies[FeedType.Seats].Get("/OrderChangeNotif/Old/Customers/*/firstname"), "JSON policy paths are case sensitive");
         Reject(() => new FieldPolicy("/Old/Customers/*/UARecloc", FieldIdentification.Known, FieldAction.Redact, "PNR").Validate(), "PNR aliases cannot be overridden in path policies");
@@ -58,7 +60,7 @@ static class JsonCodecChecks
             var env = FeedPayloadReader.Read(new(new(FeedType.Seats, Guid.Empty, pair.Item1, "fixture"), bytes));
             Require(env.Payload.Length == pair.Item2 && env.Serialize(env.Payload).AsSpan().SequenceEqual(bytes), "finalized " + pair.Item1 + " envelope decodes and round trips exactly");
         }
-        var linking = new JsonFeedCodec(FeedType.PnrLinking);
+        var linking = FeedCodecRegistry.Create(FeedType.PnrLinking);
         var link = linking.Parse(Message("[{\"PNROwner\":\"K7QX2M\",\"Customers\":[{\"PaxId\":\"PAX-1001\",\"FirstName\":\"Emily\",\"UaRecordLocator\":\"K7QX2M\",\"DOB\":null}]}]", feed: FeedType.PnrLinking));
         var plan = ConfiguredPiiIdentifier.CreatePlan(link.Fields, policies[FeedType.PnrLinking]);
         Require(plan.Count == 5 && link.Fields.Single(f => f.Id.EndsWith("/DOB")).Value == "", "complete illustrative PNR Linking resolves exact configured paths and retains null values");

@@ -4,6 +4,16 @@ All 15 files in `docs/sample-docs` were reviewed without changing source bytes. 
 
 The application retains the three original XML formats: reference mappings, feed policies and XDR structures. All six ACI examples parse with the same sequence, and all six ETKT examples parse with the same sequence. Reference offsets and lengths remain as reviewed baseline documentation; dynamic parsing follows ordered XDR definitions instead of selecting per-sample templates. String scanning was used during review only. The active configurations do not read source samples at runtime.
 
+## PNR-Linking and Seats: shared System.Text.Json processing
+
+The standard routes select `PNRLinking/PnrLinkingFeedCodec` and `Seats/SeatsFeedCodec`, retaining one codec in each feed folder. These classes own the route and required JSON root and inherit `JsonFeedCodec`. The shared class uses `System.Text.Json.Utf8JsonReader` and `JsonSerializer` for both feeds. There are no separate JSON decoder, encoder, parser, serializer, model, structure-definition or report-formatter files. Four former shared helper files are also folded into the class, removing 18 redundant source files from the active project.
+
+The PNR-Linking sample has 76 scalar occurrences across 49 configured policy paths; Seats has 59 across 39 paths. The existing XML policies remain authoritative. JSON field names and nesting supply the structure, while instance paths locate values and wildcard paths select the rules. Every populated scalar still needs a configured rule. Array position never establishes passenger identity.
+
+Both routes retain original JSON bytes, scalar types and grouping, including empty arrays and objects. PNRs, passenger grouping, replacement settings, nulls and non-string values are unchanged. A protected output may differ only within changed string spans; MQ metadata and all other payload bytes are validated before publication. Comparing the byte gaps between scalars also detects changes to property names and empty containers. A parsed message from one feed cannot be serialized through the other feed's codec.
+
+`dotnet run --project tests/JsonFeeds` checks both routes against an independent `System.Text.Json.JsonDocument` reader, supplied messages, two-passenger fixtures, malformed JSON, route mismatches, missing fields, unsupported encodings, type changes, PNR changes and unreviewed paths. Reports are generated in the test project and include original payload values and field paths. Existing full-workflow round-trip checks also assert that both JSON feeds use the shared implementation. Earlier delivered source snapshots and samples are preserved.
+
 ## Common binary representation
 
 The examples use big-endian 32-bit words and counted ASCII strings padded to four bytes. A counted string consists of its byte length, that many text bytes and zero padding. An empty string is a length word of zero, with no value or padding. Missing text is therefore represented structurally, not by a special character. Actual `*` characters in populated fields are masked/placeholder content and are not universal missing-field markers.
@@ -14,7 +24,7 @@ The initial ACI/PNR word is two; ETKT's is five. The schema checks these individ
 
 ## ACI: documented structures and a dedicated module
 
-The C-structure definitions were checked against all six supplied ACI payloads. The new `src/feeds/ACI` folder separates the XDR reader, writer, decoder, parser, encoder, serializer, models, source definitions, indicators, readable reports and route adapter. The standard application route selects `AciFeedCodec` when the reviewed schema-driven ACI configuration is loaded.
+The C-structure definitions were checked against all six supplied ACI payloads. The new `src/Feeds/ACI` folder separates the XDR reader, writer, decoder, parser, encoder, serializer, models, source definitions, indicators, readable reports and route adapter. The standard application route selects `AciFeedCodec` when the reviewed schema-driven ACI configuration is loaded.
 
 The decoder follows `seats_assigned` (ERROR=1 / DATA=2), flight/leg/compartment lists, passenger lists, passenger-flight items and nested seat, bag, registration, loyalty, profile, sequence, security, ticket, through-check-in, miscellaneous, history, consolidated-flight, codeshare, tier and transaction-time lists. Four-byte XDR scalar slots must not be confused with C memory sizes. Strings have length words and zero padding; null linked pointers have a zero presence word.
 
@@ -32,7 +42,7 @@ The immutable workspace review, decoded examples, searchable transcription, veri
 
 ## ETKT: a dedicated module and one 136-slot sample profile
 
-`src/feeds/ETKT` now owns separate XDR reader/writer, decoder, parser, encoder, serializer, structure definitions, models, report formatter and route adapter. The supplied configuration selects this module with `etktStructures="true"`; custom reference entries without that setting keep their previous codec. The existing XML remains a reviewed protection projection. Every nonempty decoded string needs complete policy coverage, and unsupported populated shapes are retained without publication.
+`src/Feeds/ETKT` now owns separate XDR reader/writer, decoder, parser, encoder, serializer, structure definitions, models, report formatter and route adapter. The supplied configuration selects this module with `etktStructures="true"`; custom reference entries without that setting keep their previous codec. The existing XML remains a reviewed protection projection. Every nonempty decoded string needs complete policy coverage, and unsupported populated shapes are retained without publication.
 
 The six samples begin with `5, 1, 0`. The screenshot union defines error=1, issue=2 and update=3. The agreed implementation supports an explicitly observed type-5 profile while leaving its discriminator meaning unconfirmed. All 136 scalar slots align with the screenshot history order. The encoder rebuilds the entire payload, including empty string slots and four-byte character slots. A separate Python reader agrees on every value, type, offset and encoded width.
 

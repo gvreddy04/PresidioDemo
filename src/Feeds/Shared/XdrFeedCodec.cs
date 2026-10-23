@@ -1,11 +1,12 @@
 using System.Buffers.Binary;
 using System.Globalization;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml;
+using System.Text;
 using System.Xml.Linq;
+using System.Xml;
+using PresidioDemo.Protection;
 
-namespace PresidioDemo.Feeds;
+namespace PresidioDemo.Feeds.Shared;
 
 /// <summary>Describes an ordered binary field; offsets are computed while parsing each message.</summary>
 public sealed record XdrFieldDefinition(string Name, string Kind, int Limit = 0, int Count = 0,

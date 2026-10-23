@@ -2,12 +2,13 @@ using System.Buffers.Binary;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml;
+using System.Text;
 using System.Xml.Linq;
+using System.Xml;
+using PresidioDemo.Protection;
 
-namespace PresidioDemo.Feeds;
+namespace PresidioDemo.Feeds.Shared;
 
 public sealed record ReferenceFieldSpan(string Name, int Offset, int Length);
 

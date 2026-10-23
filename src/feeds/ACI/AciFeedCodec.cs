@@ -1,3 +1,5 @@
+using PresidioDemo.Feeds.Shared;
+
 namespace PresidioDemo.Feeds.ACI;
 
 /// <summary>ACI route: semantic decoding and full encoding, with existing XML policy projection.</summary>

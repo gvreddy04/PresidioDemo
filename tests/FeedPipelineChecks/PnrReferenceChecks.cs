@@ -1,6 +1,8 @@
 using System.Text;
 using System.Xml.Linq;
-using PresidioDemo.Feeds;
+using PresidioDemo.Feeds.Shared;
+using PresidioDemo.Pipeline;
+using PresidioDemo.Protection;
 
 static class PnrReferenceChecks
 {
@@ -27,8 +29,8 @@ static class PnrReferenceChecks
     }
     public static void Run(string root, string workspace)
     {
-        string config = Path.Combine(root, "src/config/reference-layouts.xml");
-        var references = ReferenceLayoutConfiguration.Load(config, XdrLayoutConfiguration.Load(Path.Combine(root, "src/config/xdr-layouts.xml")));
+        string config = Path.Combine(root, "src/Configuration/reference-layouts.xml");
+        var references = ReferenceLayoutConfiguration.Load(config, XdrLayoutConfiguration.Load(Path.Combine(root, "src/Configuration/xdr-layouts.xml")));
         var layout = references[FeedType.PNR];
         var codec = FeedCodecRegistry.Create(FeedType.PNR, new Dictionary<FeedType, XdrFeedSchema>(), references);
         Check(codec is ReferenceLayoutFeedCodec, "PNR registry selects only the reviewed reference profile");
@@ -39,7 +41,7 @@ static class PnrReferenceChecks
         var values = parsed.Fields.ToDictionary(field => field.Id, field => field.Value);
         Check(values.Count == 106 && codec.Serialize(parsed, values).AsSpan().SequenceEqual(source),
             "PNR no-op round trip preserves the complete MQ export exactly");
-        var policy = FeedPolicyConfiguration.Load(Path.Combine(root, "src/config/feed-policies.xml"))[FeedType.PNR];
+        var policy = FeedPolicyConfiguration.Load(Path.Combine(root, "src/Configuration/feed-policies.xml"))[FeedType.PNR];
         var plan = ConfiguredPiiIdentifier.CreatePlan(parsed.Fields, policy);
         Check(plan.Count(item => item.Rule.Action == FieldAction.Mask) == 76 && plan.Count(item => item.Rule.Action == FieldAction.Keep) == 30 &&
             plan.All(item => item.Rule.Identification != FieldIdentification.Analyze),
@@ -84,7 +86,7 @@ static class PnrReferenceChecks
             entry.SetAttributeValue("referenceFile", Path.Combine(root, "docs/sample-docs/PNR.txt"));
             change(entry);
             new XDocument(new XElement("referenceLayouts", entry)).Save(temporary);
-            Reject(() => ReferenceLayoutConfiguration.Load(temporary, XdrLayoutConfiguration.Load(Path.Combine(root, "src/config/xdr-layouts.xml"))), label);
+            Reject(() => ReferenceLayoutConfiguration.Load(temporary, XdrLayoutConfiguration.Load(Path.Combine(root, "src/Configuration/xdr-layouts.xml"))), label);
         }
         Invalid(entry => entry.Descendants("part").First().SetAttributeValue("fixed", "yes"),
             "reference loader rejects malformed fixed-part flags");

@@ -1,5 +1,6 @@
 using System.Xml.Linq;
-using PresidioDemo.Feeds;
+using PresidioDemo.Feeds.Shared;
+using PresidioDemo.Protection;
 
 static class UnconfiguredPolicyChecks
 {
@@ -28,7 +29,7 @@ static class UnconfiguredPolicyChecks
 
     public static void Run(string root, string workspace)
     {
-        string source = Path.Combine(root, "src", "config", "feed-policies.xml");
+        string source = Path.Combine(root, "src", "Configuration", "feed-policies.xml");
         var policies = FeedPolicyConfiguration.Load(source);
         var pending = new FeedPolicy(FeedType.PNR, [], configured: false);
         Check(policies[FeedType.PNR].IsConfigured && policies[FeedType.PNR].Fields.Count == 106,

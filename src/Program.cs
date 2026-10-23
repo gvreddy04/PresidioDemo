@@ -1,5 +1,7 @@
-using PresidioDemo;
-using PresidioDemo.Feeds;
+using PresidioDemo.Feeds.Shared;
+using PresidioDemo.Pipeline;
+using PresidioDemo.Protection;
+using PresidioDemo.Transport;
 
 const string usage = "Usage: dotnet run [-- --docs-root <folder> --policy-file <xml-file> --xdr-layout-file <xml-file> --reference-layout-file <xml-file> --process-folder <source-folder>]";
 if (args is ["--help"] or ["-h"])
@@ -15,9 +17,9 @@ while (project is not null && !File.Exists(Path.Combine(project.FullName, "Presi
 }
 string projectRoot = project?.FullName ?? Directory.GetCurrentDirectory();
 string docsRoot = Path.Combine(projectRoot, "docs");
-string policyFile = Path.Combine(projectRoot, "src", "config", "feed-policies.xml");
-string xdrLayoutFile = Path.Combine(projectRoot, "src", "config", "xdr-layouts.xml");
-string referenceLayoutFile = Path.Combine(projectRoot, "src", "config", "reference-layouts.xml");
+string policyFile = Path.Combine(projectRoot, "src", "Configuration", "feed-policies.xml");
+string xdrLayoutFile = Path.Combine(projectRoot, "src", "Configuration", "xdr-layouts.xml");
+string referenceLayoutFile = Path.Combine(projectRoot, "src", "Configuration", "reference-layouts.xml");
 string? processFolder = null;
 var supplied = new HashSet<string>(StringComparer.Ordinal);
 for (int i = 0; i < args.Length; i += 2)

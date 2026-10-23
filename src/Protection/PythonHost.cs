@@ -1,8 +1,8 @@
 using Python.Runtime;
 
-namespace PresidioDemo;
+namespace PresidioDemo.Protection;
 
-/// <summary>Starts embedded CPython using the project's src/.venv and calls src/python/presidio_demo.py.</summary>
+/// <summary>Starts embedded CPython using the project's src/.venv and calls src/Protection/python/presidio_demo.py.</summary>
 public static class PythonHost
 {
     private static PyObject? _module;
@@ -35,7 +35,7 @@ public static class PythonHost
             Path.Combine(pythonHome, "Lib"),
             Path.Combine(pythonHome, "DLLs"),
             Path.Combine(venvDir, "Lib", "site-packages"),
-            Path.Combine(projectDir, "src", "python"));
+            Path.Combine(projectDir, "src", "Protection", "python"));
 
         PythonEngine.Initialize();
         PythonEngine.BeginAllowThreads();

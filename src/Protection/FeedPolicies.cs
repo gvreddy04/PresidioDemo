@@ -1,9 +1,10 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.Xml;
 using System.Xml.Linq;
+using System.Xml;
+using PresidioDemo.Feeds.Shared;
 
-namespace PresidioDemo.Feeds;
+namespace PresidioDemo.Protection;
 
 public enum FieldIdentification { None, Known, Analyze }
 public enum FieldAction { Keep, Replace, Mask, Redact }

@@ -127,14 +127,14 @@ class AllFeedBatchTests(unittest.TestCase):
             sources.mkdir()
             raw = struct.pack(">I", 2)
             (sources / "PNR.bin").write_bytes(raw)
-            schema = ET.parse(PROJECT / "src/config/xdr-layouts.xml")
+            schema = ET.parse(PROJECT / "src/Configuration/xdr-layouts.xml")
             pending = schema.find("feed[@type='PNR']")
             for field in list(pending):
                 pending.remove(field)
             pending.set("configured", "false")
             schemafile = root / "disabled-schema.xml"
             schema.write(schemafile, encoding="utf-8", xml_declaration=True)
-            references = ET.parse(PROJECT / "src/config/reference-layouts.xml")
+            references = ET.parse(PROJECT / "src/Configuration/reference-layouts.xml")
             references.getroot().remove(references.find("feed[@type='PNR']"))
             referencefile = root / "references.xml"
             references.write(referencefile, encoding="utf-8", xml_declaration=True)
@@ -167,7 +167,7 @@ class AllFeedBatchTests(unittest.TestCase):
             (sources / "PNR_LINKING.bin").write_bytes(json.dumps(linking).encode())
             layout = ET.Element('xdrLayouts')
             references = ET.Element('referenceLayouts')
-            policies = ET.parse(PROJECT / 'src/config/feed-policies.xml')
+            policies = ET.parse(PROJECT / 'src/Configuration/feed-policies.xml')
             for feed in ['ACI', 'PNR', 'ETKT']:
                 entry = ET.SubElement(layout, 'feed', type=feed, configured='true', preserveWidths='true')
                 ET.SubElement(entry, 'uint32', name='Version', expected='2')

@@ -1,4 +1,4 @@
-namespace PresidioDemo.Feeds;
+namespace PresidioDemo.Feeds.Shared;
 
 public enum FeedType { ETKT, PNR, PnrLinking, Seats, ACI }
 

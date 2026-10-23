@@ -79,7 +79,7 @@ class AciFeedTests(unittest.TestCase):
             sources.mkdir()
             original = (PROJECT / "docs/sample-docs/ACI.txt").read_bytes()
             (sources / "ACI.txt").write_bytes(original)
-            schema = ET.parse(PROJECT / "src/config/feed-policies.xml")
+            schema = ET.parse(PROJECT / "src/Configuration/feed-policies.xml")
             field = schema.find("feed[@type='ACI']/field[@name='/unresolvedIdentifier']")
             field.attrib.clear()
             field.attrib.update(name="/unresolvedIdentifier", identification="None", action="Keep")

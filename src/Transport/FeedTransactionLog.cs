@@ -1,7 +1,8 @@
-using System.Text;
 using System.Text.Json;
+using System.Text;
+using PresidioDemo.Feeds.Shared;
 
-namespace PresidioDemo.Feeds;
+namespace PresidioDemo.Transport;
 
 /// <summary>Reports complete input, decoded payload, plain text and parsed fields, followed by output payload and complete feed data.</summary>
 public static class FeedTransactionLog

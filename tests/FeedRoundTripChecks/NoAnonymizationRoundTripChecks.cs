@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using System.Text.Json;
-using PresidioDemo.Feeds;
 using PresidioDemo.Feeds.ACI;
+using PresidioDemo.Feeds.Shared;
+using PresidioDemo.Pipeline;
+using PresidioDemo.Protection;
 
 public static class NoAnonymizationRoundTripChecks
 {
@@ -11,9 +13,9 @@ public static class NoAnonymizationRoundTripChecks
     {
         Directory.CreateDirectory(outputDirectory);
         string reportPath = Path.Combine(outputDirectory, "verification.json");
-        var schemas = XdrLayoutConfiguration.Load(Path.Combine(root, "src/config/xdr-layouts.xml"));
-        var references = ReferenceLayoutConfiguration.Load(Path.Combine(root, "src/config/reference-layouts.xml"), schemas);
-        var configured = FeedPolicyConfiguration.Load(Path.Combine(root, "src/config/feed-policies.xml"));
+        var schemas = XdrLayoutConfiguration.Load(Path.Combine(root, "src/Configuration/xdr-layouts.xml"));
+        var references = ReferenceLayoutConfiguration.Load(Path.Combine(root, "src/Configuration/reference-layouts.xml"), schemas);
+        var configured = FeedPolicyConfiguration.Load(Path.Combine(root, "src/Configuration/feed-policies.xml"));
         // All-Keep exists only in this test assembly; source configuration files are never edited.
         var keepPolicies = configured.ToDictionary(pair => pair.Key, pair => new FeedPolicy(pair.Key,
             pair.Value.Fields.Values.Select(rule => new FieldPolicy(rule.Name, FieldIdentification.None, FieldAction.Keep))));
@@ -36,6 +38,10 @@ public static class NoAnonymizationRoundTripChecks
                     if (example.Feed == FeedType.ACI && codec is not AciFeedCodec)
                     {
                         throw new Exception("Default ACI round trips must exercise the dedicated ACI codec.");
+                    }
+                    if ((example.Feed is FeedType.PnrLinking or FeedType.Seats) && codec is not JsonFeedCodec)
+                    {
+                        throw new Exception("Default JSON round trips must exercise the shared System.Text.Json codec.");
                     }
                     byte[] expected = example.Bytes.ToArray();
                     var firstMessage = RoundTripExamples.Message(example.Feed, "case" + example.Extension, example.Bytes);

@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using PresidioDemo.Feeds.Shared;
+using PresidioDemo.Protection;
 
-namespace PresidioDemo.Feeds;
+namespace PresidioDemo.Pipeline;
 
 // Each strategy owns its confirmed codec and its feed-specific field policy.
 public abstract class ProtectedFeedWorkflow(IFeedProtector protector, IFeedCodec codec, FeedPolicy policy) : IFeedWorkflow

@@ -1,7 +1,9 @@
 using System.Buffers.Binary;
 using System.Text;
-using PresidioDemo;
-using PresidioDemo.Feeds;
+using PresidioDemo.Feeds.Shared;
+using PresidioDemo.Pipeline;
+using PresidioDemo.Protection;
+using PresidioDemo.Transport;
 
 // This codec is a regression fixture only. It is excluded from the app and is not an airline schema.
 string projectRoot = AppContext.BaseDirectory;
@@ -33,7 +35,7 @@ static void ExpectInvalid(Action action, string label)
 }
 static void CheckPolicies(string root, string workspace)
 {
-    var policies = FeedPolicyConfiguration.Load(Path.Combine(root, "src", "config", "feed-policies.xml"));
+    var policies = FeedPolicyConfiguration.Load(Path.Combine(root, "src", "Configuration", "feed-policies.xml"));
     Check(policies.Count == 5 && policies[FeedType.Seats].Get("/OrderChangeNotif/Old/Customers/*/FirstName").Identification == FieldIdentification.Known, "Feed policies are not distinct.");
     Check(policies[FeedType.PnrLinking].Get("/*/Customers/*/UaRecordLocator").Action == FieldAction.Keep, "Linked PNR must be kept.");
     ExpectInvalid(() => policies[FeedType.Seats].Get("unconfiguredField"), "unknown fields fail closed");
@@ -177,7 +179,7 @@ try
 
     using var transport = new FolderFeedTransport(docsRoot);
     transport.Initialize();
-    var policies = FeedPolicyConfiguration.Load(Path.Combine(projectRoot, "src", "config", "feed-policies.xml"));
+    var policies = FeedPolicyConfiguration.Load(Path.Combine(projectRoot, "src", "Configuration", "feed-policies.xml"));
     await CheckScheduling(docsRoot, protector, input, policies);
     var fixturePolicies = policies.ToDictionary(pair => pair.Key, pair => pair.Value);
     fixturePolicies[FeedType.ACI] = TestFixturePolicy(FeedType.ACI);

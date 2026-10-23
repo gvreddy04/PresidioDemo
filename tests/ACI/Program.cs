@@ -1,15 +1,17 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text.Json;
-using PresidioDemo.Feeds;
 using PresidioDemo.Feeds.ACI;
+using PresidioDemo.Feeds.Shared;
+using PresidioDemo.Pipeline;
+using PresidioDemo.Protection;
 
 string project = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../"));
 string output = args.Length == 1 ? Path.GetFullPath(args[0]) : Path.Combine(project, ".test-runs", "aci-checks");
 Directory.CreateDirectory(output);
-var schemas = XdrLayoutConfiguration.Load(Path.Combine(project, "src/config/xdr-layouts.xml"));
-var references = ReferenceLayoutConfiguration.Load(Path.Combine(project, "src/config/reference-layouts.xml"), schemas);
-var policies = FeedPolicyConfiguration.Load(Path.Combine(project, "src/config/feed-policies.xml"));
+var schemas = XdrLayoutConfiguration.Load(Path.Combine(project, "src/Configuration/xdr-layouts.xml"));
+var references = ReferenceLayoutConfiguration.Load(Path.Combine(project, "src/Configuration/reference-layouts.xml"), schemas);
+var policies = FeedPolicyConfiguration.Load(Path.Combine(project, "src/Configuration/feed-policies.xml"));
 var codec = FeedCodecRegistry.Create(FeedType.ACI, schemas, references);
 Check(codec is AciFeedCodec, "ACI route uses the new module");
 var results = new List<object>();

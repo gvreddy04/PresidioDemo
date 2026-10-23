@@ -1,6 +1,7 @@
 using System.Text;
+using PresidioDemo.Feeds.Shared;
 
-namespace PresidioDemo.Feeds;
+namespace PresidioDemo.Transport;
 
 /// <summary>Folder adapter: receive, publish, reject and acknowledge a delivery.</summary>
 public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport

@@ -1,4 +1,4 @@
-namespace PresidioDemo.Feeds;
+namespace PresidioDemo.Transport;
 
 /// <summary>Locates feed input, processing, output, logs and private listener state.</summary>
 public sealed class FeedWorkspacePaths

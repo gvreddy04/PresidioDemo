@@ -1,5 +1,6 @@
 using System.Text;
-using PresidioDemo.Feeds;
+using PresidioDemo.Feeds.Shared;
+using PresidioDemo.Transport;
 
 static class FeedTransactionLogChecks
 {

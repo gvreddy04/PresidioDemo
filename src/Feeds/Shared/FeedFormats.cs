@@ -1,7 +1,7 @@
-using System.Text;
 using System.Text.RegularExpressions;
+using System.Text;
 
-namespace PresidioDemo.Feeds;
+namespace PresidioDemo.Feeds.Shared;
 
 // Locations address fields within one message; they are never passenger identities.
 public sealed record FeedField(string Id, string Name, string Value);

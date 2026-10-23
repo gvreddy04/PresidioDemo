@@ -1,3 +1,5 @@
+using PresidioDemo.Feeds.Shared;
+
 namespace PresidioDemo.Feeds.ACI;
 
 public enum AciWireKind { Int32, String, Pointer }

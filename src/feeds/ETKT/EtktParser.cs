@@ -1,3 +1,5 @@
+using PresidioDemo.Feeds.Shared;
+
 namespace PresidioDemo.Feeds.ETKT;
 
 /// <summary>Separates structural decoding from reviewed protection-field bindings.</summary>
