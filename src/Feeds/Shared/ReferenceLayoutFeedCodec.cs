@@ -186,6 +186,9 @@ public sealed class ReferenceFeedLayout
     /// <value>A value indicating whether the dedicated ETKT structural codec is selected.</value>
     internal bool UseEtktStructures { get; init; }
 
+    /// <summary>Gets whether the sample-reviewed PNR module is selected.</summary>
+    internal bool UsePnrStructures { get; init; }
+
     #endregion
 }
 
@@ -218,7 +221,7 @@ public static class ReferenceLayoutConfiguration
             var layouts = new Dictionary<FeedType, ReferenceFeedLayout>();
             foreach (var element in root.Elements())
             {
-                Check(element, "feed", ["type", "name", "referenceFile", "referenceSha256", "schemaDriven", "aciStructures", "etktStructures"]);
+                Check(element, "feed", ["type", "name", "referenceFile", "referenceSha256", "schemaDriven", "aciStructures", "etktStructures", "pnrStructures"]);
                 var feed = FeedCatalog.All.SingleOrDefault(item => item.FolderName == Required(element, "type"))
                     ?? throw new InvalidDataException("Unknown reference-layout feed route.");
                 if (feed.Type is FeedType.Seats or FeedType.PnrLinking || layouts.ContainsKey(feed.Type))
@@ -236,6 +239,11 @@ public static class ReferenceLayoutConfiguration
                 if (useEtktStructures && (feed.Type != FeedType.ETKT || !schemaDriven))
                 {
                     throw new InvalidDataException("ETKT structures require the ETKT schema-driven route.");
+                }
+                bool usePnrStructures = Flag(element, "pnrStructures");
+                if (usePnrStructures && (feed.Type != FeedType.PNR || !schemaDriven))
+                {
+                    throw new InvalidDataException("PNR structures require the PNR schema-driven route.");
                 }
                 if (schemaDriven)
                 {
@@ -485,7 +493,8 @@ public static class ReferenceLayoutConfiguration
                             fields.AsReadOnly(), new ReadOnlyDictionary<string, string>(aliases), required)
         {
             UseAciStructures = Flag(element, "aciStructures"),
-            UseEtktStructures = Flag(element, "etktStructures")
+            UseEtktStructures = Flag(element, "etktStructures"),
+            UsePnrStructures = Flag(element, "pnrStructures")
         };
 
         XdrFieldDefinition Map(XdrFieldDefinition field, string path, bool conditional)

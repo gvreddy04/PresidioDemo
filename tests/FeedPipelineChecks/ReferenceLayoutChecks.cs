@@ -67,6 +67,7 @@ static class ReferenceLayoutChecks
             {
                 FeedType.ACI => codec is PresidioDemo.Feeds.ACI.AciFeedCodec,
                 FeedType.ETKT => codec is PresidioDemo.Feeds.ETKT.EtktFeedCodec,
+                FeedType.PNR => codec is PresidioDemo.Feeds.PNR.PnrFeedCodec,
                 _ => codec is ReferenceLayoutFeedCodec
             };
             Check(expectedCodec &&

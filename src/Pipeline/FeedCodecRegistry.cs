@@ -1,3 +1,4 @@
+using PresidioDemo.Feeds.PNR;
 using PresidioDemo.Feeds.ACI;
 using PresidioDemo.Feeds.ETKT;
 using PresidioDemo.Feeds.PNRLinking;
@@ -57,6 +58,10 @@ public static class FeedCodecRegistry
             if (feed == FeedType.ETKT && dynamicReference.UseEtktStructures)
             {
                 return new EtktFeedCodec(dynamicReference);
+            }
+            if (feed == FeedType.PNR && dynamicReference.UsePnrStructures)
+            {
+                return new PnrFeedCodec(dynamicReference);
             }
             return new ReferenceLayoutFeedCodec(dynamicReference);
         }

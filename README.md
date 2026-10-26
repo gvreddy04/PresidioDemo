@@ -231,3 +231,7 @@ src/.venv/Scripts/python.exe tests/run_sample_verification.py
 ```
 
 [Implementation details](topics/feeds-demo/v14/feed-implementation-reference-v14.md) · [Feed format analysis](docs/feed-analysis.md)
+
+## PNR sample mapping
+
+The PNR sample-specific route lives in `src/Feeds/PNR`. It retains the existing XML protection projection and exposes evidence-backed P2 business labels for observed XDR scalars. Unmapped fields remain neutral; the P2 screenshots do not establish this feed’s wire schema or a stable passenger ID. Run `dotnet run --project tests/PNR/PnrChecks.csproj -- <report-path>` to inspect a decoded report containing original sample values.

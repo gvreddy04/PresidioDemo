@@ -1,3 +1,4 @@
+using PresidioDemo.Feeds.PNR;
 using System.Text;
 using System.Xml.Linq;
 using PresidioDemo.Feeds.Shared;
@@ -23,11 +24,25 @@ static class PnrReferenceChecks
         var references = ReferenceLayoutConfiguration.Load(config, XdrLayoutConfiguration.Load(Path.Combine(root, "src/Configuration/xdr-layouts.xml")));
         var layout = references[FeedType.PNR];
         var codec = FeedCodecRegistry.Create(FeedType.PNR, new Dictionary<FeedType, XdrFeedSchema>(), references);
-        Check(codec is ReferenceLayoutFeedCodec, "PNR registry selects only the reviewed reference profile");
+        Check(codec is PnrFeedCodec, "PNR registry selects the dedicated PNR codec");
         byte[] source = File.ReadAllBytes(Path.Combine(root, "docs/sample-docs/PNR.txt"));
         var delivery = new FeedDelivery(FeedType.PNR, Guid.Empty, "PNR.txt", "reference-check");
         var message = new FeedMessage(delivery, source);
         var parsed = codec.Parse(message);
+        var document = PnrFeedCodec.Document(parsed);
+        Check(document.PayloadLength == 5452 && document.Fields.Single(field => field.Path == "/pnr").Value == "FWGV4L" &&
+            document.Fields.Single(field => field.Path == "/pnr").Meaning?.Label == "Record locator" &&
+            document.Fields.Single(field => field.Path == "/passengerSurname").Meaning?.Label == "Surname" &&
+            document.Fields.Single(field => field.Path == "/Origin2484").Value == "IAH" &&
+            document.Fields.Single(field => field.Path == "/Origin2484").Meaning?.Label == "Board point" &&
+            document.Fields.Single(field => field.Path == "/RecordTag260").Value == "FQTR" &&
+            document.Fields.Single(field => field.Path == "/RecordTag260").Meaning?.Label == "Service code" &&
+            document.Fields.Single(field => field.Path == "/Word000").Meaning is null,
+            "PNR maps general, passenger, frequent flyer and itinerary fields and leaves unknown meanings unresolved");
+        var reader = new PnrXdrReader(XdrLayoutConfiguration.Load(Path.Combine(root, "src/Configuration/xdr-layouts.xml"))[FeedType.PNR]);
+        var standalone = new PnrDecoder(reader).Decode(message);
+        Check(new PnrEncoder(new PnrXdrWriter(reader)).Encode(standalone).AsSpan().SequenceEqual(source),
+            "Dedicated PNR reader and writer preserve the complete MQ export");
         var values = parsed.Fields.ToDictionary(field => field.Id, field => field.Value);
         Check(values.Count == 106 && codec.Serialize(parsed, values).AsSpan().SequenceEqual(source),
             "PNR no-op round trip preserves the complete MQ export exactly");
