@@ -3,7 +3,7 @@ using Python.Runtime;
 namespace PresidioDemo.Protection;
 
 /// <summary>
-/// Starts embedded CPython using the project's src/.venv and calls src/Protection/python/presidio_demo.py.
+/// Starts embedded CPython using the project's src/.venv and calls src/Protection/Shared/python/presidio_demo.py.
 /// </summary>
 public static class PythonHost
 {
@@ -78,7 +78,7 @@ public static class PythonHost
             Path.Combine(pythonHome, "Lib"),
             Path.Combine(pythonHome, "DLLs"),
             Path.Combine(venvDir, "Lib", "site-packages"),
-            Path.Combine(projectDir, "src", "Protection", "python"));
+            Path.Combine(projectDir, "src", "Protection", "Shared", "python"));
 
         PythonEngine.Initialize();
         PythonEngine.BeginAllowThreads();

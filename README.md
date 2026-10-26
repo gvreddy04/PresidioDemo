@@ -24,9 +24,14 @@ src/
 
 Namespaces follow these folders: `PresidioDemo.Feeds.Shared`, `PresidioDemo.Pipeline`, `PresidioDemo.Protection` and `PresidioDemo.Transport`. Existing per-feed namespaces remain under `PresidioDemo.Feeds`. The Python environment stays at `src/.venv`; its setup commands are unchanged. Default configuration paths now use `src/Configuration`, and embedded Python loads `src/Protection/python/presidio_demo.py`. Custom configuration switches remain available.
 
-![Feed protection workflow](topics/feeds-demo/v14/presidio-feed-workflow-v3.svg)
+![Feed protection workflow](docs/diagrams/presidio-feed-workflow.svg)
 
 [Editable Excalidraw diagram](topics/feeds-demo/v14/presidio-feed-workflow-v3.excalidraw)
+
+## Architecture diagrams
+
+- [PII infrastructure on AWS](docs/diagrams/aws-pii-infrastructure.svg): proposed dev environment, with one exclusive queue and one listener per feed.
+- [Feed protection workflow](docs/diagrams/presidio-feed-workflow.svg): how feeds move through the .NET listener, configured field identification and local Presidio, with validation before publication.
 
 ## C# conventions
 

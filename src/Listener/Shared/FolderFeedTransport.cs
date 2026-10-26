@@ -225,7 +225,7 @@ public sealed class FolderFeedTransport(string docsRoot) : IFeedTransport
     {
         string destination = Path.Combine(LogsRoot,
             $"{FeedCatalog.Get(original.Delivery.Feed).FolderName}.{original.Delivery.MessageId:N}.txt");
-        byte[] report = Encoding.UTF8.GetBytes(FeedTransactionLog.Format(original, result, reason));
+        byte[] report = Encoding.UTF8.GetBytes(FeedLoggers.Format(original, result, reason));
         await WriteOnceAsync(destination, report, cancellationToken);
         return destination;
     }

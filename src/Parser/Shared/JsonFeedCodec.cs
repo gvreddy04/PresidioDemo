@@ -20,7 +20,7 @@ public abstract class JsonFeedCodec(FeedType feed, JsonTokenType rootKind) : IFe
     /// <param name="message">The complete input delivery and its retained message bytes.</param>
     /// <returns>The decoded document or parsed fields and retained reconstruction layout.</returns>
     /// <exception cref="InvalidDataException">The supplied message, field set or configuration violates the reviewed processing contract.</exception>
-    public ParsedFeed Parse(FeedMessage message)
+    public virtual ParsedFeed Parse(FeedMessage message)
     {
         if (feed is not (FeedType.PnrLinking or FeedType.Seats) || message.Delivery.Feed != feed)
         {
@@ -64,7 +64,7 @@ public abstract class JsonFeedCodec(FeedType feed, JsonTokenType rootKind) : IFe
     /// <param name="anonymizedFields">The complete protected field values indexed by original instance identifier.</param>
     /// <returns>The complete reconstructed message in its original transport representation.</returns>
     /// <exception cref="InvalidDataException">The supplied message, field set or configuration violates the reviewed processing contract.</exception>
-    public byte[] Serialize(ParsedFeed original, IReadOnlyDictionary<string, string> anonymizedFields)
+    public virtual byte[] Serialize(ParsedFeed original, IReadOnlyDictionary<string, string> anonymizedFields)
     {
         var layout = Layout(original);
         if (anonymizedFields.Count != layout.Scalars.Count)
@@ -110,7 +110,7 @@ public abstract class JsonFeedCodec(FeedType feed, JsonTokenType rootKind) : IFe
     /// <param name="original">The complete extracted field set and its retained codec-specific serialization layout.</param>
     /// <param name="serialized">The complete reconstructed output bytes being validated.</param>
     /// <exception cref="InvalidDataException">The supplied message, field set or configuration violates the reviewed processing contract.</exception>
-    public void Validate(ParsedFeed original, ReadOnlyMemory<byte> serialized)
+    public virtual void Validate(ParsedFeed original, ReadOnlyMemory<byte> serialized)
     {
         var before = Layout(original);
         var after = Layout(Parse(before.Message with { Content = serialized }));
