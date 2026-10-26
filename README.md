@@ -26,8 +26,6 @@ Namespaces follow these folders: `PresidioDemo.Feeds.Shared`, `PresidioDemo.Pipe
 
 ![Feed protection workflow](docs/diagrams/presidio-feed-workflow.svg)
 
-[Editable Excalidraw diagram](topics/feeds-demo/v14/presidio-feed-workflow-v3.excalidraw)
-
 ## Architecture diagrams
 
 - [PII infrastructure on AWS](docs/diagrams/aws-pii-infrastructure.svg): proposed dev environment, with one exclusive queue and one listener per feed.
