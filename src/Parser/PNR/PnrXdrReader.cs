@@ -15,7 +15,7 @@ public sealed class PnrXdrReader
     }
     private static XdrFieldDefinition WithoutCaptures(XdrFieldDefinition field) => field with
     {
-        Pattern = null, Captures = null,
+        Pattern = null, Captures = null, Variants = null,
         Members = field.Members?.Select(WithoutCaptures).ToArray(),
         Cases = field.Cases?.ToDictionary(pair => pair.Key, pair => WithoutCaptures(pair.Value)),
         DefaultCase = field.DefaultCase is null ? null : WithoutCaptures(field.DefaultCase)

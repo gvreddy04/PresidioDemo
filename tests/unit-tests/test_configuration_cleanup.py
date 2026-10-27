@@ -1,5 +1,6 @@
 """Keep all three XML configurations aligned with reviewed samples."""
 import json
+import re
 import unittest
 import xml.etree.ElementTree as ET
 
@@ -23,9 +24,14 @@ class ConfigurationCleanupTests(unittest.TestCase):
                 for child in node:
                     result.update(string_paths(child, path + "/" + child.get("name")))
                 return result
-            if node.tag in {"optional", "array", "fixedArray"}:
+            if node.tag in {"optional", "array", "fixedArray", "list"}:
                 suffix = "/value" if node.tag == "optional" else "/*"
                 return string_paths(node[0], path + suffix)
+            if node.tag == "union":
+                result = {}
+                for case in node:
+                    result.update(string_paths(case[0], path + "/" + case[0].get("name")))
+                return result
             return {}
 
         for feed in references.findall("feed"):
@@ -52,7 +58,10 @@ class ConfigurationCleanupTests(unittest.TestCase):
                                      route + " top-level names must match reviewed XML bindings")
                     if (route, path) not in reviewed_aliases:
                         self.assertNotIn("path", text.attrib, "Matching top-level names need no alias path")
-                if len(text):
+                if text.find("variant") is not None:
+                    for variant in text.findall("variant"):
+                        expected.update(alias + "/" + group for group in re.findall(r"\(\?<([A-Za-z0-9_]+)>", variant.get("pattern")))
+                elif len(text):
                     expected.update(alias + "/" + part.get("name") for part in text if part.get("fixed") != "true")
                 else:
                     expected.add(alias)
@@ -93,7 +102,8 @@ class ConfigurationCleanupTests(unittest.TestCase):
             rules.update({path: rule for path, rule in json_rules(feed).items() if "id" not in rule})
         count = 0
         for source in (PROJECT / "docs/sample-docs").glob("*.txt"):
-            feed = "ACI" if source.stem.startswith("ACI") else "ETKT" if source.stem.startswith("ETKT") else "PNR" if source.stem == "PNR" else None
+            feed = ("ACI" if source.stem.startswith("ACI") else "ETKT" if source.stem.startswith("ETKT")
+                    else "PNR" if source.stem == "PNR" or source.stem.startswith("PNR_0") else None)
             if not feed:
                 continue
             count += 1
@@ -107,7 +117,7 @@ class ConfigurationCleanupTests(unittest.TestCase):
                     self.assertEqual(rule["identification"], "Known")
                     self.assertEqual(rule["maskCharacters"], "all")
                     self.assertEqual(len(rule["maskCharacter"].encode("ascii")), 1)
-        self.assertEqual(count, 13)
+        self.assertEqual(count, 14)
 
     def json_paths(self, name):
         document = json.loads(payload((PROJECT / "docs/sample-docs" / name).read_bytes()))

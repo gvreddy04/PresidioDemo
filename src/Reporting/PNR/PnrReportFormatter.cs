@@ -8,9 +8,9 @@ public static class PnrReportFormatter
         document.PayloadLength,
         Fields = document.Fields,
         Notes = new[] {
-            "Labels are based on sample content and related P2 business descriptions; P2 uses a different wire format.",
+            "Labels follow the P2 PNR Record Layout; P2 uses a different wire format from this XDR feed.",
             "Null meanings are unresolved; numeric offsets are not exposed by the shared decoder.",
-            "One sample does not establish optional structures, stable passenger identities or a producer contract."
+            "List shapes are fitted to two samples; they do not establish stable passenger identities or a producer contract."
         }
     };
 }

@@ -32,6 +32,7 @@ class ProjectLayoutTests(unittest.TestCase):
             "ETKT_05.txt": "231943ee46a57c5f1c6e1d5ddf2cf0508d9560638cc05d9da7ca69446204ad2e",
             "ETKT_06.txt": "ecde914276f406c9e32127f7f056973bc9deb30184747e1f6ac93484ab794266",
             "PNR.txt": "75cc60895384395f8df28eff4c4abf6a0c58f1dc7960c5eee41cb294def0e4de",
+            "PNR_02.txt": "99142486d0d1b4b463363057f2822365a3f9fa567d6f1116bc881ce1d9808157",
             "PNR_LINKING.txt": "2a8caf4538eee4a2232bdcc939adf427171d5ab35a6b380059b2e09eb5c03610",
             "SEATS.txt": "3f7fd3eb9d48c5b646c3ae73c7b982f419c2c86476370bf9c8ffbddc2a19fccf",
         }

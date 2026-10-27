@@ -46,7 +46,7 @@ The root [.editorconfig](.editorconfig) shares C# formatting preferences with Vi
 | ACI | Dedicated module decodes the documented structures and rebuilds all six samples; reviewed XML controls protection-field coverage |
 | ETKT | All six samples use one 136-slot definition; empty strings account for missing values |
 | Seats | Feed-specific codec with shared System.Text.Json processing; 39 existing policy paths |
-| PNR | One reviewed sequential definition; 76 masked fields and 30 kept fields; structural tags preserved |
+| PNR | Section structs and linked lists for repeating sections; 53 policy aliases; PNR.txt has 80 masked and 74 kept values |
 | PNR-Linking | Feed-specific codec with shared System.Text.Json processing; 49 existing policy paths |
 
 The three original XML formats remain: [reference mappings](src/Configuration/reference-layouts.xml), [feed policies](src/Configuration/feed-policies.xml), and [XDR structures](src/Configuration/xdr-layouts.xml). Each binary feed has one common structural definition. Optional extensions enable variable widths, optional groups, named capture mappings and 14 shared masking rules without replacing the original roots or feed sections. New structures use reviewed XML changes and a restart. Unsupported structures are retained without publication. `TKT.txt` routes to ETKT.
@@ -237,4 +237,4 @@ src/.venv/Scripts/python.exe tests/run_sample_verification.py
 
 ## PNR sample mapping
 
-The PNR sample-specific route lives in `src/Feeds/PNR`. It retains the existing XML protection projection and exposes evidence-backed P2 business labels for observed XDR scalars. Unmapped fields remain neutral; the P2 screenshots do not establish this feed’s wire schema or a stable passenger ID. Run `dotnet run --project tests/PNR/PnrChecks.csproj -- <report-path>` to inspect a decoded report containing original sample values.
+The PNR route lives in `src/FeedCodecs/PNR`. The XDR schema follows the P2 PNR Record Layout sections (keys 01, 10, 20, 30, 40, 43, 50, 60, 80, C0, D0, D2, D8). Repeating sections are rpcgen linked lists: a `1` word precedes each element and a `0` word ends the list. The spec describes the MQ/RTA P2 record and excludes the real-time C-structure feed, so it supplies field meanings, not wire order; element shapes are fitted to PNR.txt and PNR_02.txt, and lists that are empty in both samples reject any content. Mixed record texts (SSR/OSI facts, frequent-flyer accounts, remarks and fare references) use ordered variants keyed by record code, such as DOCS, CTCE, CTCM and TKNE: the first matching pattern masks the personal values, the record syntax stays unchanged, and a catch-all masks unrecognized records whole. Neither the spec nor the samples carry a stable passenger ID. Run `dotnet run --project tests/PNR/PnrChecks.csproj -- <report-folder>` to write a decoded report for each PNR sample; reports contain original sample values.

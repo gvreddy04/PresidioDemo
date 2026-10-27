@@ -80,7 +80,7 @@ internal static class RoundTripExamples
                 {
                     FeedType.ACI => "/passengerName",
                     FeedType.ETKT => "/ticketNumber",
-                    _ => "/passengerSurname"
+                    _ => "/surname"
                 };
                 var parsed = codecFactory(feed).Parse(Message(feed, "example.bin", baseline.Envelope.Payload));
                 string current = parsed.Fields.Single(field => field.Name == fieldName).Value;
@@ -214,6 +214,7 @@ internal static class RoundTripExamples
         "SEATS.txt" => FeedType.Seats,
         "PNR_LINKING.txt" => FeedType.PnrLinking,
         "PNR.txt" => FeedType.PNR,
+        _ when sample.StartsWith("PNR_0", StringComparison.Ordinal) => FeedType.PNR,
         _ when sample.StartsWith("ACI", StringComparison.Ordinal) => FeedType.ACI,
         _ when sample.StartsWith("ETKT", StringComparison.Ordinal) => FeedType.ETKT,
         _ => throw new Exception("Unmapped sample feed: " + sample)

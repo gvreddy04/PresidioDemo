@@ -83,7 +83,7 @@ class AllFeedBatchTests(unittest.TestCase):
             process, report = self.run_batch(sources, root / "docs")
             self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
             self.assertTrue(report["AllPublished"])
-            self.assertEqual(len(report["Items"]), 15)
+            self.assertEqual(len(report["Items"]), 16)
             self.verify_transaction_logs(root / "docs", report)
             statuses = {item["Feed"]: item["Status"] for item in report["Items"]}
             self.assertEqual(statuses, {"Seats": "Published", "ACI": "Published", "ETKT": "Published", "PNR": "Published", "PNR-Linking": "Published"})
@@ -99,7 +99,7 @@ class AllFeedBatchTests(unittest.TestCase):
                             "ACI_04.txt": (19, 2), "ACI_05.txt": (18, 1), "ACI_06.txt": (19, 5),
                             "ETKT.txt": (4, 5), "ETKT_02.txt": (4, 5), "ETKT_03.txt": (20, 5),
                             "ETKT_04.txt": (4, 5), "ETKT_05.txt": (5, 5), "ETKT_06.txt": (4, 5),
-                            "PNR.txt": (30, 76),
+                            "PNR.txt": (74, 80), "PNR_02.txt": (33, 24),
                         }[Path(item["SourceFile"]).name]
                         expected = {"Keep": keep, "Mask": mask}
                         self.assertEqual(verify_reference_output(item["Feed"], original, output), expected)

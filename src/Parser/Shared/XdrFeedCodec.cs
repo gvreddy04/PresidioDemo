@@ -24,11 +24,20 @@ namespace PresidioDemo.Feeds.Shared;
 /// <param name="Pattern">The optional reviewed validation or capture pattern for a text field.</param>
 /// <param name="Captures">The reviewed named text captures inside this string field.</param>
 /// <param name="AllowEmpty">Whether an empty capture string is permitted by the reviewed schema.</param>
+/// <param name="Variants">The ordered record variants for a text field; the first matching variant selects the captures.</param>
 public sealed record XdrFieldDefinition(string Name, string Kind, int Limit = 0, int Count = 0,
     long? Expected = null, IReadOnlyList<XdrFieldDefinition>? Members = null,
     IReadOnlyDictionary<int, XdrFieldDefinition>? Cases = null, XdrFieldDefinition? DefaultCase = null,
     Regex? Pattern = null,
-    IReadOnlyList<XdrCaptureDefinition>? Captures = null, bool AllowEmpty = false);
+    IReadOnlyList<XdrCaptureDefinition>? Captures = null, bool AllowEmpty = false,
+    IReadOnlyList<XdrTextVariant>? Variants = null);
+
+/// <summary>
+/// Describes one record variant of a text field, such as one SSR code within a list of mixed facts.
+/// </summary>
+/// <param name="Pattern">The anchored pattern that selects this variant.</param>
+/// <param name="Captures">The named text captures exposed when this variant matches.</param>
+public sealed record XdrTextVariant(Regex Pattern, IReadOnlyList<XdrCaptureDefinition> Captures);
 
 /// <summary>
 /// Describes a named reference-text capture and optional PNR equality check.
@@ -149,7 +158,7 @@ public static class XdrLayoutConfiguration
         string kind = element.Name.ToString();
         string[] allowed = kind switch
         {
-            "string" or "opaque" or "array" => ["name", "max"],
+            "string" or "opaque" or "array" or "list" => ["name", "max"],
             "fixedOpaque" or "fixedArray" or "words" => ["name", "count"],
             "int32" or "uint32" => ["name", "expected"],
             "int64" or "uint64" or "float32" or "float64" or "boolean" or "struct" or "optional" or "union" => ["name"],
@@ -164,7 +173,7 @@ public static class XdrLayoutConfiguration
 
         int Positive(string key) => int.TryParse(Required(element, key), NumberStyles.None, CultureInfo.InvariantCulture, out int n) && n is > 0 and <= 1048576
                     ? n : throw new InvalidDataException("XDR length/count limit must be between 1 and 1048576.");
-        int limit = kind is "string" or "opaque" or "array" ? Positive("max") : 0;
+        int limit = kind is "string" or "opaque" or "array" or "list" ? Positive("max") : 0;
         int count = kind is "fixedOpaque" or "fixedArray" or "words" ? Positive("count") : 0;
         // Normalize the shorthand to the original definition. No count prefix is added,
         // and the Value member preserves existing scalar paths and codec behavior.
@@ -195,7 +204,7 @@ public static class XdrLayoutConfiguration
         {
             members = ParseMembers(element, depth);
         }
-        else if (kind is "array" or "fixedArray" or "optional")
+        else if (kind is "array" or "fixedArray" or "list" or "optional")
         {
             members = ParseMembers(element, depth);
             if (members.Count != 1)
@@ -550,6 +559,26 @@ public sealed class XdrFeedCodec(FeedType feed, XdrFeedSchema? schema) : IFeedCo
                     }
 
                     return;
+                case "list":
+                    // rpcgen linked list: each element follows a 1 presence word; a 0 word ends the list.
+                    int items = 0;
+                    for (uint next = Unsigned(); next != 0; next = Unsigned())
+                    {
+                        if (next != 1)
+                        {
+                            throw new InvalidDataException("Invalid XDR list presence value.");
+                        }
+
+                        if (items == definition.Limit)
+                        {
+                            throw new InvalidDataException("XDR list exceeds its configured maximum.");
+                        }
+
+                        Read(definition.Members![0], id + "/" + items, path + "/*", depth + 1);
+                        items++;
+                    }
+                    Structure.Add(id, "list:" + items);
+                    return;
                 case "optional":
                     uint present = Unsigned();
                     if (present > 1)
@@ -584,6 +613,31 @@ public sealed class XdrFeedCodec(FeedType feed, XdrFeedSchema? schema) : IFeedCo
 
                     value = Encoding.ASCII.GetString(encoded);
                     Padding(length);
+                    if (definition.Variants is not null)
+                    {
+                        // The variant index is structural: protection must not move a value into another record variant.
+                        int index = -1;
+                        Match variant = Match.Empty;
+                        for (int i = 0; i < definition.Variants.Count; i++)
+                        {
+                            variant = definition.Variants[i].Pattern.Match(value);
+                            if (variant.Success)
+                            {
+                                index = i;
+                                break;
+                            }
+                        }
+
+                        if (index < 0)
+                        {
+                            throw new InvalidDataException($"XDR text at {path} matches none of its configured record variants.");
+                        }
+
+                        Structure.Add(id, "variant-string:" + index);
+                        AddCaptures(definition.Variants[index].Captures, variant, id, path, start);
+                        return;
+                    }
+
                     if (definition.Pattern is not null)
                     {
                         if (definition.AllowEmpty && length == 0)
@@ -600,26 +654,7 @@ public sealed class XdrFeedCodec(FeedType feed, XdrFeedSchema? schema) : IFeedCo
                         if (definition.Captures is not null)
                         {
                             Structure.Add(id, "capture-string");
-                            var groups = definition.Captures.Select(capture => (Definition: capture, Group: match.Groups[capture.Name]))
-                                .Where(item => item.Group.Success).OrderBy(item => item.Group.Index).ToArray();
-                            int previousEnd = 0;
-                            foreach (var (capture, group) in groups)
-                            {
-                                if (group.Captures.Count != 1 || group.Index < previousEnd)
-                                {
-                                    throw new InvalidDataException("Text captures overlap or repeat; exact protection spans are required.");
-                                }
-
-                                string captureId = id + "/" + capture.Name;
-                                Scalars.Add(new(new(captureId, path + "/" + capture.Name, group.Value),
-                                    "capture", start + 4 + group.Index, group.Length, group.Length, group.Length));
-                                if (capture.EqualTo.Length > 0)
-                                {
-                                    _references.Add((captureId, capture.EqualTo));
-                                }
-
-                                previousEnd = group.Index + group.Length;
-                            }
+                            AddCaptures(definition.Captures, match, id, path, start);
                             return;
                         }
                     }
@@ -654,6 +689,39 @@ public sealed class XdrFeedCodec(FeedType feed, XdrFeedSchema? schema) : IFeedCo
 
             Scalars.Add(new(new(id, path, value), definition.Kind, start, Offset - start, definition.Limit,
                             definition.Kind == "string" ? value.Length : 0));
+        }
+
+        /// <summary>
+        /// Records each participating named capture of a matched text as an exact, non-overlapping protection span.
+        /// </summary>
+        /// <param name="captures">The reviewed named text captures inside this string field.</param>
+        /// <param name="match">The successful anchored match of the string value.</param>
+        /// <param name="id">The instance path locating one value within this message.</param>
+        /// <param name="path">The exact structural field path within the decoded message.</param>
+        /// <param name="start">The payload offset of the string's length word.</param>
+        /// <exception cref="InvalidDataException">The supplied message, field set or configuration violates the reviewed processing contract.</exception>
+        private void AddCaptures(IReadOnlyList<XdrCaptureDefinition> captures, Match match, string id, string path, int start)
+        {
+            var groups = captures.Select(capture => (Definition: capture, Group: match.Groups[capture.Name]))
+                .Where(item => item.Group.Success).OrderBy(item => item.Group.Index).ToArray();
+            int previousEnd = 0;
+            foreach (var (capture, group) in groups)
+            {
+                if (group.Captures.Count != 1 || group.Index < previousEnd)
+                {
+                    throw new InvalidDataException("Text captures overlap or repeat; exact protection spans are required.");
+                }
+
+                string captureId = id + "/" + capture.Name;
+                Scalars.Add(new(new(captureId, path + "/" + capture.Name, group.Value),
+                    "capture", start + 4 + group.Index, group.Length, group.Length, group.Length));
+                if (capture.EqualTo.Length > 0)
+                {
+                    _references.Add((captureId, capture.EqualTo));
+                }
+
+                previousEnd = group.Index + group.Length;
+            }
         }
 
         /// <summary>

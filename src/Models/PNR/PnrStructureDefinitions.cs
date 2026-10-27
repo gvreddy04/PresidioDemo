@@ -1,40 +1,48 @@
 namespace PresidioDemo.Feeds.PNR;
-/// <summary>Observed sample aliases and related P2 business descriptions, not a producer schema.</summary>
+/// <summary>P2 PNR Record Layout meanings for schema paths; the P2 spec defines field content, not this feed's wire order.</summary>
 public static class PnrStructureDefinitions
 {
     private static readonly IReadOnlyDictionary<string, PnrFieldMeaning> Meanings = Build();
-    /// <summary>Returns a supported label, or null if the business meaning is unresolved.</summary>
+    /// <summary>Returns a supported label for a schema path, or null if the business meaning is unresolved.</summary>
     public static PnrFieldMeaning? Find(string path) => Meanings.GetValueOrDefault(path);
     private static IReadOnlyDictionary<string, PnrFieldMeaning> Build()
     {
         var result = new Dictionary<string, PnrFieldMeaning>(StringComparer.Ordinal);
-        void Add(string names, string category, string label, string evidence)
-        {
-            foreach (string name in names.Split(' '))
-            {
-                result.Add("/" + name, new(category, label, evidence));
-            }
-        }
-        Add("RecordTag001", "General", "Airline code", "09.jpeg: key 01");
-        Add("pnr", "General", "Record locator", "09.jpeg: key 01");
-        Add("passengerSurname", "Passenger", "Surname", "17.jpeg: key 20");
-        Add("passengerGivenName", "Passenger", "Given name", "19.jpeg: key 30");
-        Add("RecordTag092 RecordTag103 RecordTag114 RecordTag125 RecordTag136 RecordTag147 RecordTag158 RecordTag169 RecordTag180 RecordTag191 RecordTag202 RecordTag213 RecordTag224 RecordTag235 RecordTag246", "General fact", "SSR or OSI type", "22.jpeg: key 40");
-        Add("travelDocumentRecord emailContactRecord phoneContactRecord ticketRecord1 ticketRecord2 Remark0592 Remark0696 Remark0796 Remark1052 Remark1140 Remark1228 Remark1316 Remark1388 Remark1488 Remark1572", "General fact", "SSR or OSI text", "22.jpeg: key 40");
-        Add("RecordTag259 RecordTag275", "Frequent flyer", "Fact type", "25.jpeg: key 43");
-        Add("RecordTag260 RecordTag276", "Frequent flyer", "Service code", "25.jpeg: key 43");
-        Add("RecordTag261 RecordTag277", "Frequent flyer", "Carrier code", "25.jpeg: key 43");
-        Add("loyaltyRecord1 loyaltyRecord2", "Frequent flyer", "Membership and status text", "25-26.jpeg: key 43");
-        Add("passengerNameOccurrence1 passengerNameOccurrence2", "Frequent flyer", "Passenger name text", "25.jpeg: key 43");
-        Add("RecordTag338 RecordTag376", "Itinerary", "Current action code", "30.jpeg: key 80");
-        Add("TravelDate2444 TravelDate2652", "Itinerary", "Departure date", "30.jpeg: key 80");
-        Add("RecordTag340 RecordTag378", "Itinerary", "Departure day of week", "30.jpeg: key 80");
-        Add("Airline2468 Airline2676", "Itinerary", "Carrier code", "30.jpeg: key 80");
-        Add("RecordTag343 RecordTag381", "Itinerary", "Previous action code", "30.jpeg: key 80");
-        Add("Origin2484 Origin2692", "Itinerary", "Board point", "30.jpeg: key 80");
-        Add("Destination2492 Destination2700", "Itinerary", "Off point", "31.jpeg: key 80");
-        Add("DepartureTime2500 DepartureTime2708", "Itinerary", "Departure time", "31.jpeg: key 80");
-        Add("ArrivalTime2508 ArrivalTime2716", "Itinerary", "Arrival time", "31.jpeg: key 80");
+        void Add(string path, string category, string label, string evidence) => result.Add(path, new(category, label, evidence));
+        Add("/general/hostAirline", "General", "Host airline code", "09.jpeg: key 01 P20HALC");
+        Add("/general/pnr", "General", "Record locator", "09.jpeg: key 01 P20KRLO");
+        Add("/general/creationDate", "General", "PNR creation date", "09.jpeg: key 01 P20KCDT");
+        Add("/general/creationTime", "General", "PNR creation time (GMT)", "09.jpeg: key 01 P20KTIM");
+        Add("/general/transactionDate", "General", "PNR transaction date", "10.jpeg: key 01 P20TDAT");
+        Add("/general/transactionTime", "General", "PNR transaction time (GMT)", "10.jpeg: key 01 P20TTIM");
+        Add("/general/p2CreationTime", "General", "P2 creation time (PT, HHMMSSnnn)", "10.jpeg: key 01 P20PTIM");
+        Add("/names/*/surname", "Passenger", "Surname", "17.jpeg: key 20 P20PSNM");
+        Add("/firstNames/*/givenName", "Passenger", "Given name", "19.jpeg: key 30 P20PNAM");
+        Add("/facts/*/itemNumber", "General fact", "Fact item number", "21.jpeg: key 40 P20P4K2");
+        Add("/facts/*/factType", "General fact", "Fact type (G = Gen Fax)", "22.jpeg: key 40 P20PFTY");
+        Add("/facts/*/factCode", "General fact", "SSR or OSI type", "22.jpeg: key 40 P20PFCD");
+        Add("/facts/*/text", "General fact", "SSR or OSI text", "22.jpeg: key 40 P20PFTX");
+        Add("/frequentFlyers/*/itemNumber", "Frequent flyer", "Fact item number", "24.jpeg: key 43 P20P432");
+        Add("/frequentFlyers/*/action", "Frequent flyer", "Action indicator", "25.jpeg: key 43 P20PFQI");
+        Add("/frequentFlyers/*/factCode", "Frequent flyer", "Fact type", "25.jpeg: key 43 P20PFC3");
+        Add("/frequentFlyers/*/serviceCode", "Frequent flyer", "Service code", "25.jpeg: key 43 P20PPSC");
+        Add("/frequentFlyers/*/carrier", "Frequent flyer", "SSR carrier code", "25.jpeg: key 43 P20PCAR");
+        Add("/frequentFlyers/*/account", "Frequent flyer", "FQTV number and tier text", "25-26.jpeg: key 43 P20PFQT, P20ESTX");
+        Add("/frequentFlyers/*/holderName", "Frequent flyer", "Name of FQTV holder", "25.jpeg: key 43 P20PNME");
+        Add("/itinerary/*/itemNumber", "Itinerary", "Segment item number", "28.jpeg: key 80 P20P8K2");
+        Add("/itinerary/*/segmentType", "Itinerary", "Segment type", "29.jpeg: key 80 P20PIT0");
+        Add("/itinerary/*/actionCode", "Itinerary", "Current action code", "30.jpeg: key 80 P20PCAC");
+        Add("/itinerary/*/departureDate", "Itinerary", "Departure date", "30.jpeg: key 80 P20PDDT");
+        Add("/itinerary/*/dayOfWeek", "Itinerary", "Departure day of week", "30.jpeg: key 80 P20PDAY");
+        Add("/itinerary/*/partySize", "Itinerary", "Number in party", "30.jpeg: key 80 P20PNIP");
+        Add("/itinerary/*/carrier", "Itinerary", "Operational carrier code", "30.jpeg: key 80 P20PCC");
+        Add("/itinerary/*/previousActionCode", "Itinerary", "Previous action code", "30.jpeg: key 80 P20PPAC");
+        Add("/itinerary/*/boardPoint", "Itinerary", "Board point", "30.jpeg: key 80 P20PBRD");
+        Add("/itinerary/*/offPoint", "Itinerary", "Off point", "31.jpeg: key 80 P20POFF");
+        Add("/itinerary/*/departureTime", "Itinerary", "Departure time", "31.jpeg: key 80 P20PDTM");
+        Add("/itinerary/*/arrivalTime", "Itinerary", "Arrival time", "31.jpeg: key 80 P20PATM");
+        Add("/itinerary/*/classOfService", "Itinerary", "Class of service", "31.jpeg: key 80 P20PCOS");
+        Add("/itinerary/*/flightNumber", "Itinerary", "Flight number", "31.jpeg: key 80 P20PFL1");
         return result;
     }
 }

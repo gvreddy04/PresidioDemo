@@ -201,7 +201,8 @@ static class ReferenceLayoutChecks
     /// <returns>The reviewed binary sample paths paired with their feed routes.</returns>
     private static IEnumerable<(FeedType Feed, string File)> Samples(string root) =>
             Directory.GetFiles(Path.Combine(root, "docs/sample-docs"), "*.txt")
-                .Where(file => Path.GetFileName(file).StartsWith("ACI", StringComparison.Ordinal) || Path.GetFileName(file).StartsWith("ETKT", StringComparison.Ordinal) || Path.GetFileName(file) == "PNR.txt")
+                .Where(file => Path.GetFileName(file).StartsWith("ACI", StringComparison.Ordinal) || Path.GetFileName(file).StartsWith("ETKT", StringComparison.Ordinal) ||
+                    Path.GetFileName(file) == "PNR.txt" || Path.GetFileName(file).StartsWith("PNR_0", StringComparison.Ordinal))
                 .Select(file => (Path.GetFileName(file).StartsWith("ACI", StringComparison.Ordinal) ? FeedType.ACI : Path.GetFileName(file).StartsWith("ETKT", StringComparison.Ordinal) ? FeedType.ETKT : FeedType.PNR, file));
 
     #endregion

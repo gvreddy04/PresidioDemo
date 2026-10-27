@@ -8,6 +8,11 @@ from configuration_support import SCHEMA, REFERENCE, catalog, json_rules
 from test_seats_feed import payload, header
 
 
+def dotnet_groups(pattern):
+    """Translate .NET named groups to Python syntax."""
+    return re.sub(r"\(\?<([A-Za-z0-9_]+)>", r"(?P<\1>", pattern)
+
+
 def inspect_fields(feed, original, raw=False, schema_file=None, reference_file=None, policy_file=None):
     """Return scalar paths, value spans and rule IDs without consulting sample filenames."""
     data = original if raw else payload(original)
@@ -44,11 +49,25 @@ def inspect_fields(feed, original, raw=False, schema_file=None, reference_file=N
             assert count <= int(node.get("max", node.get("count", "0")))
             for _ in range(count):
                 walk(node[0], path + "/*")
+        elif kind == "list":
+            # Linked list: a 1 word precedes each element and a 0 word ends the list.
+            count = 0
+            while (present := word()) != 0:
+                assert present == 1 and count < int(node.get("max"))
+                walk(node[0], path + "/*")
+                count += 1
         elif kind == "optional":
             present = word()
             assert present in (0, 1)
             if present:
                 walk(node[0], path + "/value")
+        elif kind == "union":
+            tag = struct.unpack(">i", struct.pack(">I", word()))[0]
+            arms = {int(case.get("value")): case[0] for case in node.findall("case")}
+            fallback = node.find("default")
+            arm = arms.get(tag, fallback[0] if fallback is not None else None)
+            assert arm is not None, "Unknown union discriminator"
+            walk(arm, path + "/" + arm.get("name"))
         elif kind == "string":
             start = cursor
             length = word()
@@ -66,7 +85,22 @@ def inspect_fields(feed, original, raw=False, schema_file=None, reference_file=N
             pattern = mapping.get("pattern")
             if length == 0 and mapping.get("allowEmpty") == "true":
                 return
-            match = re.fullmatch(re.sub(r"\(\?<([A-Za-z0-9_]+)>", r"(?P<\1>", pattern), value) if pattern else None
+            variants = mapping.findall("variant")
+            if variants:
+                # Ordered variants: the first full match selects the protected captures; other bytes stay unchanged.
+                for variant in variants:
+                    match = re.fullmatch(dotnet_groups(variant.get("pattern")), value)
+                    if match:
+                        break
+                assert match, "Text matches no record variant: " + path
+                for name, span_value in match.groupdict().items():
+                    if span_value is None:
+                        continue
+                    first, last = match.span(name)
+                    rule = bindings[alias + "/" + name]
+                    fields.append((alias + "/" + name, value_start + first, last - first, rule.get("id", alias + "/" + name), "text"))
+                return
+            match = re.fullmatch(dotnet_groups(pattern), value) if pattern else None
             assert not pattern or match, "Text pattern mismatch: " + path
             if len(mapping):
                 for part in mapping:

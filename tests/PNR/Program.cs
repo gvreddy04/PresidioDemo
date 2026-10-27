@@ -11,17 +11,20 @@ if (codec is not PnrFeedCodec)
 {
     throw new InvalidDataException("The PNR module was not selected.");
 }
-byte[] source = File.ReadAllBytes(Path.Combine(root, "docs/sample-docs/PNR.txt"));
-var message = new FeedMessage(new(FeedType.PNR, Guid.Empty, "PNR.txt", ""), source);
-var parsed = codec.Parse(message);
-var document = PnrFeedCodec.Document(parsed);
+string target = args.Length == 1 ? Path.GetFullPath(args[0]) : Path.Combine(root, ".test-runs");
+Directory.CreateDirectory(target);
 var reader = new PnrXdrReader(schemas[FeedType.PNR]);
-var decoded = new PnrDecoder(reader).Decode(message);
-if (!new PnrEncoder(new PnrXdrWriter(reader)).Encode(decoded).SequenceEqual(source))
+foreach (string sample in new[] { "PNR.txt", "PNR_02.txt" })
 {
-    throw new InvalidDataException("PNR XDR round-trip failed.");
+    byte[] source = File.ReadAllBytes(Path.Combine(root, "docs/sample-docs", sample));
+    var message = new FeedMessage(new(FeedType.PNR, Guid.Empty, sample, ""), source);
+    var document = PnrFeedCodec.Document(codec.Parse(message));
+    var decoded = new PnrDecoder(reader).Decode(message);
+    if (!new PnrEncoder(new PnrXdrWriter(reader)).Encode(decoded).SequenceEqual(source))
+    {
+        throw new InvalidDataException(sample + " XDR round-trip failed.");
+    }
+    string report = Path.Combine(target, Path.GetFileNameWithoutExtension(sample) + ".decoded.json");
+    File.WriteAllText(report, JsonSerializer.Serialize(PnrReportFormatter.Format(document), new JsonSerializerOptions { WriteIndented = true }));
+    Console.WriteLine($"PASS {sample} decode and exact MQ round trip; {document.Fields.Count} scalars, {document.Fields.Count(f => f.Meaning is not null)} labeled. Report: {report}");
 }
-string target = args.Length == 1 ? Path.GetFullPath(args[0]) : Path.Combine(root, ".test-runs", "PNR.decoded.json");
-Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-File.WriteAllText(target, JsonSerializer.Serialize(PnrReportFormatter.Format(document), new JsonSerializerOptions { WriteIndented = true }));
-Console.WriteLine($"PASS PNR decode and exact MQ round trip; {document.Fields.Count} scalars, {document.Fields.Count(f => f.Meaning is not null)} labeled. Report: {target}");

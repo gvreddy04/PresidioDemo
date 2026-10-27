@@ -504,7 +504,7 @@ public static class ReferenceLayoutConfiguration
                 return field with { Members = field.Members!.Select(child => Map(child, path + "/" + child.Name, conditional)).ToArray() };
             }
 
-            if (field.Kind is "array" or "fixedArray" or "optional")
+            if (field.Kind is "array" or "fixedArray" or "list" or "optional")
             {
                 return field with { Members = [Map(field.Members![0], path + (field.Kind == "optional" ? "/value" : "/*"), true)] };
             }
@@ -537,13 +537,47 @@ public static class ReferenceLayoutConfiguration
             }
 
             bool optional = conditional || Flag(text, "optional"), allowEmpty = Flag(text, "allowEmpty");
-            Regex? pattern = null;
-            if (text.Attribute("pattern") is { } expression)
+            if (text.Elements("variant").Any())
             {
-                try { pattern = new Regex(@"\A(?:" + expression.Value + @")\z", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture | RegexOptions.NonBacktracking, TimeSpan.FromSeconds(1)); }
-                catch (Exception error) when (error is ArgumentException or NotSupportedException)
-                { throw new InvalidDataException("Invalid reference text pattern.", error); }
+                // Ordered record variants: the first matching pattern selects the captures for that value.
+                if (text.Attribute("pattern") is not null || allowEmpty || text.Elements().Any(child => child.Name != "variant"))
+                {
+                    throw new InvalidDataException("Reference variants replace the text pattern, parts and allowEmpty settings.");
+                }
+
+                var variants = new List<XdrTextVariant>();
+                var exposed = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var variant in text.Elements("variant"))
+                {
+                    Check(variant, "variant", ["pattern"]);
+                    if (variant.Elements().Any())
+                    {
+                        throw new InvalidDataException("Reference variants cannot contain children.");
+                    }
+
+                    var selector = Pattern(Required(variant, "pattern"));
+                    string[] groups = selector.GetGroupNames().Where(group => group != "0").Select(Identifier).ToArray();
+                    if (groups.Length == 0)
+                    {
+                        throw new InvalidDataException("Each reference variant needs at least one named capture.");
+                    }
+
+                    variants.Add(new(selector, groups.Select(group => new XdrCaptureDefinition(group)).ToArray()));
+                    foreach (string group in groups.Where(exposed.Add))
+                    {
+                        // Variant captures are present only when their variant matches, so none is required.
+                        if (!aliases.TryAdd(path + "/" + group, alias + "/" + group))
+                        {
+                            throw new InvalidDataException("Duplicate reference part path.");
+                        }
+
+                        fields.Add(new(alias + "/" + group, offset + 4, 0));
+                    }
+                }
+                return field with { Variants = variants.AsReadOnly() };
             }
+
+            Regex? pattern = text.Attribute("pattern") is { } expression ? Pattern(expression.Value) : null;
             var captures = new List<XdrCaptureDefinition>();
             var parts = text.Elements().ToArray();
             int consumed = 0;
@@ -611,6 +645,13 @@ public static class ReferenceLayoutConfiguration
                     required.Add(sourcePath);
                 }
             }
+        }
+
+        static Regex Pattern(string expression)
+        {
+            try { return new Regex(@"\A(?:" + expression + @")\z", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture | RegexOptions.NonBacktracking, TimeSpan.FromSeconds(1)); }
+            catch (Exception error) when (error is ArgumentException or NotSupportedException)
+            { throw new InvalidDataException("Invalid reference text pattern.", error); }
         }
     }
 
