@@ -128,225 +128,190 @@
     <words name="Words106" count="30" />
   </feed>
   <feed type="PNR" configured="true" preserveWidths="true">
-    <uint32 name="Word000" expected="2" />
-    <string name="RecordTag001" max="4096" />
-    <string name="EventDate0012" max="4096" />
-    <string name="EventTime0028" max="4096" />
-    <string name="EventDate0036" max="4096" />
-    <string name="EventTime0052" max="4096" />
-    <string name="Identifier0064" max="4096" />
-    <string name="pnr" max="6" />
-    <words name="Words008" count="11" />
-    <string name="RecordTag019" max="4096" />
-    <words name="Words020" count="6" />
-    <string name="Identifier0168" max="4096" />
-    <string name="RecordTag027" max="4096" />
-    <string name="RecordTag028" max="4096" />
-    <string name="EventDate0196" max="4096" />
-    <words name="Words030" count="19" />
-    <string name="Identifier0284" max="4096" />
-    <string name="RecordTag050" max="4096" />
-    <string name="RecordTag051" max="4096" />
-    <words name="Words052" count="6" />
-    <string name="FlightNumber0336" max="4096" />
-    <words name="Words059" count="14" />
-    <string name="passengerSurname" max="4096" />
-    <words name="Words074" count="7" />
-    <string name="passengerGivenName" max="4096" />
-    <words name="Words082" count="10" />
-    <string name="RecordTag092" max="4096" />
-    <string name="travelDocumentRecord" max="4096" />
-    <words name="Words094" count="9" />
-    <string name="RecordTag103" max="4096" />
-    <string name="Remark0592" max="4096" />
-    <words name="Words105" count="9" />
-    <string name="RecordTag114" max="4096" />
-    <string name="Remark0696" max="4096" />
-    <words name="Words116" count="9" />
-    <string name="RecordTag125" max="4096" />
-    <string name="Remark0796" max="4096" />
-    <words name="Words127" count="9" />
-    <string name="RecordTag136" max="4096" />
-    <string name="emailContactRecord" max="4096" />
-    <words name="Words138" count="9" />
-    <string name="RecordTag147" max="4096" />
-    <string name="phoneContactRecord" max="4096" />
-    <words name="Words149" count="9" />
-    <string name="RecordTag158" max="4096" />
-    <string name="Remark1052" max="4096" />
-    <words name="Words160" count="9" />
-    <string name="RecordTag169" max="4096" />
-    <string name="Remark1140" max="4096" />
-    <words name="Words171" count="9" />
-    <string name="RecordTag180" max="4096" />
-    <string name="Remark1228" max="4096" />
-    <words name="Words182" count="9" />
-    <string name="RecordTag191" max="4096" />
-    <string name="Remark1316" max="4096" />
-    <words name="Words193" count="9" />
-    <string name="RecordTag202" max="4096" />
-    <string name="Remark1388" max="4096" />
-    <words name="Words204" count="9" />
-    <string name="RecordTag213" max="4096" />
-    <string name="Remark1488" max="4096" />
-    <words name="Words215" count="9" />
-    <string name="RecordTag224" max="4096" />
-    <string name="Remark1572" max="4096" />
-    <words name="Words226" count="9" />
-    <string name="RecordTag235" max="4096" />
-    <string name="ticketRecord1" max="4096" />
-    <words name="Words237" count="9" />
-    <string name="RecordTag246" max="4096" />
-    <string name="ticketRecord2" max="4096" />
-    <words name="Words248" count="11" />
-    <string name="RecordTag259" max="4096" />
-    <string name="RecordTag260" max="4096" />
-    <string name="RecordTag261" max="4096" />
-    <string name="loyaltyRecord1" max="4096" />
-    <string name="passengerNameOccurrence1" max="4096" />
-    <words name="Words264" count="11" />
-    <string name="RecordTag275" max="4096" />
-    <string name="RecordTag276" max="4096" />
-    <string name="RecordTag277" max="4096" />
-    <string name="loyaltyRecord2" max="4096" />
-    <string name="passengerNameOccurrence2" max="4096" />
-    <words name="Words280" count="11" />
-    <string name="RecordTag291" max="4096" />
-    <string name="PhonePart2052" max="4096" />
-    <string name="PhonePart2060" max="4096" />
-    <words name="Words294" count="6" />
-    <string name="RecordTag300" max="4096" />
-    <string name="RecordTag301" max="4096" />
-    <string name="Remark2112" max="4096" />
-    <words name="Words303" count="6" />
-    <string name="RecordTag309" max="4096" />
-    <string name="RecordTag310" max="4096" />
-    <string name="Remark2188" max="4096" />
-    <words name="Words312" count="6" />
-    <string name="RecordTag318" max="4096" />
-    <string name="RecordTag319" max="4096" />
-    <string name="Remark2284" max="4096" />
-    <words name="Words321" count="6" />
-    <string name="RecordTag327" max="4096" />
-    <string name="RecordTag328" max="4096" />
-    <string name="Remark2352" max="4096" />
-    <words name="Words330" count="8" />
-    <string name="RecordTag338" max="4096" />
-    <string name="TravelDate2444" max="4096" />
-    <string name="RecordTag340" max="4096" />
-    <uint32 name="Word341" />
-    <string name="Airline2468" max="4096" />
-    <string name="RecordTag343" max="4096" />
-    <string name="Origin2484" max="4096" />
-    <string name="Destination2492" max="4096" />
-    <string name="DepartureTime2500" max="4096" />
-    <string name="ArrivalTime2508" max="4096" />
-    <string name="RecordTag348" max="4096" />
-    <words name="Words349" count="21" />
-    <string name="TravelDate2608" max="4096" />
-    <string name="RecordTag371" max="4096" />
-    <words name="Words372" count="4" />
-    <string name="RecordTag376" max="4096" />
-    <string name="TravelDate2652" max="4096" />
-    <string name="RecordTag378" max="4096" />
-    <uint32 name="Word379" />
-    <string name="Airline2676" max="4096" />
-    <string name="RecordTag381" max="4096" />
-    <string name="Origin2692" max="4096" />
-    <string name="Destination2700" max="4096" />
-    <string name="DepartureTime2708" max="4096" />
-    <string name="ArrivalTime2716" max="4096" />
-    <string name="RecordTag386" max="4096" />
-    <words name="Words387" count="21" />
-    <string name="TravelDate2816" max="4096" />
-    <string name="RecordTag409" max="4096" />
-    <words name="Words410" count="4" />
-    <string name="MaskedPayment2852" max="4096" />
-    <words name="Words415" count="6" />
-    <string name="ClientAddress2904" max="4096" />
-    <words name="Words422" count="6" />
-    <string name="Remark2956" max="4096" />
-    <words name="Words429" count="6" />
-    <string name="Remark3012" max="4096" />
-    <words name="Words436" count="6" />
-    <string name="Remark3064" max="4096" />
-    <words name="Words443" count="6" />
-    <string name="loyaltyMembershipRecord" max="4096" />
-    <words name="Words450" count="6" />
-    <string name="loyaltySponsorRecord" max="4096" />
-    <words name="Words457" count="6" />
-    <string name="accountBalanceRecord" max="4096" />
-    <words name="Words464" count="6" />
-    <string name="Mileage3308" max="4096" />
-    <words name="Words471" count="6" />
-    <string name="MileageQuote3384" max="4096" />
-    <words name="Words478" count="6" />
-    <string name="iataMsoIdRecord" max="4096" />
-    <words name="Words485" count="6" />
-    <string name="requestedEmailRecord" max="4096" />
-    <words name="Words492" count="6" />
-    <string name="FareRemark3576" max="4096" />
-    <words name="Words499" count="6" />
-    <string name="fareQuoteReferenceRecord" max="4096" />
-    <words name="Words506" count="6" />
-    <string name="Remark3740" max="4096" />
-    <words name="Words513" count="6" />
-    <string name="ticketOrderRecord" max="4096" />
-    <words name="Words520" count="6" />
-    <string name="addressRecipientRecord" max="4096" />
-    <words name="Words527" count="6" />
-    <string name="addressStreetRecord" max="4096" />
-    <words name="Words534" count="6" />
-    <string name="addressCityRecord" max="4096" />
-    <words name="Words541" count="6" />
-    <string name="addressStateRecord" max="4096" />
-    <words name="Words548" count="6" />
-    <string name="addressPostalCodeRecord" max="4096" />
-    <words name="Words555" count="6" />
-    <string name="additionalAddressRecord" max="4096" />
-    <words name="Words562" count="6" />
-    <string name="rviReferenceRecord" max="4096" />
-    <words name="Words569" count="6" />
-    <string name="Remark4240" max="4096" />
-    <words name="Words576" count="6" />
-    <string name="paymentApprovalRecord" max="4096" />
-    <words name="Words583" count="6" />
-    <string name="mileageOrderRecord" max="4096" />
-    <words name="Words590" count="6" />
-    <string name="Remark4468" max="4096" />
-    <words name="Words597" count="6" />
-    <string name="Remark4544" max="4096" />
-    <words name="Words604" count="6" />
-    <string name="Remark4624" max="4096" />
-    <words name="Words611" count="6" />
-    <string name="Remark4700" max="4096" />
-    <words name="Words618" count="6" />
-    <string name="Remark4780" max="4096" />
-    <words name="Words625" count="7" />
-    <string name="fareTicketRecord" max="4096" />
-    <words name="Words633" count="9" />
-    <string name="loyaltyReferenceRecord" max="4096" />
-    <words name="Words643" count="7" />
-    <string name="Remark5000" max="4096" />
-    <words name="Words651" count="6" />
-    <string name="fareQuote" max="4096" />
-    <words name="Words658" count="5" />
-    <string name="passengerCountText" max="4096" />
-    <words name="Words664" count="5" />
-    <string name="fareAmounts" max="4096" />
-    <words name="Words670" count="5" />
-    <string name="totalFare" max="4096" />
-    <words name="Words676" count="6" />
-    <string name="RecordTag682" max="4096" />
-    <string name="passengerNameOccurrence3" max="4096" />
-    <words name="Words684" count="7" />
-    <string name="RecordTag691" max="4096" />
-    <words name="Words692" count="4" />
-    <string name="EventDate5344" max="4096" />
-    <string name="EventTime5356" max="4096" />
-    <string name="Identifier5364" max="4096" />
-    <words name="Words699" count="10" />
-    <string name="Remark5416" max="4096" />
-    <words name="Words710" count="5" />
+    <!-- Real-time C-structure PNR feed encoded as XDR. The P2 layout spec gives field meanings, not wire order.
+         Repeating sections are rpcgen linked lists (1 before each element, 0 ends the list); element
+         shapes were fitted to PNR.txt and PNR_02.txt, and unknown words remain neutral. -->
+    <uint32 name="version" expected="2" />
+    <!-- Key 01 (P20HALC, P20KCDT, P20KTIM, P20TDAT, P20TTIM, P20PTIM, P20KRLO); the locator follows the times on the wire. -->
+    <struct name="general">
+      <string name="hostAirline" max="4096" />
+      <string name="creationDate" max="4096" />
+      <string name="creationTime" max="4096" />
+      <string name="transactionDate" max="4096" />
+      <string name="transactionTime" max="4096" />
+      <string name="p2CreationTime" max="4096" />
+      <string name="pnr" max="6" />
+    </struct>
+    <!-- Key 10 indicator characters and counters as uint32 words (P20PETK, P20PTRM, P20PSTF, P20PPTA, P20PPNH, ...). -->
+    <struct name="indicators">
+      <words name="flags" count="11" />
+      <string name="indicatorText" max="4096" />
+    </struct>
+    <!-- Booking origin and purge flight; the spec lists these under key 90 (not detailed for this proof of concept). -->
+    <struct name="bookingOrigin">
+      <words name="words1" count="6" />
+      <string name="changeIdentifier" max="4096" />
+      <string name="agentSine" max="4096" />
+      <string name="originCity" max="4096" />
+      <string name="changeDate" max="4096" />
+      <words name="words2" count="19" />
+      <string name="originIdentifier" max="4096" />
+      <string name="carrier" max="4096" />
+      <string name="pointOfSale" max="4096" />
+      <words name="words3" count="6" />
+      <string name="purgeFlight" max="4096" />
+      <words name="words4" count="10" />
+    </struct>
+    <!-- Key 20 name items. Both samples hold one name item and one first name, so the 20/30 grouping is unverified for multi-passenger PNRs. -->
+    <list name="names" max="99">
+      <struct name="name">
+        <uint32 name="itemNumber" />
+        <uint32 name="partySize" />
+        <uint32 name="nameWord" />
+        <string name="surname" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <list name="firstNames" max="999">
+      <struct name="firstName">
+        <uint32 name="itemNumber" />
+        <string name="givenName" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <!-- Empty linked lists in every sample: a nonzero word means an unmodelled element type and the message is rejected. -->
+    <uint32 name="unresolvedList1" expected="0" />
+    <uint32 name="unresolvedList2" expected="0" />
+    <!-- Key 40 OSI/SSR items; continuation items repeat the prime item number. -->
+    <list name="facts" max="999">
+      <struct name="fact">
+        <uint32 name="itemNumber" />
+        <uint32 name="factType" />
+        <string name="factCode" max="4096" />
+        <string name="text" max="4096" />
+        <words name="tail" count="6" />
+      </struct>
+    </list>
+    <uint32 name="unresolvedList3" expected="0" />
+    <!-- Key 43 FQTV/FQTR/FCPR items; item numbers are shared with key 40. -->
+    <list name="frequentFlyers" max="99">
+      <struct name="frequentFlyer">
+        <uint32 name="itemNumber" />
+        <uint32 name="action" />
+        <string name="factCode" max="4096" />
+        <string name="serviceCode" max="4096" />
+        <string name="carrier" max="4096" />
+        <string name="account" max="4096" />
+        <string name="holderName" max="4096" />
+        <words name="tail" count="8" />
+      </struct>
+    </list>
+    <!-- Key 50 phone items. -->
+    <list name="phones" max="99">
+      <struct name="phone">
+        <uint32 name="phoneType" />
+        <string name="city" max="4096" />
+        <string name="areaCode" max="4096" />
+        <string name="text" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <!-- Key 80 itinerary segments; flightNumber is binary (P20PFL1). -->
+    <list name="itinerary" max="99">
+      <struct name="segment">
+        <uint32 name="itemNumber" />
+        <uint32 name="segmentType" />
+        <string name="actionCode" max="4096" />
+        <string name="departureDate" max="4096" />
+        <string name="dayOfWeek" max="4096" />
+        <uint32 name="partySize" />
+        <string name="carrier" max="4096" />
+        <string name="previousActionCode" max="4096" />
+        <string name="boardPoint" max="4096" />
+        <string name="offPoint" max="4096" />
+        <string name="departureTime" max="4096" />
+        <string name="arrivalTime" max="4096" />
+        <string name="classOfService" max="4096" />
+        <words name="words1" count="3" />
+        <uint32 name="flightNumber" />
+        <words name="words2" count="17" />
+        <string name="statusDate" max="4096" />
+        <string name="statusCode" max="4096" />
+        <words name="tail" count="1" />
+      </struct>
+    </list>
+    <!-- Key 60 remarks; the item count matches the key 10 remarks counter in both samples. -->
+    <list name="remarks" max="999">
+      <struct name="remark">
+        <uint32 name="itemNumber" />
+        <string name="text" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <list name="fareReferences" max="99">
+      <struct name="fareReference">
+        <uint32 name="itemType" />
+        <string name="text" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <uint32 name="unresolvedList4" expected="0" />
+    <!-- Union items: 49 = received-from (RXX...), 54 = remark index (RI-...). -->
+    <list name="referenceItems" max="99">
+      <union name="referenceItem">
+        <case value="49">
+          <struct name="receivedFrom">
+            <string name="code" max="4096" />
+            <string name="text" max="4096" />
+            <words name="tail" count="4" />
+          </struct>
+        </case>
+        <case value="54">
+          <struct name="remarkIndex">
+            <uint32 name="word" />
+            <string name="text" max="4096" />
+            <words name="tail" count="4" />
+          </struct>
+        </case>
+      </union>
+    </list>
+    <!-- Key C0 stored fare lines. -->
+    <list name="storedFare" max="999">
+      <struct name="fareLine">
+        <string name="text" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <!-- Key D0 E-TKT form of payment. -->
+    <list name="etktPayments" max="99">
+      <struct name="etktPayment">
+        <string name="paymentType" max="4096" />
+        <string name="passengerName" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <!-- Key D2 history credits; the two empty lists that follow are D4 and D6. -->
+    <list name="historyCredits" max="999">
+      <struct name="historyCredit">
+        <uint32 name="itemType" />
+        <string name="agentSine" max="4096" />
+        <words name="words" count="4" />
+        <string name="date" max="4096" />
+        <string name="time" max="4096" />
+        <string name="changeIdentifier" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <uint32 name="unresolvedList5" expected="0" />
+    <uint32 name="unresolvedList6" expected="0" />
+    <!-- Key D8 passenger history items. -->
+    <list name="passengerHistory" max="999">
+      <struct name="historyItem">
+        <uint32 name="actionCode" />
+        <uint32 name="itemType" />
+        <string name="text" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
   </feed>
 </xdrLayouts>

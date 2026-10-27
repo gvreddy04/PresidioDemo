@@ -149,7 +149,7 @@ public static class XdrLayoutConfiguration
         string kind = element.Name.ToString();
         string[] allowed = kind switch
         {
-            "string" or "opaque" or "array" => ["name", "max"],
+            "string" or "opaque" or "array" or "list" => ["name", "max"],
             "fixedOpaque" or "fixedArray" or "words" => ["name", "count"],
             "int32" or "uint32" => ["name", "expected"],
             "int64" or "uint64" or "float32" or "float64" or "boolean" or "struct" or "optional" or "union" => ["name"],
@@ -164,7 +164,7 @@ public static class XdrLayoutConfiguration
 
         int Positive(string key) => int.TryParse(Required(element, key), NumberStyles.None, CultureInfo.InvariantCulture, out int n) && n is > 0 and <= 1048576
                     ? n : throw new InvalidDataException("XDR length/count limit must be between 1 and 1048576.");
-        int limit = kind is "string" or "opaque" or "array" ? Positive("max") : 0;
+        int limit = kind is "string" or "opaque" or "array" or "list" ? Positive("max") : 0;
         int count = kind is "fixedOpaque" or "fixedArray" or "words" ? Positive("count") : 0;
         // Normalize the shorthand to the original definition. No count prefix is added,
         // and the Value member preserves existing scalar paths and codec behavior.
@@ -195,7 +195,7 @@ public static class XdrLayoutConfiguration
         {
             members = ParseMembers(element, depth);
         }
-        else if (kind is "array" or "fixedArray" or "optional")
+        else if (kind is "array" or "fixedArray" or "list" or "optional")
         {
             members = ParseMembers(element, depth);
             if (members.Count != 1)
@@ -549,6 +549,26 @@ public sealed class XdrFeedCodec(FeedType feed, XdrFeedSchema? schema) : IFeedCo
                         Read(definition.Members![0], id + "/" + i, path + "/*", depth + 1);
                     }
 
+                    return;
+                case "list":
+                    // rpcgen linked list: each element follows a 1 presence word; a 0 word ends the list.
+                    int items = 0;
+                    for (uint next = Unsigned(); next != 0; next = Unsigned())
+                    {
+                        if (next != 1)
+                        {
+                            throw new InvalidDataException("Invalid XDR list presence value.");
+                        }
+
+                        if (items == definition.Limit)
+                        {
+                            throw new InvalidDataException("XDR list exceeds its configured maximum.");
+                        }
+
+                        Read(definition.Members![0], id + "/" + items, path + "/*", depth + 1);
+                        items++;
+                    }
+                    Structure.Add(id, "list:" + items);
                     return;
                 case "optional":
                     uint present = Unsigned();

@@ -44,11 +44,25 @@ def inspect_fields(feed, original, raw=False, schema_file=None, reference_file=N
             assert count <= int(node.get("max", node.get("count", "0")))
             for _ in range(count):
                 walk(node[0], path + "/*")
+        elif kind == "list":
+            # Linked list: a 1 word precedes each element and a 0 word ends the list.
+            count = 0
+            while (present := word()) != 0:
+                assert present == 1 and count < int(node.get("max"))
+                walk(node[0], path + "/*")
+                count += 1
         elif kind == "optional":
             present = word()
             assert present in (0, 1)
             if present:
                 walk(node[0], path + "/value")
+        elif kind == "union":
+            tag = struct.unpack(">i", struct.pack(">I", word()))[0]
+            arms = {int(case.get("value")): case[0] for case in node.findall("case")}
+            fallback = node.find("default")
+            arm = arms.get(tag, fallback[0] if fallback is not None else None)
+            assert arm is not None, "Unknown union discriminator"
+            walk(arm, path + "/" + arm.get("name"))
         elif kind == "string":
             start = cursor
             length = word()

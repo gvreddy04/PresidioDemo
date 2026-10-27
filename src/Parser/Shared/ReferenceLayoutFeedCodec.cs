@@ -504,7 +504,7 @@ public static class ReferenceLayoutConfiguration
                 return field with { Members = field.Members!.Select(child => Map(child, path + "/" + child.Name, conditional)).ToArray() };
             }
 
-            if (field.Kind is "array" or "fixedArray" or "optional")
+            if (field.Kind is "array" or "fixedArray" or "list" or "optional")
             {
                 return field with { Members = [Map(field.Members![0], path + (field.Kind == "optional" ? "/value" : "/*"), true)] };
             }

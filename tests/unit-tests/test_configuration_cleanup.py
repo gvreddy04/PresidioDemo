@@ -23,9 +23,14 @@ class ConfigurationCleanupTests(unittest.TestCase):
                 for child in node:
                     result.update(string_paths(child, path + "/" + child.get("name")))
                 return result
-            if node.tag in {"optional", "array", "fixedArray"}:
+            if node.tag in {"optional", "array", "fixedArray", "list"}:
                 suffix = "/value" if node.tag == "optional" else "/*"
                 return string_paths(node[0], path + suffix)
+            if node.tag == "union":
+                result = {}
+                for case in node:
+                    result.update(string_paths(case[0], path + "/" + case[0].get("name")))
+                return result
             return {}
 
         for feed in references.findall("feed"):
@@ -93,7 +98,8 @@ class ConfigurationCleanupTests(unittest.TestCase):
             rules.update({path: rule for path, rule in json_rules(feed).items() if "id" not in rule})
         count = 0
         for source in (PROJECT / "docs/sample-docs").glob("*.txt"):
-            feed = "ACI" if source.stem.startswith("ACI") else "ETKT" if source.stem.startswith("ETKT") else "PNR" if source.stem == "PNR" else None
+            feed = ("ACI" if source.stem.startswith("ACI") else "ETKT" if source.stem.startswith("ETKT")
+                    else "PNR" if source.stem == "PNR" or source.stem.startswith("PNR_0") else None)
             if not feed:
                 continue
             count += 1
@@ -107,7 +113,7 @@ class ConfigurationCleanupTests(unittest.TestCase):
                     self.assertEqual(rule["identification"], "Known")
                     self.assertEqual(rule["maskCharacters"], "all")
                     self.assertEqual(len(rule["maskCharacter"].encode("ascii")), 1)
-        self.assertEqual(count, 13)
+        self.assertEqual(count, 14)
 
     def json_paths(self, name):
         document = json.loads(payload((PROJECT / "docs/sample-docs" / name).read_bytes()))

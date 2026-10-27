@@ -70,6 +70,7 @@ static class XdrCodecChecks
     {
         Directory.CreateDirectory(workspace);
         CheckWordsShorthand(root, workspace);
+        CheckLinkedList(workspace);
         byte[] pnrSource = File.ReadAllBytes(Path.Combine(root, "docs", "sample-docs", "PNR.txt"));
         var pnrMessage = new FeedMessage(new(FeedType.PNR, Guid.Empty, "PNR.txt", "supplied-sample"), pnrSource);
         var pnrEnvelope = FeedPayloadReader.Read(pnrMessage);
@@ -167,7 +168,8 @@ static class XdrCodecChecks
         {
             string name = Path.GetFileNameWithoutExtension(source);
             FeedType? feed = name.StartsWith("ACI", StringComparison.Ordinal) ? FeedType.ACI :
-                name.StartsWith("ETKT", StringComparison.Ordinal) ? FeedType.ETKT : name == "PNR" ? FeedType.PNR : null;
+                name.StartsWith("ETKT", StringComparison.Ordinal) ? FeedType.ETKT :
+                name == "PNR" || name.StartsWith("PNR_0", StringComparison.Ordinal) ? FeedType.PNR : null;
             if (feed is null)
             {
                 continue;
@@ -185,7 +187,7 @@ static class XdrCodecChecks
             Check(output.AsSpan().SequenceEqual(message.Content.Span), name + " words shorthand preserves every source byte");
             samples++;
         }
-        Check(samples == 13, "words compatibility covers all 13 supplied binary samples");
+        Check(samples == 14, "words compatibility covers all 14 supplied binary samples");
 
         string invalid = Path.Combine(workspace, "invalid-words.xml");
         foreach (string declaration in new[] {
@@ -198,6 +200,56 @@ static class XdrCodecChecks
                 "</feed><feed type='PNR' configured='false'/><feed type='ETKT' configured='false'/></xdrLayouts>");
             Reject(() => XdrLayoutConfiguration.Load(invalid), "invalid words declaration rejected: " + declaration);
         }
+    }
+
+    /// <summary>
+    /// Verifies rpcgen-style linked lists: presence words, terminator, bounds and structural validation.
+    /// </summary>
+    /// <param name="workspace">The isolated directory used for runtime verification artifacts.</param>
+    private static void CheckLinkedList(string workspace)
+    {
+        XdrFieldDefinition[] fields = [new("Version", "uint32", Expected: 2),
+            new("Items", "list", Limit: 3, Members: [new("Item", "struct", Members: [Text("Name")])]), new("Trailer", "uint32")];
+        var codec = new XdrFeedCodec(FeedType.ACI, new(FeedType.ACI, fields));
+        byte[] List(uint[] flags, params string[] names)
+        {
+            using (var stream = new MemoryStream())
+            {
+                void Number(uint n) { byte[] b = new byte[4]; BinaryPrimitives.WriteUInt32BigEndian(b, n); stream.Write(b); }
+                Number(2);
+                for (int i = 0; i < names.Length; i++)
+                {
+                    Number(flags[i]);
+                    byte[] b = Encoding.ASCII.GetBytes(names[i]);
+                    Number((uint)b.Length); stream.Write(b); stream.Write(new byte[(-b.Length) & 3]);
+                }
+                Number(0); Number(9);
+                return stream.ToArray();
+            }
+        }
+        byte[] fixture = List([1, 1], "Emily Carter", "Michael Brooks");
+        var parsed = codec.Parse(Message(fixture));
+        Check(parsed.Fields.Where(f => f.Name == "/Items/*/Name").Select(f => f.Id).SequenceEqual(["/Items/0/Name", "/Items/1/Name"]) &&
+            parsed.Fields.Single(f => f.Id == "/Trailer").Value == "9", "XDR list reads each present element under a wildcard path and continues after the terminator");
+        var values = parsed.Fields.ToDictionary(f => f.Id, f => f.Value);
+        Check(codec.Serialize(parsed, values).AsSpan().SequenceEqual(fixture), "XDR list round trip preserves presence words and terminator exactly");
+        values["/Items/0/Name"] = "[PASSENGER_NAME]";
+        byte[] changed = codec.Serialize(parsed, values);
+        codec.Validate(parsed, changed);
+        Check(codec.Parse(Message(changed)).Fields.Single(f => f.Id == "/Items/1/Name").Value == "Michael Brooks", "XDR list element replacement keeps later elements aligned");
+        Check(codec.Parse(Message(List([]))).Fields.All(f => !f.Name.StartsWith("/Items/", StringComparison.Ordinal)), "empty XDR list is a single terminator word");
+        Reject(() => codec.Parse(Message(List([1, 2], "A", "B"))), "XDR list presence values other than 0 or 1 are rejected");
+        Reject(() => codec.Parse(Message(List([1, 1, 1, 1], "A", "B", "C", "D"))), "XDR list longer than its maximum is rejected");
+        Reject(() => codec.Parse(Message(fixture[..^8])), "XDR list without its terminator is rejected");
+        Reject(() => codec.Validate(parsed, List([1, 1, 1], "Emily Carter", "Michael Brooks", "Extra")), "XDR list element count change fails structural validation");
+        string config = Path.Combine(workspace, "test-only-list.xml");
+        string xml = "<xdrLayouts><feed type=\"ACI\" configured=\"true\"><list name=\"Items\" max=\"3\"><struct name=\"Item\"><string name=\"Name\" max=\"64\"/></struct></list></feed><feed type=\"PNR\" configured=\"false\"/><feed type=\"ETKT\" configured=\"false\"/></xdrLayouts>";
+        File.WriteAllText(config, xml);
+        Check(XdrLayoutConfiguration.Load(config)[FeedType.ACI].Fields.Single().Kind == "list", "XDR XML loader accepts a bounded linked list");
+        File.WriteAllText(config, xml.Replace(" max=\"3\"", ""));
+        Reject(() => XdrLayoutConfiguration.Load(config), "XDR XML rejects a linked list without a maximum");
+        File.WriteAllText(config, xml.Replace("</struct></list>", "</struct><uint32 name=\"Other\"/></list>"));
+        Reject(() => XdrLayoutConfiguration.Load(config), "XDR XML rejects a linked list with more than one element type");
     }
 
     /// <summary>

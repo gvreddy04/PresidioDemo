@@ -13,7 +13,7 @@ public sealed class PnrDecoder(PnrXdrReader reader)
         {
             bool text = locations.TryGetValue(field.Id, out var span);
             return new PnrDecodedField(field.Id, field.Value, text ? span.Offset : null,
-                text ? span.Length : 4, PnrStructureDefinitions.Find(field.Id));
+                text ? span.Length : 4, PnrStructureDefinitions.Find(field.Name));
         }).ToArray();
         return new(fields, envelope.Payload.Length, parsed);
     }
