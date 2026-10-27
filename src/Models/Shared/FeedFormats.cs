@@ -228,6 +228,11 @@ public static class FeedPayloadReader
             throw new InvalidDataException("Invalid MQ export line endings.");
         }
 
+        if (normalized.Contains(' '))
+        {
+            throw new InvalidDataException("MQ export contains non-breaking spaces (U+00A0), usually from copying it out of a web page or chat. Export the message again or replace them with plain spaces.");
+        }
+
         string[] lines = normalized.Split('\n');
         bool finalNewline = lines[^1] == "";
         if (finalNewline)

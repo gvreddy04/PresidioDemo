@@ -83,8 +83,9 @@
     <text name="oldPnr" path="/UnconfirmedLocator2" offset="548" length="0" pattern="(?:[A-Z0-9]{6})?" />
   </feed>
   <feed type="PNR" name="PnrReference" pnrStructures="true" referenceFile="../../docs/sample-docs/PNR.txt" referenceSha256="75cc60895384395f8df28eff4c4abf6a0c58f1dc7960c5eee41cb294def0e4de" schemaDriven="true">
-    <!-- Every XDR string maps to one policy alias. List items share a wildcard path, so each list text
-         is protected as a whole value; baseline offsets do not apply to list items and are zero. -->
+    <!-- Every XDR string maps to one policy alias; baseline offsets do not apply to list items and are zero.
+         Mixed record texts use ordered variants: the first matching pattern selects the protected captures,
+         unmatched bytes stay unchanged, and each list ends with a catch-all that protects unknown records whole. -->
     <text name="hostAirline" path="/general/hostAirline" offset="0" length="0" />
     <text name="creationDate" path="/general/creationDate" offset="0" length="0" />
     <text name="creationTime" path="/general/creationTime" offset="0" length="0" />
@@ -104,15 +105,27 @@
     <text name="surname" path="/names/*/surname" offset="0" length="0" />
     <text name="givenName" path="/firstNames/*/givenName" offset="0" length="0" />
     <text name="factCode" path="/facts/*/factCode" offset="0" length="0" />
-    <text name="factText" path="/facts/*/text" offset="0" length="0" />
+    <text name="factText" path="/facts/*/text" offset="0" length="0">
+      <variant pattern="DOCS[A-Z0-9]{2}[A-Z]{2}[0-9]+/(?&lt;DocumentType&gt;[^/]*)/(?&lt;IssuingCountry&gt;[^/]*)/(?&lt;DocumentNumber&gt;[^/]*)/(?&lt;Nationality&gt;[^/]*)/(?&lt;DateOfBirth&gt;[^/]*)/(?&lt;Gender&gt;[^/]*)/(?&lt;DocumentExpiry&gt;[^/]*)/(?&lt;PassengerName&gt;[^-]*)(?:-[0-9]+(?&lt;AssociatedName&gt;.*))?" />
+      <variant pattern="CTCE[A-Z0-9]{2}[A-Z]{2}[0-9]+/(?&lt;EmailAddress&gt;.+?)-[0-9]+(?&lt;PassengerName&gt;.+)" />
+      <variant pattern="CTCM[A-Z0-9]{2}[A-Z]{2}[0-9]+/(?&lt;PhoneNumber&gt;.+?)-[0-9]+(?&lt;PassengerName&gt;.+)" />
+      <variant pattern="TKNE[A-Z0-9]+-[0-9]+(?&lt;PassengerName&gt;.+?)\.(?&lt;TicketNumber&gt;.+)C[0-9]+" />
+      <variant pattern="(?&lt;Text&gt;.*)" />
+    </text>
     <text name="frequentFlyerFactCode" path="/frequentFlyers/*/factCode" offset="0" length="0" />
     <text name="frequentFlyerServiceCode" path="/frequentFlyers/*/serviceCode" offset="0" length="0" />
     <text name="frequentFlyerCarrier" path="/frequentFlyers/*/carrier" offset="0" length="0" />
-    <text name="frequentFlyerAccount" path="/frequentFlyers/*/account" offset="0" length="0" />
+    <text name="frequentFlyerAccount" path="/frequentFlyers/*/account" offset="0" length="0">
+      <variant pattern="(?&lt;Account&gt;[^.]+)\.[0-9]+\*(?&lt;Status&gt;.+)" />
+      <variant pattern="(?&lt;Text&gt;.*)" />
+    </text>
     <text name="frequentFlyerHolderName" path="/frequentFlyers/*/holderName" offset="0" length="0" />
     <text name="phoneCity" path="/phones/*/city" offset="0" length="0" />
     <text name="phoneAreaCode" path="/phones/*/areaCode" offset="0" length="0" />
-    <text name="phoneText" path="/phones/*/text" offset="0" length="0" />
+    <text name="phoneText" path="/phones/*/text" offset="0" length="0">
+      <variant pattern="\*(?&lt;PhoneRemark&gt;[^*].*)" />
+      <variant pattern="(?&lt;Text&gt;.*)" />
+    </text>
     <text name="segmentActionCode" path="/itinerary/*/actionCode" offset="0" length="0" />
     <text name="segmentDepartureDate" path="/itinerary/*/departureDate" offset="0" length="0" />
     <text name="segmentDayOfWeek" path="/itinerary/*/dayOfWeek" offset="0" length="0" />
@@ -125,11 +138,38 @@
     <text name="segmentClassOfService" path="/itinerary/*/classOfService" offset="0" length="0" />
     <text name="segmentStatusDate" path="/itinerary/*/statusDate" offset="0" length="0" />
     <text name="segmentStatusCode" path="/itinerary/*/statusCode" offset="0" length="0" />
-    <text name="remarkText" path="/remarks/*/text" offset="0" length="0" />
-    <text name="fareReferenceText" path="/fareReferences/*/text" offset="0" length="0" />
+    <text name="remarkText" path="/remarks/*/text" offset="0" length="0">
+      <variant pattern="X+(?&lt;CardSuffix&gt;.{4})" />
+      <variant pattern="WEB CLIENT IP (?&lt;IpAddress&gt;.+)" />
+      <variant pattern="ONE\*MBR (?&lt;MemberName&gt;.*?)\*ACCT (?&lt;MemberAccount&gt;[^*]+)\*(?&lt;MemberStatus&gt;[^*]+)\*WEBCO" />
+      <variant pattern="SPNSR\*ACCT (?&lt;SponsorAccount&gt;[^*]+)\*WEBCO" />
+      <variant pattern="ACCOUNT BALANCE (?&lt;Balance&gt;[^*]+)\*PIN CODE VERIFIED \* WEBCO" />
+      <variant pattern="(?&lt;MileageText&gt;TOTAL MILEAGE DEDUCTION - [0-9]+ MILES \* WEBCO)" />
+      <variant pattern="(?&lt;MileageQuoteText&gt;ESO OP/MILEAGE QUOTED [0-9]+ - FQ RESPONSE [0-9]+)" />
+      <variant pattern="IATA MSO ID - (?&lt;MsoIdentifier&gt;.+)" />
+      <variant pattern="EMAIL RQSTD (?&lt;RequestedEmail&gt;.+)" />
+      <variant pattern="(?&lt;FareText&gt;ONE[0-9]{2}[A-Z]{3}\*G\$[0-9.]+PP [0-9.]+TTL [A-Z0-9-]+ PPP [0-9.]+K CFL WEBBK)" />
+      <variant pattern="SFS FQID\*(?&lt;FareQuoteReference&gt;.+)" />
+      <variant pattern="PB TKT ORDERID\*(?&lt;TicketOrderReference&gt;.+)" />
+      <variant pattern="ADDRCITY (?&lt;AddressCity&gt;.+)" />
+      <variant pattern="ADDRSTATE (?&lt;AddressState&gt;.+)" />
+      <variant pattern="ADDRZIP (?&lt;AddressPostalCode&gt;.+)" />
+      <variant pattern="ADDR (?&lt;AddressText&gt;.+)" />
+      <variant pattern="RVI ID\*(?&lt;RviReference&gt;.+)" />
+      <variant pattern="RBY[^*]+\*APPR CC [A-Z]{2} (?&lt;ApprovalReference&gt;[^ ]+) \$[^ ]+ WEBCO" />
+      <variant pattern="PB MILES ORDERID\*(?&lt;MileageOrderReference&gt;.+)" />
+      <variant pattern="(?&lt;Text&gt;.*)" />
+    </text>
+    <text name="fareReferenceText" path="/fareReferences/*/text" offset="0" length="0">
+      <variant pattern="T/FQR/MP(?&lt;LoyaltyAccount&gt;[^/]+)/[^/]+/[^/]+/(?&lt;TicketReference&gt;[^/]+)/[^/]+//" />
+      <variant pattern="(?&lt;Text&gt;.*)" />
+    </text>
     <text name="receivedFromCode" path="/referenceItems/*/receivedFrom/code" offset="0" length="0" />
     <text name="receivedFromText" path="/referenceItems/*/receivedFrom/text" offset="0" length="0" />
-    <text name="remarkIndexText" path="/referenceItems/*/remarkIndex/text" offset="0" length="0" />
+    <text name="remarkIndexText" path="/referenceItems/*/remarkIndex/text" offset="0" length="0">
+      <variant pattern="COCOM-[A-Z]{2}/(?&lt;LoyaltyAccount&gt;.+)-GUID/" />
+      <variant pattern="(?&lt;Text&gt;.*)" />
+    </text>
     <text name="storedFareText" path="/storedFare/*/text" offset="0" length="0" />
     <text name="etktPaymentType" path="/etktPayments/*/paymentType" offset="0" length="0" />
     <text name="etktPassengerName" path="/etktPayments/*/passengerName" offset="0" length="0" />

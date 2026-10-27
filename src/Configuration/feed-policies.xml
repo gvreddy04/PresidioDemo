@@ -88,8 +88,8 @@
     <field name="/oldPnr" identification="None" action="Keep" />
   </feed>
   <feed type="PNR" configured="true">
-    <!-- Aliases follow reference-layouts.xml. Values that had partial masks before list decoding are masked
-         whole until SSR-code-specific captures are added; no field is less protected than before. -->
+    <!-- Aliases follow reference-layouts.xml; variant captures use alias/capture names. Catch-all Text captures
+         protect unrecognized SSR/OSI and remark records whole. -->
     <field name="/hostAirline" identification="None" action="Keep" />
     <field name="/creationDate" identification="None" action="Keep" />
     <field name="/creationTime" identification="None" action="Keep" />
@@ -109,15 +109,30 @@
     <field name="/surname" policy="MaskPerson" />
     <field name="/givenName" policy="MaskPerson" />
     <field name="/factCode" identification="None" action="Keep" />
-    <field name="/factText" policy="MaskSensitiveAttribute" />
+    <field name="/factText/DocumentType" identification="None" action="Keep" />
+    <field name="/factText/IssuingCountry" policy="MaskSensitiveAttribute" />
+    <field name="/factText/DocumentNumber" policy="MaskUnclassifiedIdentifier" />
+    <field name="/factText/Nationality" policy="MaskSensitiveAttribute" />
+    <field name="/factText/DateOfBirth" policy="MaskDateOfBirth" />
+    <field name="/factText/Gender" policy="MaskGender" />
+    <field name="/factText/DocumentExpiry" policy="MaskSensitiveAttribute" />
+    <field name="/factText/PassengerName" policy="MaskPerson" />
+    <field name="/factText/AssociatedName" policy="MaskPerson" />
+    <field name="/factText/EmailAddress" policy="MaskEmailAddress" />
+    <field name="/factText/PhoneNumber" policy="MaskPhoneNumber" />
+    <field name="/factText/TicketNumber" policy="MaskTicketReference" />
+    <field name="/factText/Text" policy="MaskSensitiveAttribute" />
     <field name="/frequentFlyerFactCode" identification="None" action="Keep" />
     <field name="/frequentFlyerServiceCode" identification="None" action="Keep" />
     <field name="/frequentFlyerCarrier" identification="None" action="Keep" />
-    <field name="/frequentFlyerAccount" policy="MaskLoyaltyNumber" />
+    <field name="/frequentFlyerAccount/Account" policy="MaskLoyaltyNumber" />
+    <field name="/frequentFlyerAccount/Status" policy="MaskSensitiveAttribute" />
+    <field name="/frequentFlyerAccount/Text" policy="MaskLoyaltyNumber" />
     <field name="/frequentFlyerHolderName" policy="MaskPerson" />
     <field name="/phoneCity" identification="None" action="Keep" />
     <field name="/phoneAreaCode" policy="MaskPhoneNumber" />
-    <field name="/phoneText" policy="MaskPhoneNumber" />
+    <field name="/phoneText/PhoneRemark" policy="MaskSensitiveAttribute" />
+    <field name="/phoneText/Text" policy="MaskPhoneNumber" />
     <field name="/segmentActionCode" identification="None" action="Keep" />
     <field name="/segmentDepartureDate" identification="None" action="Keep" />
     <field name="/segmentDayOfWeek" identification="None" action="Keep" />
@@ -130,11 +145,35 @@
     <field name="/segmentClassOfService" identification="None" action="Keep" />
     <field name="/segmentStatusDate" identification="None" action="Keep" />
     <field name="/segmentStatusCode" identification="None" action="Keep" />
-    <field name="/remarkText" policy="MaskSensitiveAttribute" />
-    <field name="/fareReferenceText" policy="MaskSensitiveAttribute" />
+    <field name="/remarkText/CardSuffix" policy="MaskPaymentReference" />
+    <field name="/remarkText/IpAddress" policy="MaskIpAddress" />
+    <field name="/remarkText/MemberName" policy="MaskPerson" />
+    <field name="/remarkText/MemberAccount" policy="MaskLoyaltyNumber" />
+    <field name="/remarkText/MemberStatus" policy="MaskSensitiveAttribute" />
+    <field name="/remarkText/SponsorAccount" policy="MaskLoyaltyNumber" />
+    <field name="/remarkText/Balance" policy="MaskFinancialInformation" />
+    <field name="/remarkText/MileageText" identification="None" action="Keep" />
+    <field name="/remarkText/MileageQuoteText" identification="None" action="Keep" />
+    <field name="/remarkText/MsoIdentifier" policy="MaskUnclassifiedIdentifier" />
+    <field name="/remarkText/RequestedEmail" policy="MaskEmailAddress" />
+    <field name="/remarkText/FareText" identification="None" action="Keep" />
+    <field name="/remarkText/FareQuoteReference" policy="MaskOrderId" />
+    <field name="/remarkText/TicketOrderReference" policy="MaskOrderId" />
+    <field name="/remarkText/AddressCity" policy="MaskAddress" />
+    <field name="/remarkText/AddressState" policy="MaskAddress" />
+    <field name="/remarkText/AddressPostalCode" policy="MaskAddress" />
+    <field name="/remarkText/AddressText" policy="MaskAddress" />
+    <field name="/remarkText/RviReference" policy="MaskUnclassifiedIdentifier" />
+    <field name="/remarkText/ApprovalReference" policy="MaskPaymentReference" />
+    <field name="/remarkText/MileageOrderReference" policy="MaskOrderId" />
+    <field name="/remarkText/Text" policy="MaskSensitiveAttribute" />
+    <field name="/fareReferenceText/LoyaltyAccount" policy="MaskLoyaltyNumber" />
+    <field name="/fareReferenceText/TicketReference" policy="MaskTicketReference" />
+    <field name="/fareReferenceText/Text" policy="MaskSensitiveAttribute" />
     <field name="/receivedFromCode" policy="MaskUnclassifiedIdentifier" />
     <field name="/receivedFromText" policy="MaskSensitiveAttribute" />
-    <field name="/remarkIndexText" policy="MaskSensitiveAttribute" />
+    <field name="/remarkIndexText/LoyaltyAccount" policy="MaskLoyaltyNumber" />
+    <field name="/remarkIndexText/Text" policy="MaskSensitiveAttribute" />
     <field name="/storedFareText" identification="None" action="Keep" />
     <field name="/etktPaymentType" identification="None" action="Keep" />
     <field name="/etktPassengerName" policy="MaskPerson" />

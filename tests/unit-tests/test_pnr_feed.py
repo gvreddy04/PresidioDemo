@@ -7,8 +7,8 @@ from test_feed_listener import PROJECT, Listener, wait_for, rejected, processing
 from test_seats_feed import payload
 from reference_feed_support import field_spans, verify_output
 
-PNR_ACTIONS = {"Keep": 71, "Mask": 71}
-PNR_02_ACTIONS = {"Keep": 33, "Mask": 21}
+PNR_ACTIONS = {"Keep": 74, "Mask": 80}
+PNR_02_ACTIONS = {"Keep": 33, "Mask": 24}
 
 class PnrFeedTests(unittest.TestCase):
     @classmethod
@@ -46,8 +46,9 @@ class PnrFeedTests(unittest.TestCase):
         self.assertEqual(before[84:90], after[84:90])
         for value in (b"JESTE", b"MOHAN.CHALLA", b"SX397927", b"8728251761", b"21434079510", b"31AUG88", b"1600 SMITH ST", b"127.0.0.1"):
             self.assertNotIn(value, after)
-        # SSR/OSI and remark texts are list items masked whole until SSR-code-specific captures exist.
-        for value in (b"IAH", b"IAD", b"DUB", b"FQTR", b"TOTAL FARE - USD11.20", b"FWGV4L"):
+        # SSR-code variants mask the values and keep the record syntax around them.
+        for value in (b"IAH", b"IAD", b"DUB", b"FQTR", b"1373X12OCT", b"0228X13OCT", b"TOTAL FARE - USD11.20",
+                      b"TOTAL MILEAGE DEDUCTION - 55000 MILES", b"DOCSUAHK1", b"CTCEYYHK1", b"CTCMYYHK1", b"FWGV4L"):
             self.assertIn(value, after)
         self.assertEqual((PROJECT / "docs/sample-docs/PNR.txt").read_bytes(), source)
 
@@ -58,7 +59,7 @@ class PnrFeedTests(unittest.TestCase):
         after = payload(output)
         for value in (b"ADMIN", b"DEUSERDYRDAHFMW", b"01JAN90", b"890989000", b"45526666"):
             self.assertNotIn(value, after)
-        for value in (b"FWGWVG", b"SFO", b"EWR", b"03DEC26"):
+        for value in (b"FWGWVG", b"SFO", b"EWR", b"03DEC26", b"DOCSUAHK1/////"):
             self.assertIn(value, after)
 
     def test_raw_reference_can_change_selected_same_width_values_and_keep_pnr(self):

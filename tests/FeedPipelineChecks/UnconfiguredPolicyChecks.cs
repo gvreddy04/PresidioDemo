@@ -20,7 +20,7 @@ static class UnconfiguredPolicyChecks
         string source = Path.Combine(root, "src", "Configuration", "feed-policies.xml");
         var policies = FeedPolicyConfiguration.Load(source);
         var pending = new FeedPolicy(FeedType.PNR, [], configured: false);
-        Check(policies[FeedType.PNR].IsConfigured && policies[FeedType.PNR].Fields.Count == 53,
+        Check(policies[FeedType.PNR].IsConfigured && policies[FeedType.PNR].Fields.Count == 92,
             "PNR reference policy has only reviewed field paths");
         Check(policies.Where(pair => pair.Key != FeedType.PNR).All(pair => pair.Value.IsConfigured),
             "existing configured feeds stay enabled when the attribute is omitted");

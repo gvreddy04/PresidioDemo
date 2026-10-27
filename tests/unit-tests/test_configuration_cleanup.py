@@ -1,5 +1,6 @@
 """Keep all three XML configurations aligned with reviewed samples."""
 import json
+import re
 import unittest
 import xml.etree.ElementTree as ET
 
@@ -57,7 +58,10 @@ class ConfigurationCleanupTests(unittest.TestCase):
                                      route + " top-level names must match reviewed XML bindings")
                     if (route, path) not in reviewed_aliases:
                         self.assertNotIn("path", text.attrib, "Matching top-level names need no alias path")
-                if len(text):
+                if text.find("variant") is not None:
+                    for variant in text.findall("variant"):
+                        expected.update(alias + "/" + group for group in re.findall(r"\(\?<([A-Za-z0-9_]+)>", variant.get("pattern")))
+                elif len(text):
                     expected.update(alias + "/" + part.get("name") for part in text if part.get("fixed") != "true")
                 else:
                     expected.add(alias)

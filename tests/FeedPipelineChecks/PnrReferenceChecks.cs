@@ -30,10 +30,12 @@ static class PnrReferenceChecks
         var reader = new PnrXdrReader(XdrLayoutConfiguration.Load(schemaFile)[FeedType.PNR]);
         var samples = new[]
         {
-            (File: "PNR.txt", Length: 5452, Pnr: "FWGV4L", Facts: 15, Segments: 2, Remarks: 31, Masks: 71, Keeps: 71, BoardPoint: "IAH",
-                Personal: new[] { "JESTE", "MOHAN.CHALLA", "SX397927", "8728251761", "21434079510", "31AUG88", "1600 SMITH ST", "127.0.0.1" }),
-            (File: "PNR_02.txt", Length: 1780, Pnr: "FWGWVG", Facts: 4, Segments: 1, Remarks: 2, Masks: 21, Keeps: 34, BoardPoint: "SFO",
-                Personal: new[] { "ADMIN", "DEUSERDYRDAHFMW", "01JAN90", "890989000", "45526666", "LA5K", "RXXRDV" })
+            (File: "PNR.txt", Length: 5452, Pnr: "FWGV4L", Facts: 15, Segments: 2, Remarks: 31, Masks: 84, Keeps: 75, BoardPoint: "IAH",
+                Personal: new[] { "JESTE", "MOHAN.CHALLA", "SX397927", "8728251761", "21434079510", "31AUG88", "1600 SMITH ST", "127.0.0.1" },
+                Kept: new[] { "DOCSUAHK1/////", "CTCEYYHK1/", "CTCMYYHK1/", "TKNEUAHK1IAHIAD1373X12OCT-1", "WEB CLIENT IP ", "TOTAL MILEAGE DEDUCTION - 55000 MILES * WEBCO" }),
+            (File: "PNR_02.txt", Length: 1780, Pnr: "FWGWVG", Facts: 4, Segments: 1, Remarks: 2, Masks: 28, Keeps: 35, BoardPoint: "SFO",
+                Personal: new[] { "ADMIN", "DEUSERDYRDAHFMW", "01JAN90", "890989000", "45526666", "LA5K", "RXXRDV" },
+                Kept: new[] { "DOCSUAHK1/////" })
         };
         foreach (var sample in samples)
         {
@@ -61,25 +63,22 @@ static class PnrReferenceChecks
             Check(plan.Count(item => item.Rule.Action == FieldAction.Mask) == sample.Masks && plan.Count(item => item.Rule.Action == FieldAction.Keep) == sample.Keeps &&
                 plan.All(item => item.Rule.Identification != FieldIdentification.Analyze),
                 sample.File + $" resolves {sample.Masks} direct masks and {sample.Keeps} Keeps without NLP inference");
-            byte[] expected = FeedPayloadReader.ReadPayload(message);
-            foreach (var (field, rule) in plan)
+            foreach (var (field, rule) in plan.Where(item => item.Rule.Action == FieldAction.Mask))
             {
-                if (rule.Action == FieldAction.Mask)
-                {
-                    var span = document.Fields.Single(item => item.Path == field.Id);
-                    Check(span.Offset is not null && rule.MaskCount(field.Value) == span.Length, sample.File + " mask length matches " + field.Id);
-                    values[field.Id] = new string(rule.MaskCharacter[0], span.Length);
-                    Array.Fill(expected, (byte)rule.MaskCharacter[0], span.Offset!.Value, span.Length);
-                }
+                values[field.Id] = new string(rule.MaskCharacter[0], rule.MaskCount(field.Value));
             }
             byte[] output = codec.Serialize(parsed, values);
+            // Validate rejects any change outside string and capture spans, including list flags, counts, padding and variant choice.
             codec.Validate(parsed, output);
             byte[] payload = FeedPayloadReader.ReadPayload(new(delivery, output));
-            Check(payload.Length == sample.Length && payload.AsSpan().SequenceEqual(expected),
-                sample.File + " serialization changes only selected bytes and preserves list flags, counts, padding and unknown bytes");
+            var protectedFields = codec.Parse(new(delivery, output)).Fields.ToDictionary(field => field.Id, field => field.Value);
+            Check(payload.Length == sample.Length && protectedFields.Count == values.Count && values.All(pair => protectedFields[pair.Key] == pair.Value),
+                sample.File + " serialization changes only selected spans and preserves list flags, counts, padding, variants and unknown bytes");
             string text = Encoding.ASCII.GetString(payload);
             Check(sample.Personal.All(value => !text.Contains(value, StringComparison.Ordinal)),
                 sample.File + " selected personal values are removed from every occurrence");
+            Check(sample.Kept.All(value => text.Contains(value, StringComparison.Ordinal)),
+                sample.File + " SSR-code variants keep record syntax and operational text around masked values");
             Check(codec.Parse(new(delivery, output)).Fields.Single(field => field.Id == "/general/pnr").Value == sample.Pnr,
                 sample.File + " locator remains unchanged after protection");
             values["/general/pnr"] = "K7QX2M";
@@ -100,6 +99,18 @@ static class PnrReferenceChecks
         Reject(() => codec.Parse(new(rawDelivery, changed)), "PNR rejects an invalid SSR/OSI list presence word");
         Reject(() => codec.Parse(new(rawDelivery, baseline[..^4])), "PNR rejects aligned truncation");
         Reject(() => codec.Parse(new(rawDelivery, new byte[5456])), "PNR rejects different frame lengths");
+        string export = File.ReadAllText(Path.Combine(root, "docs/sample-docs/PNR_02.txt"));
+        var copied = new FeedMessage(new(FeedType.PNR, Guid.Empty, "copied.txt", "reference-check"),
+            Encoding.UTF8.GetBytes(export.Replace("A RTQ ", "A RTQ ", StringComparison.Ordinal)));
+        try
+        {
+            codec.Parse(copied);
+            throw new Exception("MQ export with non-breaking spaces was accepted.");
+        }
+        catch (InvalidDataException error)
+        {
+            Check(error.Message.Contains("non-breaking spaces", StringComparison.Ordinal), "MQ export copied from a web page is rejected with a non-breaking-space message");
+        }
 
         string temporary = Path.Combine(workspace, "pnr-reference-invalid.xml");
         void Invalid(Action<XElement> change, string label)
@@ -114,6 +125,10 @@ static class PnrReferenceChecks
             "reference loader rejects a list string without a mapping");
         Invalid(entry => entry.Elements("text").Single(text => (string?)text.Attribute("name") == "remarkText").SetAttributeValue("name", "factText"),
             "reference loader rejects duplicate policy aliases");
+        Invalid(entry => entry.Elements("text").Single(text => (string?)text.Attribute("name") == "factText").Elements("variant").First().SetAttributeValue("pattern", "DOCS.*"),
+            "reference loader rejects a record variant without a named capture");
+        Invalid(entry => entry.Elements("text").Single(text => (string?)text.Attribute("name") == "factText").SetAttributeValue("pattern", "(?<Text>.*)"),
+            "reference loader rejects a text that combines a pattern with record variants");
     }
 
     /// <summary>
