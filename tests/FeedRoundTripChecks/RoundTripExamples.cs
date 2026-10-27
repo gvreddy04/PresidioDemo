@@ -40,6 +40,12 @@ internal static class RoundTripExamples
         foreach (string file in Directory.GetFiles(Path.Combine(root, "docs/sample-docs"), "*.txt").Order())
         {
             string sample = Path.GetFileName(file);
+            if (sample.Contains("_Negative_Testing", StringComparison.Ordinal))
+            {
+                // Negative-testing samples are rejected by design and are covered by the batch checks.
+                continue;
+            }
+
             FeedType feed = Route(sample);
             byte[] bytes = File.ReadAllBytes(file);
             var envelope = FeedPayloadReader.Read(Message(feed, sample, bytes));

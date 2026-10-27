@@ -14,7 +14,7 @@ PROJECT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT / "tests/unit-tests"))
 
 from reference_feed_support import field_spans, inspect_fields, verify_output as verify_binary
-from configuration_support import catalog, json_rules
+from configuration_support import NEGATIVE_SAMPLES, catalog, json_rules
 from test_seats_feed import header, payload, verify_output as verify_json
 
 POLICIES = {feed: json_rules(feed) for feed in ("Seats", "PNR-Linking")}
@@ -65,7 +65,7 @@ def scalar_pairs(before, after, path=""):
 
 samples = PROJECT / "docs/sample-docs"
 sources = {source.name: source.read_bytes() for source in samples.glob("*.txt")}
-require(len(sources) == 16, "Expected exactly 16 sample source files")
+require(len(sources) == 19, "Expected exactly 19 sample source files")
 started = datetime.now(timezone(timedelta(hours=5, minutes=30)))
 run = PROJECT / ".test-runs" / ("e2e-" + started.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8])
 docs = run / "docs"
@@ -80,6 +80,7 @@ require(len(reports) == 1, "Application did not create exactly one batch report;
 batch = json.loads(reports[0].read_text(encoding="utf-8"))
 results = []
 totals = Counter()
+expected_failures = set()
 for item in batch["Items"]:
     name = Path(item["SourceFile"]).name
     result = {"sample": name, "feed": item["Feed"], "status": item["Status"], "checks": {}}
@@ -87,6 +88,17 @@ for item in batch["Items"]:
         original = sources[name]
         require(Path(item["SourceFile"]).read_bytes() == original, "Source bytes changed")
         require(item["SourceSha256"] == digest(original), "Source hash in batch report differs")
+        if name in NEGATIVE_SAMPLES:
+            # Negative-testing samples must be rejected at their intended stage and retained unchanged.
+            require(item["Status"] == "Rejected" and item["OutputFile"] is None, "Negative sample outcome: " + item["Status"])
+            require(Path(item["RetainedFile"]).read_bytes() == original, "Retained negative sample changed")
+            error = Path(item["ErrorReport"]).read_text(encoding="utf-8")
+            require("error: " + NEGATIVE_SAMPLES[name] in error, "Unexpected rejection reason: " + error.strip().splitlines()[-1])
+            expected_failures.update({str(Path(item["RetainedFile"])), str(Path(item["ErrorReport"]))})
+            result["checks"].update(source_unchanged=True, rejected_with_expected_reason=True)
+            result["verification"] = "Passed"
+            results.append(result)
+            continue
         require(item["Status"] == "Published", "Application outcome: " + item["Status"])
         output_path = Path(item["OutputFile"])
         output = output_path.read_bytes()
@@ -158,12 +170,12 @@ for item in batch["Items"]:
 statuses = Counter(item["Status"] for item in batch["Items"])
 require({result["sample"] for result in results} == set(sources), "Batch did not cover every supplied source")
 pending = [str(path) for folder in (docs / "input-feeds", docs / "feed-processing") for path in folder.rglob("*") if path.is_file()]
-failed_files = [str(path) for path in (docs / "failed-feeds").rglob("*") if path.is_file()]
+failed_files = [str(path) for path in (docs / "failed-feeds").rglob("*") if path.is_file() and str(path) not in expected_failures]
 summary = dict(started_at=started.isoformat(), command=command, application_exit_code=completed.returncode,
                batch_report=str(reports[0]), application_log=str(run / "application.log"),
                total_samples=len(results), statuses=dict(statuses), totals=dict(totals),
                total_identified_pnr_occurrences=sum(r.get("identified_pnr_occurrences", 0) for r in results),
-               all_checks_passed=completed.returncode == 0 and all(r["verification"] == "Passed" for r in results) and not pending and not failed_files,
+               all_checks_passed=completed.returncode == (2 if NEGATIVE_SAMPLES else 0) and all(r["verification"] == "Passed" for r in results) and not pending and not failed_files,
                pending_files=pending, retained_failure_files=failed_files, samples=results)
 evidence = run / "verification.json"
 evidence.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")

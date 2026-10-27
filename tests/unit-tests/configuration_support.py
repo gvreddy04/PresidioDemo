@@ -7,6 +7,13 @@ SCHEMA = PROJECT / "src/Configuration/xdr-layouts.xml"
 CATALOG = PROJECT / "src/Configuration/feed-policies.xml"
 REFERENCE = PROJECT / "src/Configuration/reference-layouts.xml"
 
+# Supplied samples that parse or route correctly but must be rejected at a later stage, with the expected error.
+NEGATIVE_SAMPLES = {
+    "PNR_LINKING_02_Negative_Testing.txt": "The feed codec returned a field without a configured protection policy.",
+    "PNR_LINKING_03_Negative_Testing.txt": "Non-string JSON fields must remain unchanged.",
+    "SEATS_02_Negative_Testing.txt": "JSON MQ exports require UTF-8 CCSID 1208; no implicit code-page conversion is performed.",
+}
+
 def catalog(path=None):
     entry = ET.parse(path or CATALOG).find("catalog")
     return {} if entry is None else {rule.get("id"): rule.attrib for rule in entry}

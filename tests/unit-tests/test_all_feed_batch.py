@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 from test_feed_listener import PROJECT, DLL, runtime_root
 from test_seats_feed import payload, verify_output
 from reference_feed_support import verify_output as verify_reference_output
+from configuration_support import NEGATIVE_SAMPLES
 
 
 class AllFeedBatchTests(unittest.TestCase):
@@ -81,12 +82,18 @@ class AllFeedBatchTests(unittest.TestCase):
             shutil.copytree(PROJECT / "docs" / "sample-docs", sources)
             before = {p.name: p.read_bytes() for p in sources.iterdir()}
             process, report = self.run_batch(sources, root / "docs")
-            self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
-            self.assertTrue(report["AllPublished"])
-            self.assertEqual(len(report["Items"]), 16)
+            # Negative-testing samples are rejected by design, so the batch reports exit code 2.
+            self.assertEqual(process.returncode, 2, process.stdout + process.stderr)
+            self.assertFalse(report["AllPublished"])
+            self.assertEqual(len(report["Items"]), 19)
             self.verify_transaction_logs(root / "docs", report)
-            statuses = {item["Feed"]: item["Status"] for item in report["Items"]}
-            self.assertEqual(statuses, {"Seats": "Published", "ACI": "Published", "ETKT": "Published", "PNR": "Published", "PNR-Linking": "Published"})
+            outcomes = {Path(item["SourceFile"]).name: item["Status"] for item in report["Items"]}
+            self.assertEqual({name for name, status in outcomes.items() if status != "Published"}, set(NEGATIVE_SAMPLES))
+            self.assertTrue(all(outcomes[name] == "Rejected" for name in NEGATIVE_SAMPLES))
+            for item in report["Items"]:
+                name = Path(item["SourceFile"]).name
+                if name in NEGATIVE_SAMPLES:
+                    self.assertIn("error: " + NEGATIVE_SAMPLES[name], Path(item["ErrorReport"]).read_text(encoding="utf-8"))
             for item in report["Items"]:
                 original = before[Path(item["SourceFile"]).name]
                 self.assertEqual(Path(item["SourceFile"]).read_bytes(), original)
