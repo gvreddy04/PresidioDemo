@@ -34,6 +34,9 @@ class ProjectLayoutTests(unittest.TestCase):
             "PNR.txt": "75cc60895384395f8df28eff4c4abf6a0c58f1dc7960c5eee41cb294def0e4de",
             "PNR_02.txt": "99142486d0d1b4b463363057f2822365a3f9fa567d6f1116bc881ce1d9808157",
             "PNR_LINKING.txt": "2a8caf4538eee4a2232bdcc939adf427171d5ab35a6b380059b2e09eb5c03610",
+            "PNR_LINKING_02_Negative_Testing.txt": "ad14c3dfe6e4e98e49e008d1989135cc367ac944f137de0e831f2418eae0aa73",
+            "PNR_LINKING_03_Negative_Testing.txt": "d581ee11879d8c3a487d9476c34ff64f54e85043f6ed0261086a85cdf18c3738",
+            "SEATS_02_Negative_Testing.txt": "43b78c7ad1a318ab9a2aa259ed4e74c1ce8615fec9aa043079a53ed684794ca8",
             "SEATS.txt": "3f7fd3eb9d48c5b646c3ae73c7b982f419c2c86476370bf9c8ffbddc2a19fccf",
         }
         samples = PROJECT / "docs" / "sample-docs"

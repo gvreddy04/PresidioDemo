@@ -77,6 +77,8 @@ public static class FeedBatchProcessor
             }
 
             string route = Path.GetFileNameWithoutExtension(source).Replace('_', '-').ToUpperInvariant();
+            // Negative-testing samples route to their feed so they fail at the stage they exercise, not on the filename.
+            route = Regex.Replace(route, "-NEGATIVE-TESTING$", "", RegexOptions.CultureInvariant);
             route = Regex.Replace(route, "-[0-9]+$", "", RegexOptions.CultureInvariant);
             FeedType feed = route switch
             {
@@ -85,7 +87,7 @@ public static class FeedBatchProcessor
                 "PNR-LINKING" => FeedType.PnrLinking,
                 "SEATS" => FeedType.Seats,
                 "ETKT" or "TKT" => FeedType.ETKT,
-                _ => throw new InvalidDataException("Unknown source feed filename. Use ACI, PNR, PNR_LINKING, SEATS, ETKT or TKT, optionally followed by a numeric _NN or -NN suffix.")
+                _ => throw new InvalidDataException("Unknown source feed filename. Use ACI, PNR, PNR_LINKING, SEATS, ETKT or TKT, optionally followed by a numeric _NN or -NN suffix and _Negative_Testing.")
             };
             byte[] content = await File.ReadAllBytesAsync(source, cancellationToken);
             string imported = FeedCatalog.Get(feed).FolderName + ".run-" + runId + "-" + jobs.Count + extension;
