@@ -1,0 +1,437 @@
+<?xml version='1.0' encoding='utf-8'?>
+<referenceLayouts>
+  <!-- Preserve the original field/part mapping format. schemaDriven opts into the matching
+       XDR sequence; without it the original reference-file/template behavior still applies.
+       In schemaDriven mode every XDR string must be mapped, including fixed syntax strings.
+       Restart applies changes only after all three configuration files validate together. -->
+  <!-- Confirmed top-level string names match XDR definitions and policy field names.
+       path is retained for nested optional fields; explicit aliases remain supported.
+       Rename only content identified in the samples. Uncertain codes keep their legacy names.
+       Numbered name occurrences identify wire order, not different passengers. Date-only
+       fields retain original names when their business purpose cannot be established. -->
+  <feed type="ACI" name="AciReference888" referenceFile="../../docs/sample-docs/ACI.txt" referenceSha256="f038c05e590ade818748f6547c2a624d8d662a52c54d3596ad93649eafce022d" schemaDriven="true" aciStructures="true">
+    <!-- Business aliases verified against C-structure definitions and all six samples.
+         origin was actually terminating city; seatNumber was actually departure gate. -->
+    <!--Offsets/lengths retain reviewed baseline values. schemaDriven uses XDR for actual positions/widths; referenceFile/hash are provenance only in this mode.-->
+    <text name="airlineCode" offset="8" length="2" />
+    <text name="flightDate" offset="20" length="8" />
+    <text name="terminatingCity" offset="40" length="3" />
+    <text name="flightProcessName" offset="72" length="6" />
+    <text name="flightAciTimestamp" offset="88" length="21" />
+    <text name="legCity" offset="124" length="3" />
+    <text name="equipmentCode" offset="144" length="3" />
+    <text name="aircraftNumber" offset="152" length="4" />
+    <text name="departureGate" offset="160" length="4" />
+    <text name="sectorNumber" offset="172" length="4" />
+    <text name="estimatedDepartureDate" offset="188" length="8" />
+    <text name="scheduledDepartureDate" offset="204" length="8" />
+    <text name="boardingDate" offset="220" length="8" />
+    <text name="pnr" offset="404" length="6" pattern="[A-Z0-9]{6}" />
+    <text name="passengerName" offset="424" length="11" />
+    <text name="passengerProcessName" offset="468" length="6" />
+    <text name="passengerFlightAirline" offset="492" length="2" />
+    <text name="passengerFlightDate" offset="504" length="8" />
+    <text name="passengerSeatNumber" offset="672" length="3" path="/OptionalGroupA/value/Counted135" optional="true" />
+    <text name="frequentTravelerNumber" offset="680" length="8" path="/OptionalGroupB/value/Counted137" optional="true" />
+    <text name="unresolvedSeatString" offset="688" length="1" path="/OptionalGroupA/value/Counted138" optional="true" />
+    <text name="aciTransactionTime" offset="792" length="12" />
+    <text name="aciTransactionDate" offset="808" length="8" />
+    <text name="unresolvedIdentifier" offset="840" length="11" />
+    <text name="unresolvedRecordReference" offset="856" length="15" optional="true" pattern="(?&lt;Prefix&gt;[0-9*]*)(?&lt;pnr&gt;[A-Z0-9]{6})" allowEmpty="true">
+      <part name="Prefix" start="0" length="9" />
+      <part name="pnr" start="9" length="6" equalTo="/pnr" />
+    </text>
+  </feed>
+  <feed type="ETKT" name="EtktReference672" referenceFile="../../docs/sample-docs/ETKT.txt" referenceSha256="6a0f5f65a53ff39fee57fdf8dbb870a28dc4fe136296ba4c151c277e99b78cfa" schemaDriven="true" etktStructures="true">
+    <!-- ETKT screenshot mapping: legacy pnr occupies h_aaa_lniata, the agent terminal
+         address. Its new display label is provisional; the legacy alias and Keep
+         treatment remain unchanged. This route supports the observed type-5 family. -->
+    <!-- Text0132 is deliberately absent: the six samples identify raw words, not a string.
+         Zero baseline lengths below describe strings empty in the reference, not fixed widths.
+         Divide-event locators are provisionally mapped to newPnr/oldPnr and kept.
+         Their historical XDR path names remain as provenance. The legacy pnr
+         alias belongs to the provisional agent terminal address and is also kept. -->
+    <!--Offsets/lengths retain reviewed baseline values. schemaDriven uses XDR for actual positions/widths; referenceFile/hash are provenance only in this mode.-->
+    <text name="entryDate" offset="12" length="7" />
+    <text name="entryTime" offset="24" length="4" />
+    <text name="pnr" offset="32" length="6" pattern="[A-Z0-9]{6}" />
+    <text name="Text0044" offset="44" length="3" />
+    <text name="Text0072" offset="72" length="4" />
+    <text name="Text0088" offset="88" length="15" />
+    <text name="ticketNumber" offset="152" length="13" />
+    <text name="ticketStatusRecord" offset="172" length="65" optional="true" pattern="(?&lt;Prefix&gt;.{8})(?&lt;StatusText&gt;.*)" allowEmpty="true">
+      <part name="Prefix" start="0" length="8" />
+      <part name="StatusText" start="8" length="57" />
+    </text>
+    <text name="Flight1Airline" offset="376" length="0" />
+    <text name="Flight1Number" offset="380" length="0" />
+    <text name="Flight1Date" offset="384" length="0" />
+    <text name="Flight1DepartureTime" offset="388" length="0" />
+    <text name="Flight1ArrivalTime" offset="392" length="0" />
+    <text name="Flight1Origin" offset="396" length="0" />
+    <text name="Flight1Destination" offset="400" length="0" />
+    <text name="Flight1Class" offset="404" length="0" />
+    <text name="Flight1NumberRepeat" offset="416" length="0" />
+    <text name="Flight2Number" offset="436" length="0" />
+    <text name="Flight2Date" offset="440" length="0" />
+    <text name="Flight2DepartureTime" offset="444" length="0" />
+    <text name="Flight2ArrivalTime" offset="448" length="0" />
+    <text name="Flight2Origin" offset="452" length="0" />
+    <text name="Flight2Destination" offset="456" length="0" />
+    <text name="Flight2NumberRepeat" offset="476" length="0" />
+    <text name="newPnr" path="/UnconfirmedLocator1" offset="544" length="0" pattern="(?:[A-Z0-9]{6})?" />
+    <text name="oldPnr" path="/UnconfirmedLocator2" offset="548" length="0" pattern="(?:[A-Z0-9]{6})?" />
+  </feed>
+  <feed type="PNR" name="PnrReference5452" pnrStructures="true" referenceFile="../../docs/sample-docs/PNR.txt" referenceSha256="75cc60895384395f8df28eff4c4abf6a0c58f1dc7960c5eee41cb294def0e4de" schemaDriven="true">
+    <!--Offsets/lengths retain reviewed baseline values. schemaDriven uses XDR for actual positions/widths; referenceFile/hash are provenance only in this mode.-->
+    <text name="RecordTag001" offset="4" length="2">
+      <part name="Literal" start="0" length="2" fixed="true" />
+    </text>
+    <text name="EventDate0012" offset="12" length="9" />
+    <text name="EventTime0028" offset="28" length="4" />
+    <text name="EventDate0036" offset="36" length="9" />
+    <text name="EventTime0052" offset="52" length="6" />
+    <text name="Identifier0064" offset="64" length="9" />
+    <text name="pnr" offset="80" length="6" pattern="[A-Z0-9]{6}" />
+    <text name="RecordTag019" offset="136" length="1">
+      <part name="Literal" start="0" length="1" fixed="true" />
+    </text>
+    <text name="Identifier0168" offset="168" length="6" />
+    <text name="RecordTag027" offset="180" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="RecordTag028" offset="188" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="EventDate0196" offset="196" length="7" />
+    <text name="Identifier0284" offset="284" length="6" />
+    <text name="RecordTag050" offset="296" length="2">
+      <part name="Literal" start="0" length="2" fixed="true" />
+    </text>
+    <text name="RecordTag051" offset="304" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="FlightNumber0336" offset="336" length="4" />
+    <text name="passengerSurname" offset="400" length="5" />
+    <text name="passengerGivenName" offset="440" length="4" />
+    <text name="RecordTag092" offset="488" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="travelDocumentRecord" offset="496" length="47" pattern="DOCS[A-Z]{2}[A-Z]{2}[0-9]+/////(?&lt;DateOfBirth1&gt;[^/]+)/(?&lt;Gender1&gt;[^/])//(?&lt;PassengerName1&gt;.+?)-[0-9]+(?&lt;PassengerName2&gt;.+)">
+      <part name="Literal1" start="0" length="14" fixed="true" />
+      <part name="DateOfBirth1" start="14" length="7" />
+      <part name="Literal2" start="21" length="1" fixed="true" />
+      <part name="Gender1" start="22" length="1" />
+      <part name="Literal3" start="23" length="2" fixed="true" />
+      <part name="PassengerName1" start="25" length="10" />
+      <part name="Literal4" start="35" length="2" fixed="true" />
+      <part name="PassengerName2" start="37" length="10" />
+    </text>
+    <text name="RecordTag103" offset="584" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="Remark0592" offset="592" length="53" />
+    <text name="RecordTag114" offset="688" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="Remark0696" offset="696" length="50" />
+    <text name="RecordTag125" offset="788" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="Remark0796" offset="796" length="29" />
+    <text name="RecordTag136" offset="868" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="emailContactRecord" offset="876" length="46" pattern="CTCE[A-Z]{2}[A-Z]{2}[0-9]+/(?&lt;EmailAddress&gt;.+?)-[0-9]+(?&lt;PassengerName1&gt;.+)">
+      <part name="Literal1" start="0" length="10" fixed="true" />
+      <part name="EmailAddress" start="10" length="24" />
+      <part name="Literal2" start="34" length="2" fixed="true" />
+      <part name="PassengerName1" start="36" length="10" />
+    </text>
+    <text name="RecordTag147" offset="964" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="phoneContactRecord" offset="972" length="32" pattern="CTCM[A-Z]{2}[A-Z]{2}[0-9]+/(?&lt;PhoneNumber&gt;.+?)-[0-9]+(?&lt;PassengerName1&gt;.+)">
+      <part name="Literal1" start="0" length="10" fixed="true" />
+      <part name="PhoneNumber" start="10" length="10" />
+      <part name="Literal2" start="20" length="2" fixed="true" />
+      <part name="PassengerName1" start="22" length="10" />
+    </text>
+    <text name="RecordTag158" offset="1044" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="Remark1052" offset="1052" length="37" />
+    <text name="RecordTag169" offset="1132" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="Remark1140" offset="1140" length="38" />
+    <text name="RecordTag180" offset="1220" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="Remark1228" offset="1228" length="38" />
+    <text name="RecordTag191" offset="1308" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="Remark1316" offset="1316" length="21" />
+    <text name="RecordTag202" offset="1380" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="Remark1388" offset="1388" length="52" />
+    <text name="RecordTag213" offset="1480" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="Remark1488" offset="1488" length="35" />
+    <text name="RecordTag224" offset="1564" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="Remark1572" offset="1572" length="8" />
+    <text name="RecordTag235" offset="1620" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="ticketRecord1" offset="1628" length="54" pattern="TKNE[A-Z0-9]+-[0-9]+(?&lt;PassengerName1&gt;.+?)\.(?&lt;TicketReference1&gt;.+)C[0-9]+">
+      <part name="Literal1" start="0" length="27" fixed="true" />
+      <part name="PassengerName1" start="27" length="10" />
+      <part name="Literal2" start="37" length="1" fixed="true" />
+      <part name="TicketReference1" start="38" length="14" />
+      <part name="Literal3" start="52" length="2" fixed="true" />
+    </text>
+    <text name="RecordTag246" offset="1724" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="ticketRecord2" offset="1732" length="54" pattern="TKNE[A-Z0-9]+-[0-9]+(?&lt;PassengerName1&gt;.+?)\.(?&lt;TicketReference1&gt;.+)C[0-9]+">
+      <part name="Literal1" start="0" length="27" fixed="true" />
+      <part name="PassengerName1" start="27" length="10" />
+      <part name="Literal2" start="37" length="1" fixed="true" />
+      <part name="TicketReference1" start="38" length="14" />
+      <part name="Literal3" start="52" length="2" fixed="true" />
+    </text>
+    <text name="RecordTag259" offset="1836" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="RecordTag260" offset="1844" length="4">
+      <part name="Literal" start="0" length="4" fixed="true" />
+    </text>
+    <text name="RecordTag261" offset="1852" length="2">
+      <part name="Literal" start="0" length="2" fixed="true" />
+    </text>
+    <text name="loyaltyRecord1" offset="1860" length="15" pattern="(?&lt;Account1&gt;[^.]+)\.[0-9]+\*(?&lt;Status1&gt;.+)">
+      <part name="Account1" start="0" length="8" />
+      <part name="Literal1" start="8" length="3" fixed="true" />
+      <part name="Status1" start="11" length="4" />
+    </text>
+    <text name="passengerNameOccurrence1" offset="1880" length="10" />
+    <text name="RecordTag275" offset="1940" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="RecordTag276" offset="1948" length="4">
+      <part name="Literal" start="0" length="4" fixed="true" />
+    </text>
+    <text name="RecordTag277" offset="1956" length="2">
+      <part name="Literal" start="0" length="2" fixed="true" />
+    </text>
+    <text name="loyaltyRecord2" offset="1964" length="15" pattern="(?&lt;Account1&gt;[^.]+)\.[0-9]+\*(?&lt;Status1&gt;.+)">
+      <part name="Account1" start="0" length="8" />
+      <part name="Literal1" start="8" length="3" fixed="true" />
+      <part name="Status1" start="11" length="4" />
+    </text>
+    <text name="passengerNameOccurrence2" offset="1984" length="10" />
+    <text name="RecordTag291" offset="2044" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="PhonePart2052" offset="2052" length="3" />
+    <text name="PhonePart2060" offset="2060" length="7" />
+    <text name="RecordTag300" offset="2096" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="RecordTag301" offset="2104" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="Remark2112" offset="2112" length="29" />
+    <text name="RecordTag309" offset="2172" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="RecordTag310" offset="2180" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="Remark2188" offset="2188" length="50" />
+    <text name="RecordTag318" offset="2268" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="RecordTag319" offset="2276" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="Remark2284" offset="2284" length="23" />
+    <text name="RecordTag327" offset="2336" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="RecordTag328" offset="2344" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="Remark2352" offset="2352" length="48" />
+    <text name="RecordTag338" offset="2436" length="2">
+      <part name="Literal" start="0" length="2" fixed="true" />
+    </text>
+    <text name="TravelDate2444" offset="2444" length="7" />
+    <text name="RecordTag340" offset="2456" length="2">
+      <part name="Literal" start="0" length="2" fixed="true" />
+    </text>
+    <text name="Airline2468" offset="2468" length="2" />
+    <text name="RecordTag343" offset="2476" length="2">
+      <part name="Literal" start="0" length="2" fixed="true" />
+    </text>
+    <text name="Origin2484" offset="2484" length="3" />
+    <text name="Destination2492" offset="2492" length="3" />
+    <text name="DepartureTime2500" offset="2500" length="4" />
+    <text name="ArrivalTime2508" offset="2508" length="4" />
+    <text name="RecordTag348" offset="2516" length="2">
+      <part name="Literal" start="0" length="2" fixed="true" />
+    </text>
+    <text name="TravelDate2608" offset="2608" length="7" />
+    <text name="RecordTag371" offset="2620" length="2">
+      <part name="Literal" start="0" length="2" fixed="true" />
+    </text>
+    <text name="RecordTag376" offset="2644" length="2">
+      <part name="Literal" start="0" length="2" fixed="true" />
+    </text>
+    <text name="TravelDate2652" offset="2652" length="7" />
+    <text name="RecordTag378" offset="2664" length="2">
+      <part name="Literal" start="0" length="2" fixed="true" />
+    </text>
+    <text name="Airline2676" offset="2676" length="2" />
+    <text name="RecordTag381" offset="2684" length="2">
+      <part name="Literal" start="0" length="2" fixed="true" />
+    </text>
+    <text name="Origin2692" offset="2692" length="3" />
+    <text name="Destination2700" offset="2700" length="3" />
+    <text name="DepartureTime2708" offset="2708" length="4" />
+    <text name="ArrivalTime2716" offset="2716" length="4" />
+    <text name="RecordTag386" offset="2724" length="2">
+      <part name="Literal" start="0" length="2" fixed="true" />
+    </text>
+    <text name="TravelDate2816" offset="2816" length="7" />
+    <text name="RecordTag409" offset="2828" length="2">
+      <part name="Literal" start="0" length="2" fixed="true" />
+    </text>
+    <text name="MaskedPayment2852" offset="2852" length="23" pattern="X+(?&lt;Suffix1&gt;.{4})">
+      <part name="Literal1" start="0" length="19" fixed="true" />
+      <part name="Suffix1" start="19" length="4" />
+    </text>
+    <text name="ClientAddress2904" offset="2904" length="23" pattern="WEB CLIENT IP (?&lt;IPAddress1&gt;.+)">
+      <part name="Literal1" start="0" length="14" fixed="true" />
+      <part name="IPAddress1" start="14" length="9" />
+    </text>
+    <text name="Remark2956" offset="2956" length="25" />
+    <text name="Remark3012" offset="3012" length="23" />
+    <text name="Remark3064" offset="3064" length="6" />
+    <text name="loyaltyMembershipRecord" offset="3100" length="41" pattern="ONE\*MBR (?&lt;PassengerName1&gt;.*?)\*ACCT (?&lt;Account1&gt;[^*]+)\*(?&lt;Status1&gt;[^*]+)\*WEBCO">
+      <part name="Literal1" start="0" length="8" fixed="true" />
+      <part name="PassengerName1" start="8" length="10" />
+      <part name="Literal2" start="18" length="6" fixed="true" />
+      <part name="Account1" start="24" length="8" />
+      <part name="Literal3" start="32" length="1" fixed="true" />
+      <part name="Status1" start="33" length="2" />
+      <part name="Literal4" start="35" length="6" fixed="true" />
+    </text>
+    <text name="loyaltySponsorRecord" offset="3172" length="25" pattern="SPNSR\*ACCT (?&lt;Account1&gt;[^*]+)\*WEBCO">
+      <part name="Literal1" start="0" length="11" fixed="true" />
+      <part name="Account1" start="11" length="8" />
+      <part name="Literal2" start="19" length="6" fixed="true" />
+    </text>
+    <text name="accountBalanceRecord" offset="3228" length="50" pattern="ACCOUNT BALANCE (?&lt;Balance1&gt;[^*]+)\*PIN CODE VERIFIED \* WEBCO">
+      <part name="Literal1" start="0" length="16" fixed="true" />
+      <part name="Balance1" start="16" length="8" />
+      <part name="Literal2" start="24" length="26" fixed="true" />
+    </text>
+    <text name="Mileage3308" offset="3308" length="45" />
+    <text name="MileageQuote3384" offset="3384" length="43" />
+    <text name="iataMsoIdRecord" offset="3456" length="22" pattern="IATA MSO ID - (?&lt;Identifier1&gt;.+)">
+      <part name="Literal1" start="0" length="14" fixed="true" />
+      <part name="Identifier1" start="14" length="8" />
+    </text>
+    <text name="requestedEmailRecord" offset="3508" length="38" pattern="EMAIL RQSTD (?&lt;Email1&gt;.+)">
+      <part name="Literal1" start="0" length="12" fixed="true" />
+      <part name="Email1" start="12" length="26" />
+    </text>
+    <text name="FareRemark3576" offset="3576" length="59" />
+    <text name="fareQuoteReferenceRecord" offset="3664" length="45" pattern="SFS FQID\*(?&lt;Reference1&gt;.+)">
+      <part name="Literal1" start="0" length="9" fixed="true" />
+      <part name="Reference1" start="9" length="36" />
+    </text>
+    <text name="Remark3740" offset="3740" length="48" />
+    <text name="ticketOrderRecord" offset="3816" length="51" pattern="PB TKT ORDERID\*(?&lt;Reference1&gt;.+)">
+      <part name="Literal1" start="0" length="15" fixed="true" />
+      <part name="Reference1" start="15" length="36" />
+    </text>
+    <text name="addressRecipientRecord" offset="3896" length="15" pattern="ADDR (?&lt;RecipientName&gt;.+)">
+      <part name="Literal1" start="0" length="5" fixed="true" />
+      <part name="RecipientName" start="5" length="10" />
+    </text>
+    <text name="addressStreetRecord" offset="3940" length="18" pattern="ADDR (?&lt;Street&gt;.+)">
+      <part name="Literal1" start="0" length="5" fixed="true" />
+      <part name="Street" start="5" length="13" />
+    </text>
+    <text name="addressCityRecord" offset="3988" length="16" pattern="ADDRCITY (?&lt;City&gt;.+)">
+      <part name="Literal1" start="0" length="9" fixed="true" />
+      <part name="City" start="9" length="7" />
+    </text>
+    <text name="addressStateRecord" offset="4032" length="12" pattern="ADDRSTATE (?&lt;State&gt;.+)">
+      <part name="Literal1" start="0" length="10" fixed="true" />
+      <part name="State" start="10" length="2" />
+    </text>
+    <text name="addressPostalCodeRecord" offset="4072" length="13" pattern="ADDRZIP (?&lt;PostalCode&gt;.+)">
+      <part name="Literal1" start="0" length="8" fixed="true" />
+      <part name="PostalCode" start="8" length="5" />
+    </text>
+    <text name="additionalAddressRecord" offset="4116" length="21" pattern="ADDR (?&lt;AdditionalText&gt;.+)">
+      <part name="Literal1" start="0" length="5" fixed="true" />
+      <part name="AdditionalText" start="5" length="16" />
+    </text>
+    <text name="rviReferenceRecord" offset="4168" length="43" pattern="RVI ID\*(?&lt;Reference1&gt;.+)">
+      <part name="Literal1" start="0" length="7" fixed="true" />
+      <part name="Reference1" start="7" length="36" />
+    </text>
+    <text name="Remark4240" offset="4240" length="48" />
+    <text name="paymentApprovalRecord" offset="4316" length="37" pattern="RBY[^*]+\*APPR CC [A-Z]{2} (?&lt;ApprovalReference1&gt;[^ ]+) \$[^ ]+ WEBCO">
+      <part name="Literal1" start="0" length="19" fixed="true" />
+      <part name="ApprovalReference1" start="19" length="6" />
+      <part name="Literal2" start="25" length="12" fixed="true" />
+    </text>
+    <text name="mileageOrderRecord" offset="4384" length="53" pattern="PB MILES ORDERID\*(?&lt;Reference1&gt;.+)">
+      <part name="Literal1" start="0" length="17" fixed="true" />
+      <part name="Reference1" start="17" length="36" />
+    </text>
+    <text name="Remark4468" offset="4468" length="48" />
+    <text name="Remark4544" offset="4544" length="51" />
+    <text name="Remark4624" offset="4624" length="48" />
+    <text name="Remark4700" offset="4700" length="49" />
+    <text name="Remark4780" offset="4780" length="48" />
+    <text name="fareTicketRecord" offset="4860" length="43" pattern="T/FQR/MP(?&lt;Account1&gt;[^/]+)/[^/]+/[^/]+/(?&lt;TicketReference1&gt;[^/]+)/[^/]+//">
+      <part name="Literal1" start="0" length="8" fixed="true" />
+      <part name="Account1" start="8" length="8" />
+      <part name="Literal2" start="16" length="9" fixed="true" />
+      <part name="TicketReference1" start="25" length="11" />
+      <part name="Literal3" start="36" length="7" fixed="true" />
+    </text>
+    <text name="loyaltyReferenceRecord" offset="4944" length="23" pattern="COCOM-[A-Z]{2}/(?&lt;Account1&gt;.+)-GUID/">
+      <part name="Literal1" start="0" length="9" fixed="true" />
+      <part name="Account1" start="9" length="8" />
+      <part name="Literal2" start="17" length="6" fixed="true" />
+    </text>
+    <text name="Remark5000" offset="5000" length="6" />
+    <text name="fareQuote" offset="5036" length="26" />
+    <text name="passengerCountText" offset="5088" length="23" />
+    <text name="fareAmounts" offset="5136" length="56" />
+    <text name="totalFare" offset="5216" length="21" />
+    <text name="RecordTag682" offset="5268" length="2">
+      <part name="Literal" start="0" length="2" fixed="true" />
+    </text>
+    <text name="passengerNameOccurrence3" offset="5276" length="10" />
+    <text name="RecordTag691" offset="5320" length="3">
+      <part name="Literal" start="0" length="3" fixed="true" />
+    </text>
+    <text name="EventDate5344" offset="5344" length="7" />
+    <text name="EventTime5356" offset="5356" length="4" />
+    <text name="Identifier5364" offset="5364" length="6" />
+    <text name="Remark5416" offset="5416" length="11" />
+  </feed>
+</referenceLayouts>

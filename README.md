@@ -1,1185 +1,240 @@
-# Presidio Demo (.NET 10 + Python.NET)
+# Presidio Feed Protection Demo
 
-A small console app that runs [Microsoft Presidio](https://presidio.dataprivacystack.org/) **locally**
-from C#. Python is embedded in the .NET process with [Python.NET](https://pythonnet.github.io/),
-so there is no HTTP service and no network call during PII processing.
+Process airline feeds using configured field rules and local Presidio. PNR stays unchanged. Output is validated before publication; failed input is retained.
 
-The menu has four demos:
+## Solution organization
 
-| Option | What it shows |
-|---|---|
-| 1. Analyze | Built-in recognizers find names, emails, phone numbers and card numbers |
-| 2. Anonymize | The same entities transformed with `replace`, `redact`, `mask` or `hash` |
-| 3. Custom recognizers | Two `PatternRecognizer`s added for `PNR_LOCATOR` and `PASSENGER_ID` |
-| 4. Reversible tokenization | A custom operator swaps values for tokens such as `<PERSON_0>`, keeps the PNR unchanged, then restores the original from the mapping |
-| 5. Run all | Runs every demo on the built-in sample text |
-
-When the app starts, its first question is whether to use the **default**: anonymize the first
-JSON file in `docs/input` with the default rules (names become `[PASSENGER_NAME]`, emails
-`xxxx@example.com`, phones and cards keep their last 4 digits). Press Enter (or `y`) to run it, or
-`n` to open the menu above.
-
-Options 1 to 4 can read **user input** (text, JSON or XML typed or pasted into the console) or a
-**local file** (JSON or XML placed in `docs/input`). See [Using the app](#using-the-app).
-All sample data is fictional.
-
-## How it fits together
-
-```
-Program.cs (menu)  ->  PythonHost.cs (Python.NET)  ->  python/presidio_demo.py  ->  Presidio + spaCy
-     C#                  embeds CPython 3.12              plain Python functions      inside .venv
-```
-
-C# passes strings in and gets strings (JSON) back, so no Python objects leak into the C# code.
-
-## Prerequisites
-
-- **Windows 10/11 x64 only.** `PythonHost.cs` expects the Windows Python layout
-  (`python312.dll`, `Lib\site-packages`), so macOS and Linux won't work as-is.
-- **.NET 10 SDK**
-- **Python 3.12 x64** from python.org or winget (not the Microsoft Store version).
-  It can sit next to other Python versions and doesn't need to be on `PATH`.
-  This project is tested with 3.12; other versions are untested.
-- **About 1.5 GB of free disk space.** The finished `.venv` is about 700 MB.
-- **Internet access to NuGet, PyPI and GitHub** for the first setup. The spaCy model
-  (~400 MB) downloads from GitHub, which is the step most likely to be blocked by a company proxy
-  or firewall. After setup, the app runs fully offline.
-
-### Install the tools
-
-**Using the terminal:**
-
-```powershell
-winget install --id Microsoft.DotNet.SDK.10
-winget install --id Python.Python.3.12 --scope user
-```
-
-**Or manually:**
-
-1. **.NET 10 SDK:** download the x64 SDK installer from
-   https://dotnet.microsoft.com/download/dotnet/10.0 and run it. If you install
-   Visual Studio 2026 with the **.NET desktop development** workload, the SDK comes with it.
-2. **Python 3.12:** open https://www.python.org/downloads/release/python-31210/, download
-   **Windows installer (64-bit)** and run it. Leave **Use admin privileges when installing py.exe**
-   as it is. You don't need **Add python.exe to PATH**. Click **Install Now**.
-
-### Check the tools
-
-**Using the terminal** (open a new terminal after installing):
-
-```powershell
-dotnet --list-sdks     # should list a 10.0.x SDK
-py -0p                 # should list -V:3.12 and its path
-```
-
-**Or manually:** open Windows **Settings > Apps > Installed apps** and look for
-**Microsoft .NET SDK 10.0.x (x64)** and **Python 3.12.x (64-bit)**.
-
-## Quick start
-
-There are two one-time setup actions after cloning (create `.venv` and install the packages),
-then you run the app. `.venv` is not in git, so every teammate does the setup once.
-
-**Using the terminal:** open PowerShell in the project folder (the folder that contains
-`PresidioDemo.csproj`), then run:
-
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-dotnet run
-```
-
-After the first time, `dotnet run` is enough.
-
-**Or manually, with VS Code and Visual Studio:**
-
-1. **Create `.venv` in VS Code:** choose **File > Open Folder** and open the project folder.
-   Press `Ctrl+Shift+P`, run **Python: Create Environment**, choose **Venv**, then choose
-   **Python 3.12**. When it asks which dependencies to install, tick **requirements.txt** and click
-   **OK**. VS Code creates `.venv` in the project folder and installs the packages. If it doesn't
-   ask about dependencies, open **Terminal > New Terminal** and run the pip line above.
-2. **Run in Visual Studio:** double-click `PresidioDemo.csproj` to open it in Visual Studio 2026,
-   then press `Ctrl+F5` (**Debug > Start Without Debugging**). The menu opens in a console window.
-
-Things to know:
-
-- Create the venv with `py -3.12 -m venv` or VS Code, **not** `uv venv`. A uv venv has no pip,
-  so the install line fails.
-- The terminal commands call the venv's `python.exe` directly, so you don't need to activate the
-  venv (activation can be blocked by the PowerShell execution policy).
-- The first install takes several minutes, mostly for the spaCy model.
-- Startup takes a few seconds while spaCy loads the model. Then answer `n` and choose `5` to see
-  every demo.
-- The app finds `.venv` by searching upward from its build output folder, so it works the same from
-  the terminal, Visual Studio or VS Code.
-
-## Using the app
-
-Start the app (`dotnet run`, or `Ctrl+F5` in Visual Studio). The first question is always:
-
-```
-Use default: Anonymize the first JSON file in docs/input? [Y/n]:
-```
-
-- **Enter or `y`:** runs the default with no further questions. It takes the first `.json` file in
-  `docs/input` in alphabetical order (`booking-sample.json` unless you add others), applies the
-  default rules below, prints the result and saves it to `docs/output`.
-- **`n`:** shows the full menu:
-
-```
-1. Analyze (built-in recognizers)
-2. Anonymize (replace / redact / mask / hash)
-3. Custom recognizers (PNR + passenger ID)
-4. Reversible tokenization
-5. Run all with sample text
-0. Exit
-Choose:
-```
-
-**Default rules.** They apply to every value, including free text such as `remarks`:
-
-| Detected as | Shown as | Example |
-|---|---|---|
-| Name (`PERSON`) | `[PASSENGER_NAME]` | `Sarah Mitchell` → `[PASSENGER_NAME]` |
-| Email (`EMAIL_ADDRESS`) | `xxxx@` + the original domain | `sarah.mitchell@example.com` → `xxxx@example.com` |
-| Phone (`PHONE_NUMBER`) | Last 4 digits; separators kept | `312-555-0182` → `***-***-0182` |
-| Card (`CREDIT_CARD`) | Last 4 digits; separators kept | `4111 1111 1111 1111` → `**** **** **** 1111` |
-| PNR, passenger ID | Unchanged | `R4TZ8N`, `PAX-3001` |
-| Anything else detected | Masked with `*` | |
-
-The default uses the custom recognizers (PNR and passenger ID), so spaCy can't mistake a passenger
-ID or PNR for a name. The rules are the `DEFAULT_RULES` table in `python/presidio_demo.py`; edit it
-to change what the default does.
-
-After each run the app asks the default question again. To exit, answer `n`, then `0`.
-
-For options **1** to **4**, the app then asks where the input comes from:
-
-```
-Input source:
-  1. User input
-  2. Local file (docs/input)
-```
-
-**1. User input:** choose the format (**1** Text, **2** JSON, **3** XML), then type or paste the
-input and press **Enter on an empty line** to finish. Press Enter straight away to use the sample
-for that format.
-
-**2. Local file:** put your file in `docs/input` first. The app shows the folder's full path, asks
-for the format (**1** JSON, **2** XML), then lists the matching files by number (Enter = 1).
-Two samples are already there:
-
-| File | Contents |
-|---|---|
-| `docs/input/booking-sample.json` | PNR `R4TZ8N` with passengers Sarah Mitchell and David Turner |
-| `docs/input/booking-sample.xml` | PNR `M2VK9D` with passengers Jessica Hayes and Ryan Cooper |
-
-For option **2** (Anonymize), the app finally asks for the operator: `replace`, `redact`, `mask` or
-`hash` (Enter = `replace`).
-
-**How results are shown:** every demo prints the input and the output in separate blocks, so it's
-easy to compare them:
-
-```
-===== INPUT [json, booking-sample.json] ================================
-...the input...
-===== OUTPUT: Anonymize (mask) =========================================
-...the result...
-========================================================================
-```
-
-The label after `INPUT` shows the format and, for local files, the file name. Option 4 splits its
-output further into `----- Tokenized`, `----- Mapping` and `----- Restored` sections.
-
-**Where results go:** every result is printed in the console. Results from a local file are also
-saved to `docs/output` as `<file name>.<demo>.<extension>`:
-
-| Demo | Saved file for `booking-sample.json` |
-|---|---|
-| 1. Analyze | `booking-sample.analyze.json` (list of findings) |
-| Default | `booking-sample.anonymize-default.json` |
-| 2. Anonymize | `booking-sample.anonymize-mask.json` (the operator is in the name) |
-| 3. Custom recognizers | `booking-sample.custom-analyze.json` (list of findings) |
-| 4. Reversible tokenization | `booking-sample.tokenized.json` |
-
-**JSON and XML are processed value by value.** Presidio checks each JSON string value and each
-XML element text and attribute separately, and the field name (for example `email` or `pnr`) is
-passed to Presidio as a context hint. Keys, tags and nesting are never changed, so the output is
-still valid JSON or XML. In option 4, one token mapping covers the whole document, so the same
-name gets the same token everywhere in it.
-
-### Example 1 – Analyze text you type
-
-Keys: `n` → `1` (Analyze) → `1` (User input) → `1` (Text) → type the text → Enter on an empty line.
-
-```
-===== INPUT [text] =====================================================
-Please call Kevin Price at 646-555-0110 or email kevin.price@example.com
-===== OUTPUT: Analyze ==================================================
--              PERSON           0.85  Kevin Price
--              PHONE_NUMBER     0.40  646-555-0110
--              EMAIL_ADDRESS    1.00  kevin.price@example.com
--              URL              0.50  kevin.pr
--              URL              0.50  example.com
-========================================================================
-```
-
-The first column is the field name; it shows `-` for plain text.
-
-### Example 2 – The default: anonymize the first JSON file
-
-Keys: Enter.
-
-```
-Using the first JSON file in docs/input: booking-sample.json
-
-===== INPUT [json, booking-sample.json] ================================
-{
-  "pnr": "R4TZ8N",
-  ...
-}
-===== OUTPUT: Anonymize (default rules) ================================
-{
-  "pnr": "R4TZ8N",
-  "messageType": "booking",
-  "passengers": [
-    {
-      "passengerId": "PAX-3001",
-      "name": "[PASSENGER_NAME]",
-      "email": "xxxx@example.com",
-      "phone": "***-***-0182"
-    },
-    {
-      "passengerId": "PAX-3002",
-      "name": "[PASSENGER_NAME]",
-      "email": "xxxx@example.com",
-      "phone": "***-***-0164"
-    }
-  ],
-  "remarks": "[PASSENGER_NAME] requests an aisle seat. Call ***-***-0182 if the flight changes.",
-  "payment": {
-    "cardNumber": "**** **** **** 1111"
-  }
-}
-Saved: docs/output/booking-sample.anonymize-default.json
-========================================================================
-```
-
-### Example 3 – Mask JSON you paste
-
-Keys: `n` → `2` (Anonymize) → `1` (User input) → `2` (JSON) → paste → Enter on an empty line → `mask`.
-
-```
-===== INPUT [json] =====================================================
-{"pnr": "Q8WN3B",
- "passenger": {"passengerId": "PAX-5001", "name": "Laura Bennett", "email": "laura.bennett@example.com"}}
-===== OUTPUT: Anonymize (mask) =========================================
-{
-  "pnr": "******",
-  "passenger": {
-    "passengerId": "PAX-5001",
-    "name": "*************",
-    "email": "*************************"
-  }
-}
-========================================================================
-```
-
-The built-in model mistakes the PNR for a person's name and masks it, and it doesn't know
-passenger IDs. Options 3 and 4 add the custom recognizers that fix both.
-
-### Example 4 – Custom recognizers on the JSON sample file
-
-Keys: `n` → `3` (Custom recognizers) → `2` (Local file) → `1` (JSON) → `1` (`booking-sample.json`).
-
-```
-===== INPUT [json, booking-sample.json] ================================
-{
-  "pnr": "R4TZ8N",
-  "messageType": "booking",
-  ...
-}
-===== OUTPUT: Analyze with custom recognizers ==========================
-pnr            PNR_LOCATOR      0.75  R4TZ8N
-passengerId    PASSENGER_ID     0.90  PAX-3001
-name           PERSON           0.85  Sarah Mitchell
-email          EMAIL_ADDRESS    1.00  sarah.mitchell@example.com
-phone          PHONE_NUMBER     0.75  312-555-0182
-...
-cardNumber     CREDIT_CARD      1.00  4111 1111 1111 1111
-Saved: docs/output/booking-sample.custom-analyze.json
-========================================================================
-```
-
-### Example 5 – Tokenize the XML sample file
-
-Keys: `n` → `4` (Reversible tokenization) → `2` (Local file) → `2` (XML) → `1` (`booking-sample.xml`).
-
-```
-===== INPUT [xml, booking-sample.xml] ==================================
-<?xml version="1.0" encoding="utf-8"?>
-<booking pnr="M2VK9D" messageType="booking">
-  ...
-  <remarks>Ryan Cooper requests a window seat. Contact Jessica Hayes at 415-555-0123.</remarks>
-</booking>
-===== OUTPUT: Reversible tokenization (PNR kept) =======================
------ Tokenized --------------------------------------------------------
-<booking pnr="M2VK9D" messageType="booking">
-  <passenger id="&lt;PASSENGER_ID_0&gt;">
-    <name>&lt;PERSON_0&gt;</name>
-    <email>&lt;EMAIL_ADDRESS_0&gt;</email>
-    <phone>&lt;PHONE_NUMBER_0&gt;</phone>
-  </passenger>
-  ...
-  <remarks>&lt;PERSON_1&gt; requests a window seat. Contact &lt;PERSON_0&gt; at &lt;PHONE_NUMBER_0&gt;.</remarks>
-</booking>
------ Mapping ----------------------------------------------------------
-  <PASSENGER_ID_0>     = PAX-4001
-  <PASSENGER_ID_1>     = PAX-4002
-  <PERSON_0>           = Jessica Hayes
-  <PERSON_1>           = Ryan Cooper
-  ...
------ Restored ---------------------------------------------------------
-<booking pnr="M2VK9D" messageType="booking">
-  <passenger id="PAX-4001">
-    <name>Jessica Hayes</name>
-  ...
-Saved: docs/output/booking-sample.tokenized.xml
-========================================================================
-```
-
-The PNR stays unchanged, and Jessica Hayes is `<PERSON_0>` both in her `<name>` element and in the
-remarks. In XML, `<` and `>` inside a value are written as `&lt;` and `&gt;`; that is what keeps
-the output valid XML.
-
-### Use your own file
-
-1. Copy a `.json` or `.xml` file into `docs/input`.
-2. Either press Enter for the default (it uses the first JSON file by name), or answer `n`, pick a
-   demo, then **2** (Local file), the format, and your file's number.
-3. Open the result in `docs/output`.
-
-`docs/output` is in `.gitignore`, so generated results are never committed.
-
----
-
-## Build it from scratch, step by step
-
-Use this section to understand how the project was made, or to recreate it in a new folder.
-It assumes the prerequisites above are installed.
-
-Each step that creates or edits a file names it in a **File:** line above the code. Paths are
-relative to the project folder, the folder that contains `PresidioDemo.csproj`.
-Steps with terminal commands also show a manual way to do the same thing.
-
-To create files in Visual Studio instead of a text editor: in **Solution Explorer**, right-click the
-project and choose **Add > New Folder** or **Add > New Item…**, then type the exact file name.
-
-### Step 1 – Create the console project and add Python.NET
-
-**Using the terminal:** pick any folder, for example:
-
-```powershell
-mkdir PresidioDemo
-cd PresidioDemo
-dotnet new console -n PresidioDemo -o . --framework net10.0
-dotnet add package pythonnet --version 3.2.0
-```
-
-**Or manually, in Visual Studio 2026:**
-
-1. Choose **File > New > Project**, select **Console App** (the C# one), and click **Next**.
-2. Set **Project name** to `PresidioDemo`, choose a **Location**, and tick
-   **Place solution and project in the same directory**. This keeps `.venv`, `python/` and
-   `PresidioDemo.csproj` in one folder, which is where the app looks for them. Click **Next**.
-3. Set **Framework** to **.NET 10.0**. Leave **Do not use top-level statements** unticked,
-   because `Program.cs` in step 7 uses top-level statements. Click **Create**.
-4. In **Solution Explorer**, right-click the project and choose **Manage NuGet Packages…**.
-   On the **Browse** tab, search for `pythonnet`, select version **3.2.0**, and click **Install**.
-
-`pythonnet` is the NuGet package that provides the `Python.Runtime` namespace.
-
-### Step 2 – Create `requirements.txt`
-
-Pinning exact versions means everyone gets the same Presidio, spaCy and model that this demo was
-tested with. The last line installs the spaCy model straight from its GitHub release, so no separate
-`spacy download` step is needed.
-
-**File:** `requirements.txt` (new file)
+The application remains one .NET project. Source folders and namespaces group files by responsibility:
 
 ```text
-presidio-analyzer==2.2.364
-presidio-anonymizer==2.2.364
-spacy==3.8.16
-en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl#sha256=293e9547a655b25499198ab15a525b05b9407a75f10255e405e8c3854329ab63
+src/
+├── Program.cs
+├── Configuration/        Three XML configuration files
+├── Feeds/
+│   ├── ACI/              ACI binary processing
+│   ├── ETKT/             ETKT binary processing
+│   ├── PNRLinking/       PNR-Linking JSON route
+│   ├── Seats/            Seats JSON route
+│   └── Shared/           Contracts, formats and shared codecs
+├── Pipeline/             Workflows, codec registry and batch processing
+├── Protection/           Field policies and embedded Presidio bridge
+│   └── python/           presidio_demo.py
+└── Transport/            Folder listener, transport, runtime paths and logs
 ```
 
-### Step 3 – Keep `.venv` out of the .NET build and out of git
+Namespaces follow these folders: `PresidioDemo.Feeds.Shared`, `PresidioDemo.Pipeline`, `PresidioDemo.Protection` and `PresidioDemo.Transport`. Existing per-feed namespaces remain under `PresidioDemo.Feeds`. The Python environment stays at `src/.venv`; its setup commands are unchanged. Default configuration paths now use `src/Configuration`, and embedded Python loads `src/Protection/python/presidio_demo.py`. Custom configuration switches remain available.
 
-`.venv` contains thousands of files, so tell MSBuild to skip it by adding the
-`DefaultItemExcludes` line. The rest of the file was generated in step 1. Do this before
-creating `.venv` in step 4, otherwise Visual Studio's Solution Explorer tries to load every file in it.
+![Feed protection workflow](docs/diagrams/presidio-feed-workflow.svg)
 
-In Visual Studio, double-click the project name in **Solution Explorer** to open the `.csproj` for editing.
+## Architecture diagrams
 
-**File:** `PresidioDemo.csproj` (edit the existing file)
+- [PII infrastructure on AWS](docs/diagrams/aws-pii-infrastructure.svg): proposed dev environment, with one exclusive queue and one listener per feed.
+- [Feed protection workflow](docs/diagrams/presidio-feed-workflow.svg): how feeds move through the .NET listener, configured field identification and local Presidio, with validation before publication.
 
-```xml
-<Project Sdk="Microsoft.NET.Sdk">
+## C# conventions
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <DefaultItemExcludes>$(DefaultItemExcludes);.venv/**</DefaultItemExcludes>
-  </PropertyGroup>
+Types and members include XML summaries. Parameters, return values and property values are documented where applicable, including positional record values and non-public helpers. The application build generates XML documentation.
 
-  <ItemGroup>
-    <PackageReference Include="pythonnet" Version="3.2.0" />
-  </ItemGroup>
+Declarations use regions for fields and constants, constructors, methods, properties and indexers, and nested types. A file with only one top-level class does not need an outer `Classes` region; member regions inside that class still apply. Methods and properties are ordered by accessibility and then name; overloads stay together. Fields without runtime initializers are sorted by name, while initialized fields retain their construction order. Enum declarations retain their existing numeric and wire order. Control-flow and scoped resource statements use explicit blocks. Documentation does not add runtime annotation attributes.
 
-</Project>
-```
+The root [.editorconfig](.editorconfig) shares C# formatting preferences with Visual Studio. See [C# formatting and cleanup](docs/code-cleanup.md) for the cleanup profile, terminal commands and rules that still require review.
 
-Then tell git to ignore the venv, the build output, the Python cache and the generated results. The file name starts
-with a dot and has no extension.
+## Current feed status
 
-**File:** `.gitignore` (new file)
+| Feed | Actual input result |
+| --- | --- |
+| ACI | Dedicated module decodes the documented structures and rebuilds all six samples; reviewed XML controls protection-field coverage |
+| ETKT | All six samples use one 136-slot definition; empty strings account for missing values |
+| Seats | Feed-specific codec with shared System.Text.Json processing; 39 existing policy paths |
+| PNR | One reviewed sequential definition; 76 masked fields and 30 kept fields; structural tags preserved |
+| PNR-Linking | Feed-specific codec with shared System.Text.Json processing; 49 existing policy paths |
 
-```text
-.venv/
-bin/
-obj/
-__pycache__/
-docs/output/
-```
+The three original XML formats remain: [reference mappings](src/Configuration/reference-layouts.xml), [feed policies](src/Configuration/feed-policies.xml), and [XDR structures](src/Configuration/xdr-layouts.xml). Each binary feed has one common structural definition. Optional extensions enable variable widths, optional groups, named capture mappings and 14 shared masking rules without replacing the original roots or feed sections. New structures use reviewed XML changes and a restart. Unsupported structures are retained without publication. `TKT.txt` routes to ETKT.
 
-### Step 4 – Create the `.venv` virtual environment and install the packages
+XDR raw-word blocks use `<words name="..." count="..." />`, a compact alias for the original fixed array of `uint32` values. The loader supports both forms and expands the alias before processing; byte widths, field paths and validation remain unchanged.
 
-The folder must be named exactly `.venv` and sit in the project folder.
+All 15 supplied samples pass actual local Presidio processing and independent byte checks: 19 identified PNR occurrences, source bytes and binary framing stay unchanged. The former ETKT `Text0132` mapping is corrected to two preserved raw words. See [verification results](docs/feed-analysis.md#reviewed-samples-and-results).
 
-**Using the terminal:**
+## ACI module and structure review
+
+[src/Feeds/ACI](src/Feeds/ACI) contains separate XDR reader/writer, decoder, parser, encoder, serializer, models, structure definitions, indicators, report formatter and feed codec. The normal ACI route uses this module through `aciStructures="true"` on its schema-driven reference entry. Older custom configurations without this opt-in retain their existing codec. The decoder follows the supplied C-structure declaration order; the encoder rebuilds the complete payload. Existing XML remains the reviewed policy projection for the supplied sample family. Every populated string must have policy coverage, and unreviewed processing shapes are rejected.
+
+The structure review corrects `seatNumber` to `departureGate`, `origin` to `terminatingCity`, and offset-based names to documented fields. Operational equipment, aircraft, gate, sector and process values are kept. Passenger names, actual passenger seat assignments, loyalty numbers and unresolved identifiers remain masked. PNR and numeric passenger IDs stay unchanged; the parser checks the `paxl_id` / `pax_id` association. This rewrite does not introduce tokenization.
+
+An extra block after transaction times appears in all six samples but is not defined in the available structure declarations. It is explicitly named `unresolved_extension`, with observed layout and preserved masks. Its business meaning is unconfirmed. Some documented branches have no populated example; transcribing them does not establish a complete producer contract. Multiple-passenger decoding has a synthetic identity-link check; production processing still needs a reviewed XML projection for that shape.
+
+Run focused ACI checks and produce decoded JSON with field locations:
 
 ```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+dotnet run --project tests/ACI/AciChecks.csproj -- .test-runs/aci-checks
 ```
 
-**Or manually, in VS Code:** choose **File > Open Folder** and open the project folder. Press
-`Ctrl+Shift+P`, run **Python: Create Environment**, choose **Venv**, then **Python 3.12**, and tick
-**requirements.txt** when asked which dependencies to install. If it doesn't ask, open
-**Terminal > New Terminal** and run the pip line above.
+Decoded analysis files intentionally contain original supplied values. The immutable workspace review, transcription, verification evidence are in `D:\Bala_Support\topics\aci\v2`.
 
-Optional quick check that Presidio works on its own (terminal only):
+## Dedicated ETKT module
+
+`src/Feeds/ETKT` separates the XDR reader, writer, decoder, parser, encoder, serializer, models, structure definitions, readable report and route adapter. The normal ETKT route selects this module through `etktStructures="true"` on its schema-driven reference entry. Custom configurations without that setting retain their existing codec.
+
+All six supplied messages begin with the observed framing words `5, 1, 0`. The screenshot enum declares only error=1, issue=2 and update=3. The implementation preserves the observed sample type 5 without assigning it an undocumented business meaning. Its body aligns with all 136 scalar slots in the screenshot history order. The encoder reconstructs the complete payload and original MQ envelope; XML remains the reviewed protection projection.
+
+The legacy `pnr` field is displayed as **Agent terminal address — provisional mapping**, matching `h_aaa_lniata` in the screenshot. Its value and legacy alias remain unchanged. The screenshot maps legacy `Text0088` to the ticket-number field, `ticketNumber` to the global history sequence number, and the `Flight1`/`Flight2` blocks to new/previous flight details. These are provisional meanings for the observed type-5 family. The divide-event fields now use `newPnr` and `oldPnr` Keep rules, with provisional new/old PNR labels and serializer guards against changes. For example, ETKT_05 retains `FWGXKN` and `FWDZRF`; the other protected values keep their existing masks. No passenger identity or tokenization is inferred from these records.
+
+Focused checks generate readable decoded JSON and exact scalar locations:
 
 ```powershell
-.\.venv\Scripts\python.exe -c "from presidio_analyzer import AnalyzerEngine; print(AnalyzerEngine().analyze(text='Call Emily Carter at 212-555-0147', language='en'))"
+dotnet run --project tests/ETKT/EtktChecks.csproj -- .test-runs/etkt-checks
 ```
 
-### Step 5 – Add the Python module
+Status reports include provisional, most-significant-bit-first labels alongside the original signed number and hexadecimal word. For example, `0x00002000` is Checked in (provisional), and `0x00004000` is Divided ETKT (provisional). Reserved set bits remain visible. The report shows exchange destination only when Exchanged is set; displaying labels never changes payload values or protection rules. Other indicator words remain raw.
 
-Create a folder named `python` and add the file below. It holds all the Presidio logic, written
-much like the [Presidio samples](https://presidio.dataprivacystack.org/samples/). The engines are
-created once when C# imports the module. The file name matters: C# imports it as `presidio_demo`.
+The immutable ETKT review and evidence are under `D:\Bala_Support\topics\etkt\v4`. The searchable reference covers the documented input, history, coupon, payment, tax, exchange, fare, passenger and project structures, union arms and indicator comments. It records the repeated `etkt_inds_2` declaration in the issue branch as a source conflict. Populated issue/error branches and other unreviewed shapes still require producer evidence.
 
-**File:** `python/presidio_demo.py` (new folder and file)
+Checks cover exact binary and MQ-export round trips, agreement with an independent reader, malformed inputs, policy coverage, kept-field integrity and compatibility of the route setting. The comparison with prior protection rules allows differences only in the approved divide-event PNR spans; status labels introduce no payload changes.
 
-```python
-"""Presidio demo functions called from .NET through Python.NET.
-Inputs and outputs are plain strings (JSON) to keep the C# side simple.
+## PNR-Linking and Seats JSON processing
 
-Every function takes `fmt`: "text", "json" or "xml". For JSON and XML, Presidio runs on each
-value separately (JSON string values, XML element text and attributes), so keys, tags and
-nesting are never changed and the output stays valid JSON/XML."""
+`src/Feeds/PNRLinking/PnrLinkingFeedCodec.cs` and `src/Feeds/Seats/SeatsFeedCodec.cs` keep the per-feed folders and own each feed's route and root contract: PNR-Linking requires a JSON array, and Seats requires a JSON object. Both inherit the common `src/Feeds/Shared/JsonFeedCodec.cs`. JSON processing uses only `System.Text.Json`; no additional JSON package is required.
 
-import json
-import re
-import xml.etree.ElementTree as ET
+The shared implementation reads named JSON fields, resolves their existing wildcard XML policy paths, replaces selected string values and validates the rebuilt message. JSON supplies its own structure, so these feeds do not need separate structure definitions, domain models, decoders, encoders, parsers, serializers or report formatters. Four former JSON helper files are folded into the same shared class. Eighteen redundant source files were removed from the active project.
 
-from presidio_analyzer import AnalyzerEngine, Pattern, PatternRecognizer
-from presidio_anonymizer import AnonymizerEngine
-from presidio_anonymizer.entities import OperatorConfig
-from presidio_anonymizer.operators import Operator, OperatorType
+The implementation keeps the original UTF-8 JSON and scalar byte locations internally. It copies unchanged bytes and edits selected string values only, preserving property order, escapes, number spelling, nulls and empty containers. Serialization preserves the MQ envelope; validation checks PNRs, JSON types and every unselected payload byte, including empty-container structure. Parsed layouts cannot cross feed routes. Unknown populated paths still reject the whole message through policy resolution. Protection settings, replacement values and passenger grouping are unchanged.
 
-# Engines are created once and reused (loading en_core_web_lg is slow).
-analyzer = AnalyzerEngine()  # default NLP engine: spaCy en_core_web_lg
-anonymizer = AnonymizerEngine()
+Run the JSON checks and generate reports with the decoded payload and field paths:
 
-# Custom airline recognizers, registered on a second analyzer so option 1 stays "built-in only".
-custom_analyzer = AnalyzerEngine()
-custom_analyzer.registry.add_recognizer(PatternRecognizer(
-    supported_entity="PNR_LOCATOR",
-    patterns=[Pattern("pnr", r"\b[A-Z][A-Z0-9]{5}\b", 0.4)],
-    context=["pnr", "booking", "reservation", "locator"],
-    global_regex_flags=re.MULTILINE,  # default includes IGNORECASE, which would match "Carter"
-))
-custom_analyzer.registry.add_recognizer(PatternRecognizer(
-    supported_entity="PASSENGER_ID",
-    patterns=[Pattern("pax_id", r"\bPAX-\d{4}\b", 0.9)],
-))
-
-
-def _map_values(content, fmt, fn):
-    """Calls fn(value, field) for every text value and returns the rebuilt document.
-    `field` is the JSON key, XML tag or XML attribute name (None for plain text)."""
-    if fmt == "text":
-        return fn(content, None)
-
-    if fmt == "json":
-        def walk(node, key):
-            if isinstance(node, dict):
-                return {k: walk(v, k) for k, v in node.items()}
-            if isinstance(node, list):
-                return [walk(v, key) for v in node]
-            if isinstance(node, str):
-                return fn(node, key)
-            return node  # numbers, booleans and null are left as they are
-        return json.dumps(walk(json.loads(content), None), indent=2, ensure_ascii=False)
-
-    if fmt == "xml":
-        root = ET.fromstring(content)
-        for element in root.iter():
-            if element.text and element.text.strip():
-                element.text = fn(element.text, element.tag)
-            for name, value in element.attrib.items():
-                element.attrib[name] = fn(value, name)
-        return ET.tostring(root, encoding="unicode")
-
-    raise ValueError(f"Unknown format: {fmt}")
-
-
-def _analyze_value(engine, value, field):
-    # The field name (for example "email" or "pnr") is passed as context to help detection.
-    return engine.analyze(text=value, language="en", context=[field] if field else None)
-
-
-def _find(engine, content, fmt):
-    found = []
-
-    def collect(value, field):
-        for r in sorted(_analyze_value(engine, value, field), key=lambda r: r.start):
-            found.append({"field": field or "", "entity_type": r.entity_type,
-                          "score": round(r.score, 2), "text": value[r.start:r.end]})
-        return value
-
-    _map_values(content, fmt, collect)
-    return json.dumps(found, indent=2)
-
-
-def analyze(content, fmt):
-    return _find(analyzer, content, fmt)
-
-
-def analyze_custom(content, fmt):
-    return _find(custom_analyzer, content, fmt)
-
-
-OPERATORS = {
-    "replace": OperatorConfig("replace"),
-    "redact": OperatorConfig("redact"),
-    "mask": OperatorConfig("mask", {"masking_char": "*", "chars_to_mask": 100, "from_end": False}),
-    "hash": OperatorConfig("hash", {"hash_type": "sha256"}),
-}
-
-
-def _pnr_wins(results):
-    """spaCy sometimes also labels a PNR as PERSON with a higher score; the PNR must win."""
-    pnrs = [r for r in results if r.entity_type == "PNR_LOCATOR"]
-    return [r for r in results if r.entity_type == "PNR_LOCATOR"
-            or not any(r.start < p.end and p.start < r.end for p in pnrs)]
-
-
-def _keep_last4_digits(value):
-    """'4111 1111 1111 1111' -> '**** **** **** 1111'; separators stay."""
-    digits = [i for i, c in enumerate(value) if c.isdigit()]
-    hidden = set(digits[:-4])
-    return "".join("*" if i in hidden else c for i, c in enumerate(value))
-
-
-def _hide_email_user(value):
-    """'sarah.mitchell@example.com' -> 'xxxx@example.com'."""
-    return "xxxx@" + value.split("@", 1)[1] if "@" in value else "xxxx"
-
-
-DEFAULT_RULES = {
-    "PERSON": OperatorConfig("replace", {"new_value": "[PASSENGER_NAME]"}),
-    "EMAIL_ADDRESS": OperatorConfig("custom", {"lambda": _hide_email_user}),
-    "PHONE_NUMBER": OperatorConfig("custom", {"lambda": _keep_last4_digits}),
-    "CREDIT_CARD": OperatorConfig("custom", {"lambda": _keep_last4_digits}),
-    "PNR_LOCATOR": OperatorConfig("keep"),
-    "PASSENGER_ID": OperatorConfig("keep"),
-    "DEFAULT": OPERATORS["mask"],  # anything else that is detected
-}
-
-
-def anonymize_default(content, fmt):
-    """The app's default mode: one rule per entity type, applied to every value (remarks too)."""
-    def protect(value, field):
-        results = _pnr_wins(_analyze_value(custom_analyzer, value, field))
-        return anonymizer.anonymize(text=value, analyzer_results=results,
-                                    operators=DEFAULT_RULES).text
-
-    return _map_values(content, fmt, protect)
-
-
-def anonymize(content, fmt, mode):
-    def protect(value, field):
-        results = _analyze_value(analyzer, value, field)
-        return anonymizer.anonymize(text=value, analyzer_results=results,
-                                    operators={"DEFAULT": OPERATORS[mode]}).text
-
-    return _map_values(content, fmt, protect)
-
-
-class TokenOperator(Operator):
-    """Custom operator: replaces each distinct value with <ENTITY_TYPE_n> and records it
-    in a mapping (adapted from the Presidio 'pseudonymization' sample)."""
-
-    def operate(self, text, params=None):
-        per_type = params["mapping"].setdefault(params["entity_type"], {})
-        if text not in per_type:
-            per_type[text] = f"<{params['entity_type']}_{len(per_type)}>"
-        return per_type[text]
-
-    def validate(self, params=None):
-        pass
-
-    def operator_name(self):
-        return "token"
-
-    def operator_type(self):
-        return OperatorType.Anonymize
-
-
-anonymizer.add_anonymizer(TokenOperator)
-
-
-def tokenize(content, fmt):
-    """Returns {"text": tokenized document, "mapping": {entity: {original: token}}}.
-    One mapping is shared by the whole document, so a repeated value gets the same token.
-    The PNR is detected but kept visible and unchanged."""
-    mapping = {}
-    operators = {
-        "DEFAULT": OperatorConfig("token", {"mapping": mapping}),
-        "PNR_LOCATOR": OperatorConfig("keep"),
-    }
-
-    def protect(value, field):
-        results = _pnr_wins(_analyze_value(custom_analyzer, value, field))
-        return anonymizer.anonymize(text=value, analyzer_results=results, operators=operators).text
-
-    document = _map_values(content, fmt, protect)
-    return json.dumps({"text": document, "mapping": mapping})
-
-
-def detokenize(tokenized_json, fmt):
-    """Restores originals from the mapping. Demo only; a real system uses a token vault."""
-    data = json.loads(tokenized_json)
-
-    def restore(value, field):
-        for per_type in data["mapping"].values():
-            for original, token in per_type.items():
-                value = value.replace(token, original)
-        return value
-
-    return _map_values(data["text"], fmt, restore)
+```powershell
+dotnet run --project tests/JsonFeeds
 ```
 
-### Step 6 – Add the Python.NET bridge
+Reports include original supplied values and are saved under `.test-runs/json-feeds`. Immutable source snapshots, the removed-file inventory and verification evidence are in `D:\Bala_Support\topics\pnr-linking\v2` and `D:\Bala_Support\topics\seats\v2`. Earlier delivered folders retain the previous implementation.
 
-This class embeds CPython. Key Python.NET points:
+## Technology stack
 
-- `Runtime.PythonDLL` must point to the base install's `python312.dll`. A venv has no DLL of its
-  own, so the path is read from `.venv\pyvenv.cfg` (`home = ...`).
-- `PythonEngine.PythonPath` replaces the module search path, so it must list the standard library
-  (`Lib`, `DLLs`), the venv's `site-packages`, and our `python` folder.
-- Call `PythonEngine.Initialize()` once, then `BeginAllowThreads()`. Wrap every Python call
-  in `using (Py.GIL())`.
+| Technology | Version |
+| --- | --- |
+| C# / .NET | .NET 10 |
+| Python.NET | 3.2.0 |
+| CPython | 3.12.10 |
+| Presidio Analyzer / Anonymizer | 2.2.364 |
+| spaCy / en_core_web_lg | 3.8.16 / 3.8.0 |
 
-**File:** `PythonHost.cs` (new file)
+Python runs inside the .NET process. Processing makes no HTTP calls or model downloads.
 
-```csharp
-using Python.Runtime;
+## Setup and run
 
-namespace PresidioDemo;
+Requires Windows, the .NET 10 SDK and Python 3.12. Run these steps in PowerShell from the project root.
 
-/// <summary>Starts embedded CPython using the project's .venv and calls python/presidio_demo.py.</summary>
-public static class PythonHost
-{
-    private static PyObject? _module;
+### 1. Create the Python virtual environment
 
-    /// <summary>The folder that contains .venv, python/ and docs/.</summary>
-    public static string ProjectDir { get; private set; } = "";
+Do this once during initial setup:
 
-    public static void Start()
-    {
-        string projectDir = ProjectDir = FindProjectDir();
-        string venvDir = Path.Combine(projectDir, ".venv");
-
-        // pyvenv.cfg records the base Python install ("home") and its version.
-        var cfg = File.ReadAllLines(Path.Combine(venvDir, "pyvenv.cfg"))
-            .Select(line => line.Split('=', 2))
-            .Where(parts => parts.Length == 2)
-            .ToDictionary(parts => parts[0].Trim(), parts => parts[1].Trim());
-
-        string pythonHome = cfg["home"];
-        string[] version = (cfg.GetValueOrDefault("version") ?? cfg["version_info"]).Split('.'); // uv writes version_info
-
-        string pythonDll = Path.Combine(pythonHome, $"python{version[0]}{version[1]}.dll");
-        if (!File.Exists(pythonDll))
-            throw new FileNotFoundException(
-                $"{pythonDll} not found. Was Python 3.12 uninstalled? Recreate .venv (README: Quick start).");
-
-        Runtime.PythonDLL = pythonDll;
-        PythonEngine.PythonHome = pythonHome;
-        PythonEngine.PythonPath = string.Join(Path.PathSeparator,
-            Path.Combine(pythonHome, "Lib"),
-            Path.Combine(pythonHome, "DLLs"),
-            Path.Combine(venvDir, "Lib", "site-packages"),
-            Path.Combine(projectDir, "python"));
-
-        PythonEngine.Initialize();
-        PythonEngine.BeginAllowThreads();
-
-        using (Py.GIL())
-        {
-            _module = Py.Import("presidio_demo");
-        }
-    }
-
-    public static string Call(string function, params string[] args)
-    {
-        using (Py.GIL())
-        {
-            PyObject[] pyArgs = args.Select(a => new PyString(a)).ToArray<PyObject>();
-            using PyObject result = _module!.InvokeMethod(function, pyArgs);
-            return result.As<string>();
-        }
-    }
-
-    public static void Stop()
-    {
-        try { PythonEngine.Shutdown(); } catch { }
-    }
-
-    // Walk up from bin/Debug/net10.0 until the folder that contains .venv.
-    private static string FindProjectDir()
-    {
-        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
-            if (Directory.Exists(Path.Combine(dir.FullName, ".venv")))
-                return dir.FullName;
-
-        throw new DirectoryNotFoundException(
-            "No .venv folder found in the project folder. Create it first (README: Quick start).");
-    }
-}
+```powershell
+py -3.12 -m venv src/.venv
 ```
 
-### Step 7 – Add the console menu
+### 2. Activate the Python virtual environment
 
-Replace everything in the `Program.cs` that step 1 created.
+Activate it whenever you open a new PowerShell terminal:
 
-**File:** `Program.cs` (replace the existing file)
-
-```csharp
-using System.Text;
-using System.Text.Json;
-using PresidioDemo;
-
-const string SampleText =
-    "Booking PNR K7QX2M for passengers Emily Carter (PAX-1001) and Michael Brooks (PAX-1002). " +
-    "Contact Emily at emily.carter@example.com or 212-555-0147. " +
-    "Michael can be reached at michael.brooks@example.com. " +
-    "Card on file: 4111 1111 1111 1111.";
-
-string[] operators = ["replace", "redact", "mask", "hash"];
-
-Console.WriteLine("Loading Presidio and spaCy en_core_web_lg (takes a few seconds)...");
-try
-{
-    PythonHost.Start();
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"Startup failed: {ex.Message}");
-    Environment.ExitCode = 1;
-    return;
-}
-
-string inputDir = Path.Combine(PythonHost.ProjectDir, "docs", "input");
-string outputDir = Path.Combine(PythonHost.ProjectDir, "docs", "output");
-
-try
-{
-    while (true)
-    {
-        Console.WriteLine();
-        Console.Write("Use default: Anonymize the first JSON file in docs/input? [Y/n]: ");
-        string? answer = Console.ReadLine()?.Trim().ToLowerInvariant();
-        if (answer is null) break;
-
-        string? choice;
-        if (answer is "" or "y" or "yes")
-        {
-            choice = "default";
-        }
-        else if (answer is "n" or "no")
-        {
-            Console.WriteLine("1. Analyze (built-in recognizers)");
-            Console.WriteLine("2. Anonymize (replace / redact / mask / hash)");
-            Console.WriteLine("3. Custom recognizers (PNR + passenger ID)");
-            Console.WriteLine("4. Reversible tokenization");
-            Console.WriteLine("5. Run all with sample text");
-            Console.WriteLine("0. Exit");
-            Console.Write("Choose: ");
-
-            choice = Console.ReadLine()?.Trim();
-            if (choice is null or "0") break;
-        }
-        else
-        {
-            Console.WriteLine("Please answer y or n.");
-            continue;
-        }
-
-        try
-        {
-            switch (choice)
-            {
-                case "default":
-                    string firstJson = InputFiles("json")[0];
-                    Console.WriteLine($"Using the first JSON file in docs/input: {Path.GetFileName(firstJson)}");
-                    AnonymizeDefault(new Input(File.ReadAllText(firstJson), "json", firstJson));
-                    break;
-                case "1": Analyze(ReadInput()); break;
-                case "2": Anonymize(ReadInput(), ReadOperator()); break;
-                case "3": AnalyzeCustom(ReadInput()); break;
-                case "4": Tokenize(ReadInput()); break;
-                case "5":
-                    var sample = new Input(SampleText, "text", null);
-                    Analyze(sample);
-                    foreach (var op in operators) Anonymize(sample, op);
-                    AnalyzeCustom(sample);
-                    Tokenize(sample);
-                    break;
-                default: Console.WriteLine("Unknown option."); break;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-        }
-    }
-}
-finally
-{
-    PythonHost.Stop();
-}
-
-string Ask(string prompt)
-{
-    Console.Write(prompt);
-    return Console.ReadLine()?.Trim() ?? "";
-}
-
-Input ReadInput()
-{
-    Console.WriteLine("\nInput source:");
-    Console.WriteLine("  1. User input");
-    Console.WriteLine("  2. Local file (docs/input)");
-    return Ask("Choose (Enter = 1): ") == "2" ? ReadLocalFile() : ReadUserInput();
-}
-
-Input ReadUserInput()
-{
-    Console.WriteLine("\nInput format:");
-    Console.WriteLine("  1. Text");
-    Console.WriteLine("  2. JSON");
-    Console.WriteLine("  3. XML");
-    string format = Ask("Choose (Enter = 1): ") switch { "2" => "json", "3" => "xml", _ => "text" };
-
-    Console.WriteLine($"Type or paste the {format.ToUpperInvariant()} input, then press Enter on an empty line.");
-    Console.WriteLine("Press Enter straight away to use the sample.");
-    var lines = new StringBuilder();
-    string? line;
-    while (!string.IsNullOrEmpty(line = Console.ReadLine()))
-        lines.AppendLine(line);
-
-    string content = lines.ToString().Trim();
-    if (content.Length == 0)
-        content = format == "text"
-            ? SampleText
-            : File.ReadAllText(Path.Combine(inputDir, $"booking-sample.{format}"));
-
-    return new Input(content, format, null);
-}
-
-// .json or .xml files in docs/input, sorted by name.
-string[] InputFiles(string format)
-{
-    string[] files = Directory.Exists(inputDir)
-        ? Directory.GetFiles(inputDir, $"*.{format}").Order().ToArray()
-        : [];
-    return files.Length > 0
-        ? files
-        : throw new FileNotFoundException($"No .{format} files found in {inputDir}");
-}
-
-Input ReadLocalFile()
-{
-    Directory.CreateDirectory(inputDir);
-    Console.WriteLine($"\nInput folder: {inputDir}");
-    Console.WriteLine("File format:");
-    Console.WriteLine("  1. JSON");
-    Console.WriteLine("  2. XML");
-    string format = Ask("Choose (Enter = 1): ") == "2" ? "xml" : "json";
-
-    string[] files = InputFiles(format);
-    for (int i = 0; i < files.Length; i++)
-        Console.WriteLine($"  {i + 1}. {Path.GetFileName(files[i])}");
-
-    string pick = Ask("Choose a file (Enter = 1): ");
-    int index = 0;
-    if (pick.Length > 0 && !(int.TryParse(pick, out index) && index >= 1 && index <= files.Length))
-        throw new ArgumentException($"Invalid file number: {pick}");
-
-    string path = files[Math.Max(index - 1, 0)];
-    return new Input(File.ReadAllText(path), format, path);
-}
-
-string ReadOperator()
-{
-    string op = Ask("Operator [replace|redact|mask|hash] (Enter = replace): ").ToLowerInvariant();
-    if (op.Length == 0) return "replace";
-    return operators.Contains(op) ? op : throw new ArgumentException($"Unknown operator: {op}");
-}
-
-void Analyze(Input input)
-{
-    Begin("Analyze", input);
-    string findings = PythonHost.Call("analyze", input.Content, input.Format);
-    PrintEntities(findings);
-    Save(input, "analyze", findings, "json");
-    End();
-}
-
-void AnalyzeCustom(Input input)
-{
-    Begin("Analyze with custom recognizers", input);
-    string findings = PythonHost.Call("analyze_custom", input.Content, input.Format);
-    PrintEntities(findings);
-    Save(input, "custom-analyze", findings, "json");
-    End();
-}
-
-void Anonymize(Input input, string op)
-{
-    Begin($"Anonymize ({op})", input);
-    string result = PythonHost.Call("anonymize", input.Content, input.Format, op);
-    Console.WriteLine(result);
-    Save(input, $"anonymize-{op}", result);
-    End();
-}
-
-// Default mode: names -> [PASSENGER_NAME], emails -> xxxx@domain, phones and cards -> last 4 digits.
-void AnonymizeDefault(Input input)
-{
-    Begin("Anonymize (default rules)", input);
-    string result = PythonHost.Call("anonymize_default", input.Content, input.Format);
-    Console.WriteLine(result);
-    Save(input, "anonymize-default", result);
-    End();
-}
-
-void Tokenize(Input input)
-{
-    Begin("Reversible tokenization (PNR kept)", input);
-    string tokenized = PythonHost.Call("tokenize", input.Content, input.Format);
-
-    using var doc = JsonDocument.Parse(tokenized);
-    string? protectedText = doc.RootElement.GetProperty("text").GetString();
-    Console.WriteLine(Rule("Tokenized", '-'));
-    Console.WriteLine(protectedText);
-    Console.WriteLine(Rule("Mapping", '-'));
-    foreach (var entity in doc.RootElement.GetProperty("mapping").EnumerateObject())
-        foreach (var pair in entity.Value.EnumerateObject())
-            Console.WriteLine($"  {pair.Value.GetString(),-20} = {pair.Name}");
-
-    Console.WriteLine(Rule("Restored", '-'));
-    Console.WriteLine(PythonHost.Call("detokenize", tokenized, input.Format));
-    Save(input, "tokenized", protectedText ?? "");
-    End();
-}
-
-void PrintEntities(string json)
-{
-    foreach (var e in JsonDocument.Parse(json).RootElement.EnumerateArray())
-    {
-        string field = e.GetProperty("field").GetString() is { Length: > 0 } f ? f : "-";
-        Console.WriteLine($"{field,-14} {e.GetProperty("entity_type").GetString(),-16} " +
-                          $"{e.GetProperty("score").GetDouble():0.00}  " +
-                          $"{e.GetProperty("text").GetString()}");
-    }
-}
-
-// Prints the input between separator lines, then opens the output section.
-void Begin(string title, Input input)
-{
-    string source = input.FilePath is null ? "" : $", {Path.GetFileName(input.FilePath)}";
-    Console.WriteLine();
-    Console.WriteLine(Rule($"INPUT [{input.Format}{source}]", '='));
-    Console.WriteLine(input.Content.TrimEnd());
-    Console.WriteLine(Rule($"OUTPUT: {title}", '='));
-}
-
-void End() => Console.WriteLine(new string('=', 72));
-
-// "===== LABEL =====...", padded to 72 characters.
-string Rule(string label, char c) => $"{new string(c, 5)} {label} ".PadRight(72, c);
-
-// Results are saved only for local-file input, as docs/output/<file>.<demo>.<ext>.
-void Save(Input input, string suffix, string content, string? extension = null)
-{
-    if (input.FilePath is null) return;
-    Directory.CreateDirectory(outputDir);
-    string name = $"{Path.GetFileNameWithoutExtension(input.FilePath)}.{suffix}.{extension ?? input.Format}";
-    File.WriteAllText(Path.Combine(outputDir, name), content);
-    Console.WriteLine($"Saved: docs/output/{name}");
-}
-
-record Input(string Content, string Format, string? FilePath);
+```powershell
+.\src\.venv\Scripts\Activate.ps1
 ```
 
-### Step 8 – Add the sample input files
+If PowerShell reports that running scripts is disabled, allow locally created scripts for this terminal session, then retry activation:
 
-Create the folders `docs` and `docs/input`, then add the two samples. The app lists every `.json`
-or `.xml` file in `docs/input`, and uses these two files when you press Enter for a JSON or XML
-sample. The `docs/output` folder is created automatically the first time a result is saved.
-
-**File:** `docs/input/booking-sample.json` (new folders and file)
-
-```json
-{
-  "pnr": "R4TZ8N",
-  "messageType": "booking",
-  "passengers": [
-    {
-      "passengerId": "PAX-3001",
-      "name": "Sarah Mitchell",
-      "email": "sarah.mitchell@example.com",
-      "phone": "312-555-0182"
-    },
-    {
-      "passengerId": "PAX-3002",
-      "name": "David Turner",
-      "email": "david.turner@example.com",
-      "phone": "312-555-0164"
-    }
-  ],
-  "remarks": "Sarah Mitchell requests an aisle seat. Call 312-555-0182 if the flight changes.",
-  "payment": {
-    "cardNumber": "4111 1111 1111 1111"
-  }
-}
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+.\src\.venv\Scripts\Activate.ps1
 ```
 
-**File:** `docs/input/booking-sample.xml` (new file)
+If prompted, enter `Y`. The policy change lasts only until this PowerShell terminal closes; administrator access is not required. See [PowerShell execution policies](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies).
 
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<booking pnr="M2VK9D" messageType="booking">
-  <passenger id="PAX-4001">
-    <name>Jessica Hayes</name>
-    <email>jessica.hayes@example.com</email>
-    <phone>415-555-0123</phone>
-  </passenger>
-  <passenger id="PAX-4002">
-    <name>Ryan Cooper</name>
-    <email>ryan.cooper@example.com</email>
-    <phone>415-555-0198</phone>
-  </passenger>
-  <remarks>Ryan Cooper requests a window seat. Contact Jessica Hayes at 415-555-0123.</remarks>
-</booking>
+If your organization enforces a policy that still blocks activation, use the Python launcher to install packages for its selected interpreter:
+
+```powershell
+py -m pip install -r requirements.txt
 ```
 
-### Step 9 – Build and run
+With an active virtual environment and no explicit Python version, `py` uses that environment. Without activation, `py` uses its default interpreter and may install packages outside `src/.venv`. If activation remains blocked, confirm the selected interpreter with `py -c "import sys; print(sys.executable)"` before installing; it should end in `src\.venv\Scripts\python.exe` for this project.
 
-**Using the terminal:**
+The prompt normally shows `(.venv)` after activation. Confirm Python uses this environment:
+
+```powershell
+python -c "import sys; print(sys.executable)"
+```
+
+The path should end in `src\.venv\Scripts\python.exe`.
+
+### 3. Install the Python packages
+
+With the virtual environment active, install the required packages:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+### 4. Deactivate the Python virtual environment
+
+After package installation finishes, deactivate it:
+
+```powershell
+deactivate
+```
+
+### Build and run the .NET demo
 
 ```powershell
 dotnet build
-dotnet run
 ```
 
-**Or manually, in Visual Studio:** choose **Build > Build Solution** (`Ctrl+Shift+B`), then
-**Debug > Start Without Debugging** (`Ctrl+F5`). Use `F5` instead if you want to hit breakpoints in
-the C# code. Breakpoints in the Python file are not hit, because Python runs inside the .NET process.
+Process the actual feeds once, preserving the source files:
 
-The final folder looks like this:
-
-```
-PresidioDemo/
-├── .venv/                       Python 3.12 virtual environment (not in git)
-├── docs/
-│   ├── input/
-│   │   ├── booking-sample.json  JSON sample
-│   │   └── booking-sample.xml   XML sample
-│   └── output/                  Saved results (created when needed, not in git)
-├── python/
-│   └── presidio_demo.py         Presidio logic
-├── PythonHost.cs                Python.NET bridge
-├── Program.cs                   Console menu and input handling
-├── PresidioDemo.csproj
-├── requirements.txt             Pinned Python packages and spaCy model
-├── .gitignore                   Ignores .venv, bin, obj, Python cache, docs/output
-└── README.md
+```powershell
+dotnet run -- --process-folder D:/Bala_Support/Feeds
 ```
 
----
+For continuous listening, run `dotnet run`, wait for `READY`, then copy a `.txt` MQ export or `.bin` payload into `docs/input-feeds/<feed>`. Press Enter or Ctrl+C to stop. Use the folders `ACI`, `ETKT`, `PNR`, `PNR-Linking` and `Seats`.
 
-## Things worth knowing for the demo
+A batch succeeds only when every input is published and acknowledged. Batch filenames accept numeric suffixes such as `ACI_03.txt` and `ETKT_05.txt`; the listener routes by feed folder and accepts arbitrary filenames. Samples are review/test inputs and are not required at runtime. The schemas describe the structures supported by the supplied examples; a producer contract is still needed to confirm unknown binary meanings and general passenger associations.
 
-- **Detection is model-based.** For example, "Emily" on its own after "Contact" is not detected
-  in the sample, while "Michael" is. This is how spaCy behaves, not a bug in the app.
-- **URL hits inside emails** (`emily.car`, `example.com`) appear in the analyze list. The anonymizer
-  resolves the overlap in favour of the higher-scoring `EMAIL_ADDRESS`, so the output is clean.
-- **Short values on their own are harder for the model.** In the JSON and XML samples, spaCy labels
-  the bare value `PAX-3002` as a PERSON and `PAX-4002` as a LOCATION. The built-in demos
-  (options 1 and 2) therefore treat one passenger ID differently from the other. With the custom
-  recognizers (options 3 and 4), the higher-scoring `PASSENGER_ID` wins.
-- **The PNR always stays unchanged in option 4,** even when spaCy also labels it as a name.
-- **Token numbers can look reversed** in plain text, because Presidio replaces entities from the end
-  of the text backwards.
-- **`hash` output changes between runs,** because Presidio adds a random salt to each hash.
-- **Only text values are checked.** JSON numbers and booleans, XML comments and the XML declaration
-  are not analyzed, and the saved XML leaves out the `<?xml ...?>` declaration and comments.
-- **Pasted input ends at the first empty line.** Remove blank lines from JSON or XML before pasting,
-  or use a local file instead.
-- **The token mapping is in memory only.** It shows the concept; a real system would store
-  mappings in a secured token database.
-- **Piping input from PowerShell** (`"n" | dotnet run`) can add an invisible byte-order mark that
-  makes the first answer show "Please answer y or n.". Typing interactively works normally.
+## Folders and configuration
 
-## Troubleshooting
+- `src/`: startup, `Configuration/`, `Feeds/`, `Pipeline/`, `Protection/`, `Transport/` and `.venv/`.
+- `tests/unit-tests/`: Python tests; `tests/FeedPipelineChecks/`: .NET checks.
+- `docs/sample-docs/`: immutable source TXT files for review and testing; not required at runtime.
+- `docs/input-feeds/`, `output-feeds/`, `failed-feeds/`: one subfolder per feed.
+- `docs/feed-logs/`: one text file per transaction, named `<feed>.<message-id>.txt`.
+- `docs/feed-processing/`: active input files, with one subfolder per feed.
+- `.runtime/docs/`: listener lock and batch reports.
 
-| Problem | Fix |
-|---|---|
-| `Startup failed: No .venv folder found` | Run the Quick start's first two lines in the project folder. |
-| `Startup failed: ...python312.dll not found` | Python 3.12 was moved or uninstalled. Reinstall it, delete `.venv` and recreate it. |
-| `Startup failed: No module named 'presidio_analyzer'` | Packages went to the wrong Python. Run `.\.venv\Scripts\python.exe -m pip install -r requirements.txt`. |
-| `No module named pip` | The venv was made with `uv venv`. Delete `.venv` and recreate it with `py -3.12 -m venv .venv`. |
-| `py` is not recognized | Open a new terminal after installing Python, or reinstall Python 3.12 with the "py launcher" option. |
-| Download of `en_core_web_lg` times out or is blocked | Your network blocks GitHub downloads. Ask IT for access to `github.com`, or set `HTTPS_PROXY` before running pip. |
-| Install fails building spaCy or numpy wheels | You are on a Python version without prebuilt wheels. Use 3.12. |
-| `Error: No .json files found in ...` (or `.xml`) | Put the file in the `docs/input` folder the app shows, with a `.json` or `.xml` extension, and pick the matching format. |
-| `Error: Expecting ',' delimiter...` or a similar JSON message | The JSON is invalid. Check it, or check that a pasted JSON didn't stop at a blank line. |
-| `Error: mismatched tag...` or `not well-formed` | The XML is invalid. Check that every tag is closed. |
-| `Error: Invalid file number` / `Unknown operator` | Enter one of the numbers or operator names shown in the prompt. |
+The listener moves each ready file from `docs/input-feeds/<feed>` into `docs/feed-processing/<feed>/<original-stem>.<unique-id>.<extension>`. This removes it from the input folder before processing starts. The same ID follows the transaction through its log and output. Once output is saved, the processing file is deleted. Rejected input is saved in `docs/failed-feeds/<feed>` with an error report before the processing file is deleted. Interrupted transactions and temporary storage failures stay in `feed-processing` for retry after restart. Older `.runtime/docs/processing` deliveries are migrated on startup while preserving their IDs and bytes.
 
-## References
+Each transaction log has separate `BEFORE ANONYMIZATION` and `AFTER ANONYMIZATION` headings with divider lines. For MQ input, the before section shows the complete original feed data, decoded payload, a plain-text payload view, then parsed original fields (`location | policy field | value`). The plain-text view preserves readable UTF-8 text and whitespace; binary controls and invalid UTF-8 are shown as spaces. The after section shows the decoded anonymized payload followed by the complete rebuilt and validated feed data. Byte counts reflect the actual payload and feed sizes. Raw input or malformed MQ envelopes show complete input data and its plain-text view without a decoded payload. Binary data is shown as a hex dump with a readable character column. Rejected transactions retain the complete input data and any decoded payload and explain why no validated anonymized output is available. Retries reuse the same log file. If a log cannot be saved, input remains pending and is retried before publication or rejection.
 
-- Presidio samples: https://presidio.dataprivacystack.org/samples/
-- Presidio custom recognizers: https://presidio.dataprivacystack.org/analyzer/adding_recognizers/
-- Presidio anonymizer operators: https://presidio.dataprivacystack.org/anonymizer/adding_operators/
-- Python.NET: https://pythonnet.github.io/
+These logs contain original personal data and are excluded from Git. They are written under the selected `--docs-root` when a custom folder is used.
+
+All three XML files are loaded and validated together before input is claimed. Reference mappings retain `name`, `offset` and `length`; with `schemaDriven="true"`, these numbers document the reviewed baseline while the XDR structure determines actual input positions and widths. Reference sample filenames and hashes are provenance only in this mode. Original reference configurations without this flag retain their existing sample-based behavior. Binary fields use Keep or Known full-width ASCII masks. PNRs and confirmed operational fields stay unchanged. Unknown readable identifiers are masked, including the two additional ETKT codes. The three catalog rules for loyalty, sensitive attributes and financial information use `#` to preserve `*` record separators; other masks use `*`. JSON retains its original inline policies, replacement behavior, nulls, types and grouping.
+
+Restart after changes. The existing switches `--reference-layout-file <xml>`, `--xdr-layout-file <xml>` and `--policy-file <xml>` select alternate files. See the [feed analysis](docs/feed-analysis.md) for commented XML examples, empty/optional values, per-sample results and verification commands.
+
+## Tests
+
+Run byte-exact round trips without anonymization for every feed type:
+
+```powershell
+dotnet run --project tests/FeedRoundTripChecks
+```
+
+These checks load the normal codecs and workflows, with an in-memory All-Keep policy for this test only. They compare complete input/output byte arrays, decoded payloads and field values over three cycles per example. Coverage includes all supplied samples as raw payloads and MQ exports, binary string widths and padding, JSON whitespace/property order/escapes/numeric spelling/empty/null values, MQ line endings, hex casing, row widths and complete diagnostic dumps. Synthetic variants test supported encoding shapes; they do not establish new producer contracts. No Python initialization or application configuration change is required. Results and execution logs are written to a fresh `.test-runs/round-trip-*` folder; supply a directory argument to choose another location. The same checks also run in `FeedPipelineChecks`.
+
+```powershell
+src/.venv/Scripts/python.exe -m unittest discover -s tests/unit-tests -p test_*.py -v
+src/.venv/Scripts/python.exe tests/unit-tests/test_feed_listener.py
+dotnet run --project tests/FeedPipelineChecks
+src/.venv/Scripts/python.exe tests/run_sample_verification.py
+```
+
+[Implementation details](topics/feeds-demo/v14/feed-implementation-reference-v14.md) · [Feed format analysis](docs/feed-analysis.md)
+
+## PNR sample mapping
+
+The PNR sample-specific route lives in `src/Feeds/PNR`. It retains the existing XML protection projection and exposes evidence-backed P2 business labels for observed XDR scalars. Unmapped fields remain neutral; the P2 screenshots do not establish this feed’s wire schema or a stable passenger ID. Run `dotnet run --project tests/PNR/PnrChecks.csproj -- <report-path>` to inspect a decoded report containing original sample values.

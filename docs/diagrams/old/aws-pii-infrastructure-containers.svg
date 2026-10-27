@@ -1,0 +1,221 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1275" viewBox="0 0 1920 1275" role="img" aria-labelledby="title desc">
+  <title id="title">PII infrastructure on AWS</title>
+  <desc id="desc">Proposed development infrastructure in a private AWS VPC, drawn as five lanes, one per feed: ACI, ETKT, PNR, Seats and PNR Linking. In each lane, producers publish to that feed's exclusive raw queue on one Solace broker. Each feed runs as one ECS Fargate task with one container, built from the same image. Inside the container, in process, the feed listens to its raw queue one message at a time in arrival order, parses the message, protects PII with local Presidio, serializes it back to the original format, validates the output and publishes it to that feed's protected queue, where consumers read. PII never leaves the container between stages. Presidio runs embedded through Python.NET (pythonnet, presidio-analyzer, presidio-anonymizer, en_core_web_lg); the PNR stays unchanged. Broker connections use a native client; there are no HTTP or remote PII calls. Input is acknowledged only after the protected publish succeeds; messages not acknowledged after retries move to dead-message queues with no consumer access, and their replay owner is to be confirmed. Broker ACLs let listeners read raw queues and consumers read protected queues only. The broker is one EC2 instance in a single Availability Zone with an EBS volume and no high availability in dev, to be confirmed. VPC endpoints carry platform traffic to Amazon ECR, S3, CloudWatch Logs and Secrets Manager, outside the PII path. The producer and consumer connection type is to be confirmed.</desc>
+  <metadata>Project evidence: Projects/PresidioDemo/PresidioDemo.csproj; src/Program.cs; src/Models/Shared/FeedContracts.cs; src/Listener; src/Parser; src/Serializer; src/Protection/Shared/PythonHost.cs; src/Protection/Shared/FeedProtection.cs; src/Protection/Shared/python/presidio_demo.py; src/Listener/Shared/FolderFeedTransport.cs. Current source runs all feeds in one process with one active delivery per feed through FolderFeedTransport, validates output before publication and retains failed input in failed-feeds; one container per feed, Solace integration and publishing, exclusive queues, dead-message queues, broker ACLs and AWS deployment are proposed. No external documents used as evidence.</metadata>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9" fill="none" stroke="#3e556b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <marker id="arrowGrey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9" fill="none" stroke="#8a9aab" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <style>
+      text{font-family:Arial,Segoe UI,sans-serif;fill:#21374b;text-anchor:middle}
+      .muted{fill:#637385}.start{text-anchor:start}.bold{font-weight:bold}.title{font-size:35px}.heading{font-size:27px}.label{font-size:23px}.note{font-size:19px}.small{font-size:17px}.tiny{font-size:15px}
+      .box{fill:white;stroke:#61778d;stroke-width:2}
+      .raw{fill:#eef4fc;stroke:#a9bfd8;stroke-width:1.5}.protected{fill:#edf7f2;stroke:#a9cdb9;stroke-width:1.5}.dead{fill:#fdf6ec;stroke:#e2cfae;stroke-width:1.5}
+      .container{fill:#f4f7fa;stroke:#8fa3b8;stroke-width:1.5}.stage{fill:white;stroke:#b7c6d5;stroke-width:1.2}.presidio{fill:#f1edf9;stroke:#b9a9dc;stroke-width:1.2}
+      .connection{fill:none;stroke:#3e556b;stroke-width:2;marker-end:url(#arrow)}
+      .step{fill:none;stroke:#637385;stroke-width:1.5;marker-end:url(#arrow)}
+      .platform{fill:none;stroke:#8a9aab;stroke-width:2;stroke-dasharray:7 6;marker-end:url(#arrowGrey)}
+      .attach{fill:none;stroke:#8a9aab;stroke-width:2}
+      .external{fill:white;stroke:#61778d;stroke-width:2;stroke-dasharray:9 6}
+    </style>
+  </defs>
+  <rect width="1920" height="1275" fill="#ffffff"/>
+  <text x="960" y="62" class="title">PII infrastructure on AWS</text>
+  <text x="960" y="100" class="note muted">Proposed dev · one queue and one container per feed</text>
+
+  <rect x="230" y="140" width="1460" height="970" rx="24" fill="#ffffff" stroke="#9aabba" stroke-width="2"/>
+  <text x="260" y="178" class="label start">Customer AWS account</text>
+  <rect x="255" y="200" width="1410" height="885" rx="20" fill="#f8fafc" stroke="#b7c6d5" stroke-width="2"/>
+  <text x="285" y="238" class="label muted start">Private VPC</text>
+
+  <!-- One Solace broker: raw queues on the left leg, protected queues on the right leg -->
+  <path d="M310 260H1610Q1630 260 1630 280V925Q1630 945 1610 945H1420Q1400 945 1400 925V340H520V925Q520 945 500 945H310Q290 945 290 925V280Q290 260 310 260Z" class="box"/>
+  <text x="960" y="294" class="heading">Solace broker</text>
+  <text x="960" y="324" class="note muted">EC2 · single AZ · no HA · to confirm</text>
+
+  <text x="405" y="384" class="label">Raw queues</text>
+  <text x="405" y="410" class="small muted">Exclusive · listeners only</text>
+  <text x="1515" y="384" class="label">Protected queues</text>
+  <text x="1515" y="410" class="small muted">Consumers only</text>
+
+  <rect x="560" y="372" width="800" height="573" rx="21" class="box"/>
+  <text x="960" y="404" class="heading">ECS Fargate</text>
+  <text x="960" y="432" class="note muted">Same image · one task per feed · one message at a time</text>
+
+  <rect x="25" y="460" width="180" height="336" rx="18" class="external"/>
+  <text x="115" y="620" class="label">Producers</text>
+  <text x="115" y="648" class="small muted">Link: to confirm</text>
+  <rect x="1715" y="460" width="180" height="336" rx="18" class="external"/>
+  <text x="1805" y="620" class="label">Consumers</text>
+  <text x="1805" y="648" class="small muted">Link: to confirm</text>
+
+  <!-- Feed lanes: raw queue -> container (all stages in process) -> protected queue -->
+  <g>
+    <rect x="305" y="460" width="200" height="56" rx="10" class="raw"/>
+    <text x="405" y="495" class="note">ACI</text>
+    <rect x="585" y="460" width="750" height="56" rx="10" class="container"/>
+    <text x="603" y="494" class="small bold start">ACI</text>
+    <rect x="760" y="471" width="62" height="34" rx="7" class="stage"/>
+    <text x="791" y="493" class="tiny">Listen</text>
+    <path d="M824 488H840" class="step"/>
+    <rect x="844" y="471" width="54" height="34" rx="7" class="stage"/>
+    <text x="871" y="493" class="tiny">Parse</text>
+    <path d="M900 488H916" class="step"/>
+    <rect x="920" y="471" width="70" height="34" rx="7" class="presidio"/>
+    <text x="955" y="493" class="tiny">Protect</text>
+    <path d="M992 488H1008" class="step"/>
+    <rect x="1012" y="471" width="84" height="34" rx="7" class="stage"/>
+    <text x="1054" y="493" class="tiny">Serialize</text>
+    <path d="M1098 488H1114" class="step"/>
+    <rect x="1118" y="471" width="78" height="34" rx="7" class="stage"/>
+    <text x="1157" y="493" class="tiny">Validate</text>
+    <path d="M1198 488H1214" class="step"/>
+    <rect x="1218" y="471" width="70" height="34" rx="7" class="stage"/>
+    <text x="1253" y="493" class="tiny">Publish</text>
+    <rect x="1415" y="460" width="200" height="56" rx="10" class="protected"/>
+    <text x="1515" y="495" class="note">ACI</text>
+    <path d="M205 488H301" class="connection"/><path d="M505 488H581" class="connection"/><path d="M1335 488H1411" class="connection"/><path d="M1615 488H1711" class="connection"/>
+  </g>
+  <g>
+    <rect x="305" y="530" width="200" height="56" rx="10" class="raw"/>
+    <text x="405" y="565" class="note">ETKT</text>
+    <rect x="585" y="530" width="750" height="56" rx="10" class="container"/>
+    <text x="603" y="564" class="small bold start">ETKT</text>
+    <rect x="760" y="541" width="62" height="34" rx="7" class="stage"/>
+    <text x="791" y="563" class="tiny">Listen</text>
+    <path d="M824 558H840" class="step"/>
+    <rect x="844" y="541" width="54" height="34" rx="7" class="stage"/>
+    <text x="871" y="563" class="tiny">Parse</text>
+    <path d="M900 558H916" class="step"/>
+    <rect x="920" y="541" width="70" height="34" rx="7" class="presidio"/>
+    <text x="955" y="563" class="tiny">Protect</text>
+    <path d="M992 558H1008" class="step"/>
+    <rect x="1012" y="541" width="84" height="34" rx="7" class="stage"/>
+    <text x="1054" y="563" class="tiny">Serialize</text>
+    <path d="M1098 558H1114" class="step"/>
+    <rect x="1118" y="541" width="78" height="34" rx="7" class="stage"/>
+    <text x="1157" y="563" class="tiny">Validate</text>
+    <path d="M1198 558H1214" class="step"/>
+    <rect x="1218" y="541" width="70" height="34" rx="7" class="stage"/>
+    <text x="1253" y="563" class="tiny">Publish</text>
+    <rect x="1415" y="530" width="200" height="56" rx="10" class="protected"/>
+    <text x="1515" y="565" class="note">ETKT</text>
+    <path d="M205 558H301" class="connection"/><path d="M505 558H581" class="connection"/><path d="M1335 558H1411" class="connection"/><path d="M1615 558H1711" class="connection"/>
+  </g>
+  <g>
+    <rect x="305" y="600" width="200" height="56" rx="10" class="raw"/>
+    <text x="405" y="635" class="note">PNR</text>
+    <rect x="585" y="600" width="750" height="56" rx="10" class="container"/>
+    <text x="603" y="634" class="small bold start">PNR</text>
+    <rect x="760" y="611" width="62" height="34" rx="7" class="stage"/>
+    <text x="791" y="633" class="tiny">Listen</text>
+    <path d="M824 628H840" class="step"/>
+    <rect x="844" y="611" width="54" height="34" rx="7" class="stage"/>
+    <text x="871" y="633" class="tiny">Parse</text>
+    <path d="M900 628H916" class="step"/>
+    <rect x="920" y="611" width="70" height="34" rx="7" class="presidio"/>
+    <text x="955" y="633" class="tiny">Protect</text>
+    <path d="M992 628H1008" class="step"/>
+    <rect x="1012" y="611" width="84" height="34" rx="7" class="stage"/>
+    <text x="1054" y="633" class="tiny">Serialize</text>
+    <path d="M1098 628H1114" class="step"/>
+    <rect x="1118" y="611" width="78" height="34" rx="7" class="stage"/>
+    <text x="1157" y="633" class="tiny">Validate</text>
+    <path d="M1198 628H1214" class="step"/>
+    <rect x="1218" y="611" width="70" height="34" rx="7" class="stage"/>
+    <text x="1253" y="633" class="tiny">Publish</text>
+    <rect x="1415" y="600" width="200" height="56" rx="10" class="protected"/>
+    <text x="1515" y="635" class="note">PNR</text>
+    <path d="M205 628H301" class="connection"/><path d="M505 628H581" class="connection"/><path d="M1335 628H1411" class="connection"/><path d="M1615 628H1711" class="connection"/>
+  </g>
+  <g>
+    <rect x="305" y="670" width="200" height="56" rx="10" class="raw"/>
+    <text x="405" y="705" class="note">Seats</text>
+    <rect x="585" y="670" width="750" height="56" rx="10" class="container"/>
+    <text x="603" y="704" class="small bold start">Seats</text>
+    <rect x="760" y="681" width="62" height="34" rx="7" class="stage"/>
+    <text x="791" y="703" class="tiny">Listen</text>
+    <path d="M824 698H840" class="step"/>
+    <rect x="844" y="681" width="54" height="34" rx="7" class="stage"/>
+    <text x="871" y="703" class="tiny">Parse</text>
+    <path d="M900 698H916" class="step"/>
+    <rect x="920" y="681" width="70" height="34" rx="7" class="presidio"/>
+    <text x="955" y="703" class="tiny">Protect</text>
+    <path d="M992 698H1008" class="step"/>
+    <rect x="1012" y="681" width="84" height="34" rx="7" class="stage"/>
+    <text x="1054" y="703" class="tiny">Serialize</text>
+    <path d="M1098 698H1114" class="step"/>
+    <rect x="1118" y="681" width="78" height="34" rx="7" class="stage"/>
+    <text x="1157" y="703" class="tiny">Validate</text>
+    <path d="M1198 698H1214" class="step"/>
+    <rect x="1218" y="681" width="70" height="34" rx="7" class="stage"/>
+    <text x="1253" y="703" class="tiny">Publish</text>
+    <rect x="1415" y="670" width="200" height="56" rx="10" class="protected"/>
+    <text x="1515" y="705" class="note">Seats</text>
+    <path d="M205 698H301" class="connection"/><path d="M505 698H581" class="connection"/><path d="M1335 698H1411" class="connection"/><path d="M1615 698H1711" class="connection"/>
+  </g>
+  <g>
+    <rect x="305" y="740" width="200" height="56" rx="10" class="raw"/>
+    <text x="405" y="775" class="note">PNR Linking</text>
+    <rect x="585" y="740" width="750" height="56" rx="10" class="container"/>
+    <text x="603" y="774" class="small bold start">PNR Linking</text>
+    <rect x="760" y="751" width="62" height="34" rx="7" class="stage"/>
+    <text x="791" y="773" class="tiny">Listen</text>
+    <path d="M824 768H840" class="step"/>
+    <rect x="844" y="751" width="54" height="34" rx="7" class="stage"/>
+    <text x="871" y="773" class="tiny">Parse</text>
+    <path d="M900 768H916" class="step"/>
+    <rect x="920" y="751" width="70" height="34" rx="7" class="presidio"/>
+    <text x="955" y="773" class="tiny">Protect</text>
+    <path d="M992 768H1008" class="step"/>
+    <rect x="1012" y="751" width="84" height="34" rx="7" class="stage"/>
+    <text x="1054" y="773" class="tiny">Serialize</text>
+    <path d="M1098 768H1114" class="step"/>
+    <rect x="1118" y="751" width="78" height="34" rx="7" class="stage"/>
+    <text x="1157" y="773" class="tiny">Validate</text>
+    <path d="M1198 768H1214" class="step"/>
+    <rect x="1218" y="751" width="70" height="34" rx="7" class="stage"/>
+    <text x="1253" y="773" class="tiny">Publish</text>
+    <rect x="1415" y="740" width="200" height="56" rx="10" class="protected"/>
+    <text x="1515" y="775" class="note">PNR Linking</text>
+    <path d="M205 768H301" class="connection"/><path d="M505 768H581" class="connection"/><path d="M1335 768H1411" class="connection"/><path d="M1615 768H1711" class="connection"/>
+  </g>
+
+  <path d="M405 800V826" class="connection"/>
+  <rect x="305" y="830" width="200" height="70" rx="10" class="dead"/>
+  <text x="405" y="859" class="note">Dead-message</text>
+  <text x="405" y="884" class="tiny muted">Replay owner: to confirm</text>
+
+  <text x="960" y="846" class="label">.NET worker + local Presidio in each container</text>
+  <text x="960" y="874" class="tiny muted">pythonnet · presidio-analyzer · presidio-anonymizer · en_core_web_lg</text>
+  <text x="960" y="910" class="small muted">Ack after publish succeeds</text>
+
+  <path d="M405 945V985" class="attach"/>
+  <rect x="290" y="985" width="230" height="75" rx="16" class="box"/>
+  <text x="405" y="1016" class="label">EBS volume</text>
+  <text x="405" y="1043" class="small muted">Broker storage</text>
+
+  <path d="M960 945V981" class="platform"/>
+  <rect x="560" y="985" width="800" height="75" rx="16" class="box"/>
+  <text x="960" y="1016" class="label">VPC endpoints</text>
+  <text x="960" y="1043" class="small muted">ECR · S3 · CloudWatch Logs · Secrets Manager</text>
+
+  <!-- Legend -->
+  <rect x="230" y="1135" width="1460" height="120" rx="16" fill="#ffffff" stroke="#d3dce5" stroke-width="1.5"/>
+  <text x="255" y="1165" class="small start bold">Legend</text>
+  <rect x="255" y="1183" width="40" height="22" rx="5" class="raw"/>
+  <text x="307" y="1200" class="small start">Raw · original PII</text>
+  <rect x="620" y="1183" width="40" height="22" rx="5" class="protected"/>
+  <text x="672" y="1200" class="small start">Protected · PNR unchanged</text>
+  <rect x="985" y="1183" width="40" height="22" rx="5" class="dead"/>
+  <text x="1037" y="1200" class="small start">Failed after retries · no consumers</text>
+  <rect x="1350" y="1183" width="40" height="22" rx="5" class="external" style="stroke-dasharray:6 4"/>
+  <text x="1402" y="1200" class="small start">Outside AWS</text>
+  <rect x="255" y="1225" width="40" height="22" rx="5" class="container"/>
+  <text x="307" y="1242" class="small start">Container · one per feed</text>
+  <rect x="620" y="1225" width="40" height="22" rx="5" class="presidio"/>
+  <text x="672" y="1242" class="small start">Local Presidio · in process</text>
+  <path d="M985 1236H1021" class="connection"/>
+  <text x="1037" y="1242" class="small start">Native client · no HTTP</text>
+  <path d="M1350 1236H1386" class="platform"/>
+  <text x="1402" y="1242" class="small start">Platform traffic · not PII</text>
+</svg>

@@ -1,0 +1,352 @@
+<?xml version='1.0' encoding='utf-8'?>
+<xdrLayouts>
+  <!--Original structural format. One sequence per binary feed; no policies or JSON paths are embedded here.-->
+  <!-- Confirmed string names match reference mappings and policy fields. Uncertain names
+       remain unchanged. Nested optional strings use explicit paths in the reference file.
+       Capture names/patterns belong to reference mappings; masking actions belong to policies. -->
+  <!-- Strings carry a big-endian length word and zero padding to a four-byte boundary;
+       length zero means an empty value. Optional groups use a 0/1 presence word.
+       preserveWidths requires masks to retain framing, raw words and unselected bytes.
+       Unknown trailing bytes or unsupported optional states retain input without publication. -->
+  <!-- words is shorthand for fixedArray of N uint32 Value members: exactly N * 4 bytes,
+       with no count prefix. The original fixedArray syntax remains supported.
+       The loader expands words before processing, so paths, offsets and validation are unchanged.
+       Keep strings, expected constants and optional boundaries explicit and in wire order. -->
+  <feed type="ACI" configured="true" preserveWidths="true">
+    <!-- Reviewed policy projection for the supplied sample family. The ACI module owns
+         semantic linked-list decoding and full encoding; this sequence constrains policy coverage. -->
+    <uint32 name="Word000" expected="2" />
+    <uint32 name="Word001" />
+    <string name="airlineCode" max="4096" />
+    <uint32 name="Word003" />
+    <string name="flightDate" max="4096" />
+    <words name="Words005" count="2" />
+    <string name="terminatingCity" max="4096" />
+    <words name="Words008" count="6" />
+    <string name="flightProcessName" max="4096" />
+    <uint32 name="Word015" />
+    <string name="flightAciTimestamp" max="4096" />
+    <words name="Words017" count="2" />
+    <string name="legCity" max="4096" />
+    <words name="Words020" count="3" />
+    <string name="equipmentCode" max="4096" />
+    <string name="aircraftNumber" max="4096" />
+    <string name="departureGate" max="4096" />
+    <uint32 name="Word026" />
+    <string name="sectorNumber" max="4096" />
+    <words name="Words028" count="2" />
+    <string name="estimatedDepartureDate" max="4096" />
+    <uint32 name="Word031" />
+    <string name="scheduledDepartureDate" max="4096" />
+    <uint32 name="Word033" />
+    <string name="boardingDate" max="4096" />
+    <words name="Words035" count="43" />
+    <string name="pnr" max="6" />
+    <words name="Words079" count="2" />
+    <string name="passengerName" max="4096" />
+    <words name="Words082" count="7" />
+    <string name="passengerProcessName" max="4096" />
+    <words name="Words090" count="3" />
+    <string name="passengerFlightAirline" max="4096" />
+    <uint32 name="Word094" />
+    <string name="passengerFlightDate" max="4096" />
+    <words name="Words096" count="34" />
+    <optional name="OptionalGroupA">
+      <struct name="Body">
+        <words name="Words131" count="4" />
+        <string name="Counted135" max="4096" />
+        <words name="Words136" count="2" />
+        <string name="Counted138" max="4096" />
+        <uint32 name="Word139" />
+      </struct>
+    </optional>
+    <words name="Words131" count="2" />
+    <optional name="OptionalGroupB">
+      <struct name="Body">
+        <words name="Words134" count="3" />
+        <string name="Counted137" max="4096" />
+        <words name="Words138" count="5" />
+      </struct>
+    </optional>
+    <words name="Words134" count="2" />
+    <optional name="OptionalGroupC">
+      <struct name="Body">
+        <words name="Words137" count="7" />
+      </struct>
+    </optional>
+    <words name="Words137" count="11" />
+    <optional name="OptionalGroupD">
+      <struct name="Body">
+        <words name="Words167" count="7" />
+      </struct>
+    </optional>
+    <words name="Words149" count="9" />
+    <string name="aciTransactionTime" max="4096" />
+    <string name="aciTransactionDate" max="4096" />
+    <words name="Words160" count="5" />
+    <string name="unresolvedIdentifier" max="4096" />
+    <string name="unresolvedRecordReference" max="4096" />
+    <words name="Words167" count="3" />
+  </feed>
+  <feed type="ETKT" configured="true" preserveWidths="true">
+    <uint32 name="Word000" expected="5" />
+    <words name="Words001" count="2" />
+    <string name="entryDate" max="4096" />
+    <string name="entryTime" max="4096" />
+    <string name="pnr" max="6" />
+    <string name="Text0044" max="4096" />
+    <words name="Words007" count="5" />
+    <string name="Text0072" max="4096" />
+    <words name="Words013" count="2" />
+    <string name="Text0088" max="4096" />
+    <words name="Words016" count="11" />
+    <string name="ticketNumber" max="4096" />
+    <string name="ticketStatusRecord" max="4096" />
+    <words name="Words029" count="33" />
+    <string name="Flight1Airline" max="4096" />
+    <string name="Flight1Number" max="4096" />
+    <string name="Flight1Date" max="4096" />
+    <string name="Flight1DepartureTime" max="4096" />
+    <string name="Flight1ArrivalTime" max="4096" />
+    <string name="Flight1Origin" max="4096" />
+    <string name="Flight1Destination" max="4096" />
+    <string name="Flight1Class" max="4096" />
+    <words name="Words070" count="2" />
+    <string name="Flight1NumberRepeat" max="4096" />
+    <words name="Words073" count="4" />
+    <string name="Flight2Number" max="4096" />
+    <string name="Flight2Date" max="4096" />
+    <string name="Flight2DepartureTime" max="4096" />
+    <string name="Flight2ArrivalTime" max="4096" />
+    <string name="Flight2Origin" max="4096" />
+    <string name="Flight2Destination" max="4096" />
+    <words name="Words083" count="4" />
+    <string name="Flight2NumberRepeat" max="4096" />
+    <words name="Words088" count="16" />
+    <string name="UnconfirmedLocator1" max="4096" />
+    <string name="UnconfirmedLocator2" max="4096" />
+    <words name="Words106" count="30" />
+  </feed>
+  <feed type="PNR" configured="true" preserveWidths="true">
+    <uint32 name="Word000" expected="2" />
+    <string name="RecordTag001" max="4096" />
+    <string name="EventDate0012" max="4096" />
+    <string name="EventTime0028" max="4096" />
+    <string name="EventDate0036" max="4096" />
+    <string name="EventTime0052" max="4096" />
+    <string name="Identifier0064" max="4096" />
+    <string name="pnr" max="6" />
+    <words name="Words008" count="11" />
+    <string name="RecordTag019" max="4096" />
+    <words name="Words020" count="6" />
+    <string name="Identifier0168" max="4096" />
+    <string name="RecordTag027" max="4096" />
+    <string name="RecordTag028" max="4096" />
+    <string name="EventDate0196" max="4096" />
+    <words name="Words030" count="19" />
+    <string name="Identifier0284" max="4096" />
+    <string name="RecordTag050" max="4096" />
+    <string name="RecordTag051" max="4096" />
+    <words name="Words052" count="6" />
+    <string name="FlightNumber0336" max="4096" />
+    <words name="Words059" count="14" />
+    <string name="passengerSurname" max="4096" />
+    <words name="Words074" count="7" />
+    <string name="passengerGivenName" max="4096" />
+    <words name="Words082" count="10" />
+    <string name="RecordTag092" max="4096" />
+    <string name="travelDocumentRecord" max="4096" />
+    <words name="Words094" count="9" />
+    <string name="RecordTag103" max="4096" />
+    <string name="Remark0592" max="4096" />
+    <words name="Words105" count="9" />
+    <string name="RecordTag114" max="4096" />
+    <string name="Remark0696" max="4096" />
+    <words name="Words116" count="9" />
+    <string name="RecordTag125" max="4096" />
+    <string name="Remark0796" max="4096" />
+    <words name="Words127" count="9" />
+    <string name="RecordTag136" max="4096" />
+    <string name="emailContactRecord" max="4096" />
+    <words name="Words138" count="9" />
+    <string name="RecordTag147" max="4096" />
+    <string name="phoneContactRecord" max="4096" />
+    <words name="Words149" count="9" />
+    <string name="RecordTag158" max="4096" />
+    <string name="Remark1052" max="4096" />
+    <words name="Words160" count="9" />
+    <string name="RecordTag169" max="4096" />
+    <string name="Remark1140" max="4096" />
+    <words name="Words171" count="9" />
+    <string name="RecordTag180" max="4096" />
+    <string name="Remark1228" max="4096" />
+    <words name="Words182" count="9" />
+    <string name="RecordTag191" max="4096" />
+    <string name="Remark1316" max="4096" />
+    <words name="Words193" count="9" />
+    <string name="RecordTag202" max="4096" />
+    <string name="Remark1388" max="4096" />
+    <words name="Words204" count="9" />
+    <string name="RecordTag213" max="4096" />
+    <string name="Remark1488" max="4096" />
+    <words name="Words215" count="9" />
+    <string name="RecordTag224" max="4096" />
+    <string name="Remark1572" max="4096" />
+    <words name="Words226" count="9" />
+    <string name="RecordTag235" max="4096" />
+    <string name="ticketRecord1" max="4096" />
+    <words name="Words237" count="9" />
+    <string name="RecordTag246" max="4096" />
+    <string name="ticketRecord2" max="4096" />
+    <words name="Words248" count="11" />
+    <string name="RecordTag259" max="4096" />
+    <string name="RecordTag260" max="4096" />
+    <string name="RecordTag261" max="4096" />
+    <string name="loyaltyRecord1" max="4096" />
+    <string name="passengerNameOccurrence1" max="4096" />
+    <words name="Words264" count="11" />
+    <string name="RecordTag275" max="4096" />
+    <string name="RecordTag276" max="4096" />
+    <string name="RecordTag277" max="4096" />
+    <string name="loyaltyRecord2" max="4096" />
+    <string name="passengerNameOccurrence2" max="4096" />
+    <words name="Words280" count="11" />
+    <string name="RecordTag291" max="4096" />
+    <string name="PhonePart2052" max="4096" />
+    <string name="PhonePart2060" max="4096" />
+    <words name="Words294" count="6" />
+    <string name="RecordTag300" max="4096" />
+    <string name="RecordTag301" max="4096" />
+    <string name="Remark2112" max="4096" />
+    <words name="Words303" count="6" />
+    <string name="RecordTag309" max="4096" />
+    <string name="RecordTag310" max="4096" />
+    <string name="Remark2188" max="4096" />
+    <words name="Words312" count="6" />
+    <string name="RecordTag318" max="4096" />
+    <string name="RecordTag319" max="4096" />
+    <string name="Remark2284" max="4096" />
+    <words name="Words321" count="6" />
+    <string name="RecordTag327" max="4096" />
+    <string name="RecordTag328" max="4096" />
+    <string name="Remark2352" max="4096" />
+    <words name="Words330" count="8" />
+    <string name="RecordTag338" max="4096" />
+    <string name="TravelDate2444" max="4096" />
+    <string name="RecordTag340" max="4096" />
+    <uint32 name="Word341" />
+    <string name="Airline2468" max="4096" />
+    <string name="RecordTag343" max="4096" />
+    <string name="Origin2484" max="4096" />
+    <string name="Destination2492" max="4096" />
+    <string name="DepartureTime2500" max="4096" />
+    <string name="ArrivalTime2508" max="4096" />
+    <string name="RecordTag348" max="4096" />
+    <words name="Words349" count="21" />
+    <string name="TravelDate2608" max="4096" />
+    <string name="RecordTag371" max="4096" />
+    <words name="Words372" count="4" />
+    <string name="RecordTag376" max="4096" />
+    <string name="TravelDate2652" max="4096" />
+    <string name="RecordTag378" max="4096" />
+    <uint32 name="Word379" />
+    <string name="Airline2676" max="4096" />
+    <string name="RecordTag381" max="4096" />
+    <string name="Origin2692" max="4096" />
+    <string name="Destination2700" max="4096" />
+    <string name="DepartureTime2708" max="4096" />
+    <string name="ArrivalTime2716" max="4096" />
+    <string name="RecordTag386" max="4096" />
+    <words name="Words387" count="21" />
+    <string name="TravelDate2816" max="4096" />
+    <string name="RecordTag409" max="4096" />
+    <words name="Words410" count="4" />
+    <string name="MaskedPayment2852" max="4096" />
+    <words name="Words415" count="6" />
+    <string name="ClientAddress2904" max="4096" />
+    <words name="Words422" count="6" />
+    <string name="Remark2956" max="4096" />
+    <words name="Words429" count="6" />
+    <string name="Remark3012" max="4096" />
+    <words name="Words436" count="6" />
+    <string name="Remark3064" max="4096" />
+    <words name="Words443" count="6" />
+    <string name="loyaltyMembershipRecord" max="4096" />
+    <words name="Words450" count="6" />
+    <string name="loyaltySponsorRecord" max="4096" />
+    <words name="Words457" count="6" />
+    <string name="accountBalanceRecord" max="4096" />
+    <words name="Words464" count="6" />
+    <string name="Mileage3308" max="4096" />
+    <words name="Words471" count="6" />
+    <string name="MileageQuote3384" max="4096" />
+    <words name="Words478" count="6" />
+    <string name="iataMsoIdRecord" max="4096" />
+    <words name="Words485" count="6" />
+    <string name="requestedEmailRecord" max="4096" />
+    <words name="Words492" count="6" />
+    <string name="FareRemark3576" max="4096" />
+    <words name="Words499" count="6" />
+    <string name="fareQuoteReferenceRecord" max="4096" />
+    <words name="Words506" count="6" />
+    <string name="Remark3740" max="4096" />
+    <words name="Words513" count="6" />
+    <string name="ticketOrderRecord" max="4096" />
+    <words name="Words520" count="6" />
+    <string name="addressRecipientRecord" max="4096" />
+    <words name="Words527" count="6" />
+    <string name="addressStreetRecord" max="4096" />
+    <words name="Words534" count="6" />
+    <string name="addressCityRecord" max="4096" />
+    <words name="Words541" count="6" />
+    <string name="addressStateRecord" max="4096" />
+    <words name="Words548" count="6" />
+    <string name="addressPostalCodeRecord" max="4096" />
+    <words name="Words555" count="6" />
+    <string name="additionalAddressRecord" max="4096" />
+    <words name="Words562" count="6" />
+    <string name="rviReferenceRecord" max="4096" />
+    <words name="Words569" count="6" />
+    <string name="Remark4240" max="4096" />
+    <words name="Words576" count="6" />
+    <string name="paymentApprovalRecord" max="4096" />
+    <words name="Words583" count="6" />
+    <string name="mileageOrderRecord" max="4096" />
+    <words name="Words590" count="6" />
+    <string name="Remark4468" max="4096" />
+    <words name="Words597" count="6" />
+    <string name="Remark4544" max="4096" />
+    <words name="Words604" count="6" />
+    <string name="Remark4624" max="4096" />
+    <words name="Words611" count="6" />
+    <string name="Remark4700" max="4096" />
+    <words name="Words618" count="6" />
+    <string name="Remark4780" max="4096" />
+    <words name="Words625" count="7" />
+    <string name="fareTicketRecord" max="4096" />
+    <words name="Words633" count="9" />
+    <string name="loyaltyReferenceRecord" max="4096" />
+    <words name="Words643" count="7" />
+    <string name="Remark5000" max="4096" />
+    <words name="Words651" count="6" />
+    <string name="fareQuote" max="4096" />
+    <words name="Words658" count="5" />
+    <string name="passengerCountText" max="4096" />
+    <words name="Words664" count="5" />
+    <string name="fareAmounts" max="4096" />
+    <words name="Words670" count="5" />
+    <string name="totalFare" max="4096" />
+    <words name="Words676" count="6" />
+    <string name="RecordTag682" max="4096" />
+    <string name="passengerNameOccurrence3" max="4096" />
+    <words name="Words684" count="7" />
+    <string name="RecordTag691" max="4096" />
+    <words name="Words692" count="4" />
+    <string name="EventDate5344" max="4096" />
+    <string name="EventTime5356" max="4096" />
+    <string name="Identifier5364" max="4096" />
+    <words name="Words699" count="10" />
+    <string name="Remark5416" max="4096" />
+    <words name="Words710" count="5" />
+  </feed>
+</xdrLayouts>

@@ -1,0 +1,293 @@
+<?xml version='1.0' encoding='utf-8'?>
+<feedPolicies>
+  <!-- Binary field names match reference-layouts.xml aliases, not baseline byte offsets.
+       Confirmed top-level names match XDR strings; reference paths map nested optional fields.
+       Text/Identifier/Remark names remain where the exact business meaning is unconfirmed.
+       ACI actions reflect the approved structure review; other feed actions are retained. -->
+  <catalog>
+    <!--Optional shared rules. Existing inline feed/field policies remain supported unchanged.-->
+    <!-- maskCharacters="all" uses the actual value width, including punctuation and spaces.
+         Three mixed PNR records use # so their literal * separators remain distinguishable.
+         A field uses either policy="..." or inline rule attributes, never both. -->
+    <policy id="MaskUnclassifiedIdentifier" identification="Known" entity="UNCLASSIFIED_IDENTIFIER" action="Mask" maskCharacters="all" maskCharacter="*" />
+    <policy id="MaskPerson" identification="Known" entity="PERSON" action="Mask" maskCharacters="all" maskCharacter="*" />
+    <policy id="MaskTicketReference" identification="Known" entity="TICKET_REFERENCE" action="Mask" maskCharacters="all" maskCharacter="*" />
+    <policy id="MaskDateOfBirth" identification="Known" action="Mask" entity="DATE_OF_BIRTH" maskCharacters="all" maskCharacter="*" />
+    <policy id="MaskGender" identification="Known" action="Mask" entity="GENDER" maskCharacters="all" maskCharacter="*" />
+    <policy id="MaskSensitiveAttribute" identification="Known" action="Mask" entity="SENSITIVE_ATTRIBUTE" maskCharacters="all" maskCharacter="#" />
+    <policy id="MaskEmailAddress" identification="Known" action="Mask" entity="EMAIL_ADDRESS" maskCharacters="all" maskCharacter="*" />
+    <policy id="MaskPhoneNumber" identification="Known" action="Mask" entity="PHONE_NUMBER" maskCharacters="all" maskCharacter="*" />
+    <policy id="MaskLoyaltyNumber" identification="Known" action="Mask" entity="LOYALTY_NUMBER" maskCharacters="all" maskCharacter="#" />
+    <policy id="MaskPaymentReference" identification="Known" action="Mask" entity="PAYMENT_REFERENCE" maskCharacters="all" maskCharacter="*" />
+    <policy id="MaskIpAddress" identification="Known" action="Mask" entity="IP_ADDRESS" maskCharacters="all" maskCharacter="*" />
+    <policy id="MaskFinancialInformation" identification="Known" action="Mask" entity="FINANCIAL_INFORMATION" maskCharacters="all" maskCharacter="#" />
+    <policy id="MaskOrderId" identification="Known" action="Mask" entity="ORDER_ID" maskCharacters="all" maskCharacter="*" />
+    <policy id="MaskAddress" identification="Known" action="Mask" entity="ADDRESS" maskCharacters="all" maskCharacter="*" />
+  </catalog>
+  <feed type="ACI" configured="true">
+    <!-- Confirmed operational values are kept. Passenger names, seat assignments,
+         loyalty numbers and unresolved identifiers stay masked. Numeric passenger IDs are
+         deliberately preserved and association-checked; tokenization is outside this rewrite. -->
+    <field name="/airlineCode" identification="None" action="Keep" />
+    <field name="/flightDate" identification="None" action="Keep" />
+    <field name="/terminatingCity" identification="None" action="Keep" />
+    <field name="/flightProcessName" identification="None" action="Keep" />
+    <field name="/flightAciTimestamp" identification="None" action="Keep" />
+    <field name="/legCity" identification="None" action="Keep" />
+    <field name="/equipmentCode" identification="None" action="Keep" />
+    <field name="/aircraftNumber" identification="None" action="Keep" />
+    <field name="/departureGate" identification="None" action="Keep" />
+    <field name="/sectorNumber" identification="None" action="Keep" />
+    <field name="/estimatedDepartureDate" identification="None" action="Keep" />
+    <field name="/scheduledDepartureDate" identification="None" action="Keep" />
+    <field name="/boardingDate" identification="None" action="Keep" />
+    <field name="/pnr" identification="None" action="Keep" />
+    <field name="/passengerName" policy="MaskPerson" />
+    <field name="/passengerProcessName" identification="None" action="Keep" />
+    <field name="/passengerFlightAirline" identification="None" action="Keep" />
+    <field name="/passengerFlightDate" identification="None" action="Keep" />
+    <field name="/aciTransactionTime" identification="None" action="Keep" />
+    <field name="/aciTransactionDate" identification="None" action="Keep" />
+    <field name="/unresolvedIdentifier" policy="MaskUnclassifiedIdentifier" />
+    <field name="/unresolvedRecordReference/Prefix" policy="MaskUnclassifiedIdentifier" />
+    <field name="/unresolvedRecordReference/pnr" identification="None" action="Keep" />
+    <field name="/frequentTravelerNumber" identification="Known" action="Mask" entity="LOYALTY_NUMBER" maskCharacters="all" maskCharacter="*" />
+    <field name="/passengerSeatNumber" policy="MaskUnclassifiedIdentifier" />
+    <field name="/unresolvedSeatString" policy="MaskUnclassifiedIdentifier" />
+  </feed>
+  <feed type="ETKT" configured="true">
+    <!-- ticketStatusRecord contains an uncertain prefix and readable status text.
+           Text0044/Text0072/Text0088 retain their existing policies.
+           Divide-event locators are approved provisional new/old PNRs and kept. -->
+    <field name="/entryDate" identification="None" action="Keep" />
+    <field name="/entryTime" identification="None" action="Keep" />
+    <field name="/pnr" identification="None" action="Keep" />
+    <field name="/Text0044" policy="MaskUnclassifiedIdentifier" />
+    <field name="/Text0072" policy="MaskUnclassifiedIdentifier" />
+    <field name="/Text0088" policy="MaskUnclassifiedIdentifier" />
+    <field name="/ticketNumber" policy="MaskTicketReference" />
+    <field name="/ticketStatusRecord/Prefix" policy="MaskUnclassifiedIdentifier" />
+    <field name="/ticketStatusRecord/StatusText" identification="None" action="Keep" />
+    <field name="/Flight1Airline" identification="None" action="Keep" />
+    <field name="/Flight1Number" identification="None" action="Keep" />
+    <field name="/Flight1Date" identification="None" action="Keep" />
+    <field name="/Flight1DepartureTime" identification="None" action="Keep" />
+    <field name="/Flight1ArrivalTime" identification="None" action="Keep" />
+    <field name="/Flight1Origin" identification="None" action="Keep" />
+    <field name="/Flight1Destination" identification="None" action="Keep" />
+    <field name="/Flight1Class" identification="None" action="Keep" />
+    <field name="/Flight1NumberRepeat" identification="None" action="Keep" />
+    <field name="/Flight2Number" identification="None" action="Keep" />
+    <field name="/Flight2Date" identification="None" action="Keep" />
+    <field name="/Flight2DepartureTime" identification="None" action="Keep" />
+    <field name="/Flight2ArrivalTime" identification="None" action="Keep" />
+    <field name="/Flight2Origin" identification="None" action="Keep" />
+    <field name="/Flight2Destination" identification="None" action="Keep" />
+    <field name="/Flight2NumberRepeat" identification="None" action="Keep" />
+    <field name="/newPnr" identification="None" action="Keep" />
+    <field name="/oldPnr" identification="None" action="Keep" />
+  </feed>
+  <feed type="PNR" configured="true">
+    <!-- Record names follow identifiable DOCS/CTCE/CTCM, address, account and fare content.
+         Occurrence/record suffixes distinguish fields, not passenger associations.
+         Event dates, identifiers and general remarks retain existing names when roles are unclear. -->
+    <field name="/EventDate0012" identification="None" action="Keep" />
+    <field name="/EventTime0028" identification="None" action="Keep" />
+    <field name="/EventDate0036" identification="None" action="Keep" />
+    <field name="/EventTime0052" identification="None" action="Keep" />
+    <field name="/Identifier0064" policy="MaskUnclassifiedIdentifier" />
+    <field name="/pnr" identification="None" action="Keep" />
+    <field name="/Identifier0168" policy="MaskUnclassifiedIdentifier" />
+    <field name="/EventDate0196" identification="None" action="Keep" />
+    <field name="/Identifier0284" policy="MaskUnclassifiedIdentifier" />
+    <field name="/FlightNumber0336" identification="None" action="Keep" />
+    <field name="/passengerSurname" policy="MaskPerson" />
+    <field name="/passengerGivenName" policy="MaskPerson" />
+    <field name="/travelDocumentRecord/DateOfBirth1" policy="MaskDateOfBirth" />
+    <field name="/travelDocumentRecord/Gender1" policy="MaskGender" />
+    <field name="/travelDocumentRecord/PassengerName1" policy="MaskPerson" />
+    <field name="/travelDocumentRecord/PassengerName2" policy="MaskPerson" />
+    <field name="/Remark0592" policy="MaskSensitiveAttribute" />
+    <field name="/Remark0696" policy="MaskSensitiveAttribute" />
+    <field name="/Remark0796" policy="MaskSensitiveAttribute" />
+    <field name="/emailContactRecord/EmailAddress" policy="MaskEmailAddress" />
+    <field name="/emailContactRecord/PassengerName1" policy="MaskPerson" />
+    <field name="/phoneContactRecord/PhoneNumber" policy="MaskPhoneNumber" />
+    <field name="/phoneContactRecord/PassengerName1" policy="MaskPerson" />
+    <field name="/Remark1052" policy="MaskSensitiveAttribute" />
+    <field name="/Remark1140" policy="MaskSensitiveAttribute" />
+    <field name="/Remark1228" policy="MaskSensitiveAttribute" />
+    <field name="/Remark1316" policy="MaskSensitiveAttribute" />
+    <field name="/Remark1388" policy="MaskSensitiveAttribute" />
+    <field name="/Remark1488" policy="MaskSensitiveAttribute" />
+    <field name="/Remark1572" policy="MaskSensitiveAttribute" />
+    <field name="/ticketRecord1/PassengerName1" policy="MaskPerson" />
+    <field name="/ticketRecord1/TicketReference1" policy="MaskTicketReference" />
+    <field name="/ticketRecord2/PassengerName1" policy="MaskPerson" />
+    <field name="/ticketRecord2/TicketReference1" policy="MaskTicketReference" />
+    <field name="/loyaltyRecord1/Account1" policy="MaskLoyaltyNumber" />
+    <field name="/loyaltyRecord1/Status1" policy="MaskSensitiveAttribute" />
+    <field name="/passengerNameOccurrence1" policy="MaskPerson" />
+    <field name="/loyaltyRecord2/Account1" policy="MaskLoyaltyNumber" />
+    <field name="/loyaltyRecord2/Status1" policy="MaskSensitiveAttribute" />
+    <field name="/passengerNameOccurrence2" policy="MaskPerson" />
+    <field name="/PhonePart2052" policy="MaskPhoneNumber" />
+    <field name="/PhonePart2060" policy="MaskPhoneNumber" />
+    <field name="/Remark2112" policy="MaskSensitiveAttribute" />
+    <field name="/Remark2188" policy="MaskSensitiveAttribute" />
+    <field name="/Remark2284" policy="MaskSensitiveAttribute" />
+    <field name="/Remark2352" policy="MaskSensitiveAttribute" />
+    <field name="/TravelDate2444" identification="None" action="Keep" />
+    <field name="/Airline2468" identification="None" action="Keep" />
+    <field name="/Origin2484" identification="None" action="Keep" />
+    <field name="/Destination2492" identification="None" action="Keep" />
+    <field name="/DepartureTime2500" identification="None" action="Keep" />
+    <field name="/ArrivalTime2508" identification="None" action="Keep" />
+    <field name="/TravelDate2608" identification="None" action="Keep" />
+    <field name="/TravelDate2652" identification="None" action="Keep" />
+    <field name="/Airline2676" identification="None" action="Keep" />
+    <field name="/Origin2692" identification="None" action="Keep" />
+    <field name="/Destination2700" identification="None" action="Keep" />
+    <field name="/DepartureTime2708" identification="None" action="Keep" />
+    <field name="/ArrivalTime2716" identification="None" action="Keep" />
+    <field name="/TravelDate2816" identification="None" action="Keep" />
+    <field name="/MaskedPayment2852/Suffix1" policy="MaskPaymentReference" />
+    <field name="/ClientAddress2904/IPAddress1" policy="MaskIpAddress" />
+    <field name="/Remark2956" policy="MaskSensitiveAttribute" />
+    <field name="/Remark3012" policy="MaskSensitiveAttribute" />
+    <field name="/Remark3064" policy="MaskSensitiveAttribute" />
+    <field name="/loyaltyMembershipRecord/PassengerName1" policy="MaskPerson" />
+    <field name="/loyaltyMembershipRecord/Account1" policy="MaskLoyaltyNumber" />
+    <field name="/loyaltyMembershipRecord/Status1" policy="MaskSensitiveAttribute" />
+    <field name="/loyaltySponsorRecord/Account1" policy="MaskLoyaltyNumber" />
+    <field name="/accountBalanceRecord/Balance1" policy="MaskFinancialInformation" />
+    <field name="/Mileage3308" identification="None" action="Keep" />
+    <field name="/MileageQuote3384" identification="None" action="Keep" />
+    <field name="/iataMsoIdRecord/Identifier1" policy="MaskUnclassifiedIdentifier" />
+    <field name="/requestedEmailRecord/Email1" policy="MaskEmailAddress" />
+    <field name="/FareRemark3576" identification="None" action="Keep" />
+    <field name="/fareQuoteReferenceRecord/Reference1" policy="MaskOrderId" />
+    <field name="/Remark3740" policy="MaskSensitiveAttribute" />
+    <field name="/ticketOrderRecord/Reference1" policy="MaskOrderId" />
+    <field name="/addressRecipientRecord/RecipientName" policy="MaskPerson" />
+    <field name="/addressStreetRecord/Street" policy="MaskAddress" />
+    <field name="/addressCityRecord/City" policy="MaskAddress" />
+    <field name="/addressStateRecord/State" policy="MaskAddress" />
+    <field name="/addressPostalCodeRecord/PostalCode" policy="MaskAddress" />
+    <field name="/additionalAddressRecord/AdditionalText" policy="MaskAddress" />
+    <field name="/rviReferenceRecord/Reference1" policy="MaskUnclassifiedIdentifier" />
+    <field name="/Remark4240" policy="MaskSensitiveAttribute" />
+    <field name="/paymentApprovalRecord/ApprovalReference1" policy="MaskPaymentReference" />
+    <field name="/mileageOrderRecord/Reference1" policy="MaskOrderId" />
+    <field name="/Remark4468" policy="MaskSensitiveAttribute" />
+    <field name="/Remark4544" policy="MaskSensitiveAttribute" />
+    <field name="/Remark4624" policy="MaskSensitiveAttribute" />
+    <field name="/Remark4700" policy="MaskSensitiveAttribute" />
+    <field name="/Remark4780" policy="MaskSensitiveAttribute" />
+    <field name="/fareTicketRecord/Account1" policy="MaskLoyaltyNumber" />
+    <field name="/fareTicketRecord/TicketReference1" policy="MaskTicketReference" />
+    <field name="/loyaltyReferenceRecord/Account1" policy="MaskLoyaltyNumber" />
+    <field name="/Remark5000" policy="MaskSensitiveAttribute" />
+    <field name="/fareQuote" identification="None" action="Keep" />
+    <field name="/passengerCountText" identification="None" action="Keep" />
+    <field name="/fareAmounts" identification="None" action="Keep" />
+    <field name="/totalFare" identification="None" action="Keep" />
+    <field name="/passengerNameOccurrence3" policy="MaskPerson" />
+    <field name="/EventDate5344" identification="None" action="Keep" />
+    <field name="/EventTime5356" identification="None" action="Keep" />
+    <field name="/Identifier5364" policy="MaskUnclassifiedIdentifier" />
+    <field name="/Remark5416" policy="MaskSensitiveAttribute" />
+  </feed>
+  <feed type="PNR-Linking">
+    <field name="/*/PaxLinkId" identification="Known" action="Replace" entity="PASSENGER_LINK_ID" replacement="[PASSENGER_LINK_ID]" />
+    <field name="/*/LinkVersion" identification="None" action="Keep" />
+    <field name="/*/LinkType" identification="None" action="Keep" />
+    <field name="/*/LinkReasonAtCreation" identification="None" action="Keep" />
+    <field name="/*/ChangeReason" identification="None" action="Keep" />
+    <field name="/*/ChangeType" identification="None" action="Keep" />
+    <field name="/*/PNROwner" identification="None" action="Keep" />
+    <field name="/*/ChangeOfOwnershipTimestamp" identification="None" action="Keep" />
+    <field name="/*/IsIRROP" identification="None" action="Keep" />
+    <field name="/*/ChannelId" identification="None" action="Keep" />
+    <field name="/*/UserId" identification="Known" action="Replace" entity="USER_ID" replacement="[USER_ID]" />
+    <field name="/*/UserIPAddress" identification="Known" action="Replace" entity="IP_ADDRESS" replacement="[IP_ADDRESS]" />
+    <field name="/*/LEID" identification="None" action="Keep" />
+    <field name="/*/AgentSine" identification="None" action="Keep" />
+    <field name="/*/AAA" identification="None" action="Keep" />
+    <field name="/*/PaxFlightLegLinkId" identification="Known" action="Replace" entity="PASSENGER_LINK_ID" replacement="[PASSENGER_LINK_ID]" />
+    <field name="/*/ReferenceLinkId" identification="Known" action="Replace" entity="PASSENGER_LINK_ID" replacement="[PASSENGER_LINK_ID]" />
+    <field name="/*/FlightLegId" identification="None" action="Keep" />
+    <field name="/*/FlightLegOffPoint" identification="None" action="Keep" />
+    <field name="/*/CreateDateTime" identification="None" action="Keep" />
+    <field name="/*/LastUpdateDateTime" identification="None" action="Keep" />
+    <field name="/*/Customers/*/PaxId" identification="Known" action="Replace" entity="PASSENGER_ID" replacement="[PASSENGER_ID]" />
+    <field name="/*/Customers/*/OrderId" identification="Known" action="Replace" entity="ORDER_ID" replacement="[ORDER_ID]" />
+    <field name="/*/Customers/*/FirstName" identification="Known" action="Replace" entity="PERSON" replacement="[PASSENGER_NAME]" />
+    <field name="/*/Customers/*/LastName" identification="Known" action="Replace" entity="PERSON" replacement="[PASSENGER_NAME]" />
+    <field name="/*/Customers/*/BookedAs" identification="Known" action="Replace" entity="PERSON" replacement="[PASSENGER_NAME]" />
+    <field name="/*/Customers/*/UaRecordLocator" identification="None" action="Keep" />
+    <field name="/*/Customers/*/DOB" identification="Known" action="Replace" entity="DATE_OF_BIRTH" replacement="[DATE_OF_BIRTH]" />
+    <field name="/*/Customers/*/UaLoyaltyAcctNbr" identification="Known" action="Replace" entity="LOYALTY_NUMBER" replacement="[LOYALTY_NUMBER]" />
+    <field name="/*/Customers/*/PaxStatus" identification="None" action="Keep" />
+    <field name="/*/Customers/*/PartnerLoyaltyAcctNbr" identification="Known" action="Replace" entity="LOYALTY_NUMBER" replacement="[LOYALTY_NUMBER]" />
+    <field name="/*/Customers/*/ReasonForLeaving" identification="None" action="Keep" />
+    <field name="/*/Customers/*/UaRecordLocatorCreateDate" identification="None" action="Keep" />
+    <field name="/*/Customers/*/SeqInPNR" identification="None" action="Keep" />
+    <field name="/*/Customers/*/DateAdded" identification="None" action="Keep" />
+    <field name="/*/Customers/*/OrderPurgeDate" identification="None" action="Keep" />
+    <field name="/*/Customers/*/FlightSegment/FlightSegId" identification="None" action="Keep" />
+    <field name="/*/Customers/*/FlightSegment/OperatingAirlineCode" identification="None" action="Keep" />
+    <field name="/*/Customers/*/FlightSegment/OperatingFlightNumber" identification="None" action="Keep" />
+    <field name="/*/Customers/*/FlightSegment/LocalDepartureDate" identification="None" action="Keep" />
+    <field name="/*/Customers/*/FlightSegment/BoardPoint" identification="None" action="Keep" />
+    <field name="/*/Customers/*/FlightSegment/OffPoint" identification="None" action="Keep" />
+    <field name="/*/Customers/*/FlightLeg/FlightLegId" identification="None" action="Keep" />
+    <field name="/*/Customers/*/FlightLeg/OperatingAirlineCode" identification="None" action="Keep" />
+    <field name="/*/Customers/*/FlightLeg/OperatingFlightNumber" identification="None" action="Keep" />
+    <field name="/*/Customers/*/FlightLeg/LocalDepartureDate" identification="None" action="Keep" />
+    <field name="/*/Customers/*/FlightLeg/BoardPoint" identification="None" action="Keep" />
+    <field name="/*/Customers/*/FlightLeg/OffPoint" identification="None" action="Keep" />
+    <field name="/*/transitionLinkSegments" identification="Known" action="Replace" entity="SENSITIVE_ATTRIBUTE" replacement="[PROTECTED_ATTRIBUTE]" />
+  </feed>
+  <feed type="Seats">
+    <field name="/OrderChangeNotif/EventVersion" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/EventTime" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/EventName" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/EventType" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/OrderId" identification="Known" action="Replace" entity="ORDER_ID" replacement="[ORDER_ID]" />
+    <field name="/OrderChangeNotif/OrderCreateDateTime" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/OrderVersion" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/PaxId" identification="Known" action="Replace" entity="PASSENGER_ID" replacement="[PASSENGER_ID]" />
+    <field name="/OrderChangeNotif/Old/Customers/*/SeqInPNR" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/FirstName" identification="Known" action="Replace" entity="PERSON" replacement="[PASSENGER_NAME]" />
+    <field name="/OrderChangeNotif/Old/Customers/*/LastName" identification="Known" action="Replace" entity="PERSON" replacement="[PASSENGER_NAME]" />
+    <field name="/OrderChangeNotif/Old/Customers/*/BookedAsName" identification="Known" action="Replace" entity="PERSON" replacement="[PASSENGER_NAME]" />
+    <field name="/OrderChangeNotif/Old/Customers/*/UARecloc" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/UAReclocCreateDate" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/ChgReasonCode" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/ServiceItemId" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/OrderItemId" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/ServiceType" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/CreateDateTime" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/LastUpdateDateTime" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/BookingClass" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/Cabin" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/SeatNumber" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/Attributes/*" identification="Known" action="Replace" entity="SENSITIVE_ATTRIBUTE" replacement="[PROTECTED_ATTRIBUTE]" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/IATAAttributes/*" identification="Known" action="Replace" entity="SENSITIVE_ATTRIBUTE" replacement="[PROTECTED_ATTRIBUTE]" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/TTYAttributes/*" identification="Known" action="Replace" entity="SENSITIVE_ATTRIBUTE" replacement="[PROTECTED_ATTRIBUTE]" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/OccStatus" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/FlightSegRefId" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/FlightLegRefId" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/FlightLegOffPoint" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/FlightLegDepartureTime" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/FlightLegArrivalTime" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/Source" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/ActionType" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/EventDetail/ClientId" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/EventDetail/EmpId" identification="Known" action="Replace" entity="EMPLOYEE_ID" replacement="[EMPLOYEE_ID]" />
+    <field name="/OrderChangeNotif/EventDetail/LEID" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/EventDetail/AAA" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/EventDetail/AgentSine" identification="None" action="Keep" />
+  </feed>
+</feedPolicies>

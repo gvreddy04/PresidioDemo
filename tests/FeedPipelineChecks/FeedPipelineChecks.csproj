@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../PresidioDemo.csproj" />
+    <Compile Include="../FeedRoundTripChecks/NoAnonymizationRoundTripChecks.cs" Link="NoAnonymizationRoundTripChecks.cs" />
+    <Compile Include="../FeedRoundTripChecks/RoundTripExamples.cs" Link="RoundTripExamples.cs" />
+    <Compile Include="../FeedRoundTripChecks/JsonRoundTripExamples.cs" Link="JsonRoundTripExamples.cs" />
+  </ItemGroup>
+</Project>
