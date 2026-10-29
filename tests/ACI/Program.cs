@@ -18,7 +18,7 @@ var codec = FeedCodecRegistry.Create(FeedType.ACI, schemas, references);
 Check(codec is AciFeedCodec, "ACI route uses the new module");
 var results = new List<object>();
 var options = new JsonSerializerOptions { WriteIndented = true };
-foreach (string file in Directory.GetFiles(Path.Combine(project, "docs/sample-docs"), "ACI*.txt").Order())
+foreach (string file in Directory.GetFiles(Path.Combine(project, "docs/sample-docs/ACI"), "ACI*.txt").Order())
 {
     byte[] original = File.ReadAllBytes(file);
     var delivery = new FeedDelivery(FeedType.ACI, Guid.NewGuid(), Path.GetFileName(file), file);
@@ -67,7 +67,7 @@ foreach (string file in Directory.GetFiles(Path.Combine(project, "docs/sample-do
     Console.WriteLine($"PASS {Path.GetFileName(file)} | {decoded.PayloadLength} bytes | {masksCount} masks");
 }
 
-byte[] baseline = FeedPayloadReader.ReadPayload(new(new(FeedType.ACI, Guid.Empty, "ACI.txt", ""), File.ReadAllBytes(Path.Combine(project, "docs/sample-docs/ACI.txt"))));
+byte[] baseline = FeedPayloadReader.ReadPayload(new(new(FeedType.ACI, Guid.Empty, "ACI.txt", ""), File.ReadAllBytes(Path.Combine(project, "docs/sample-docs/ACI/ACI.txt"))));
 var baselineDocument = new AciDecoder().Decode(baseline);
 Reject(() => new AciDecoder().Decode(baseline[..^1]), "truncated payload");
 Reject(() => new AciDecoder().Decode(baseline.Concat(new byte[4]).ToArray()), "trailing bytes");

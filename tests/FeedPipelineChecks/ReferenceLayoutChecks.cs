@@ -76,7 +76,7 @@ static class ReferenceLayoutChecks
             _ = ConfiguredPiiIdentifier.CreatePlan(parsed.Fields, config.Policies[feed]);
         }
         var aci = Codec(FeedType.ACI, config);
-        byte[] raw = FeedPayloadReader.ReadPayload(Message(FeedType.ACI, File.ReadAllBytes(Path.Combine(root, "docs/sample-docs/ACI.txt")), "ACI.txt"));
+        byte[] raw = FeedPayloadReader.ReadPayload(Message(FeedType.ACI, File.ReadAllBytes(Path.Combine(root, "docs/sample-docs/ACI/ACI.txt")), "ACI.txt"));
         var original = aci.Parse(Message(FeedType.ACI, raw));
         string name = original.Fields.Single(f => f.Name == "/passengerName").Value;
         int offset = raw.AsSpan().IndexOf(Encoding.ASCII.GetBytes(name)) - 4;
@@ -200,7 +200,7 @@ static class ReferenceLayoutChecks
     /// <param name="root">The project root containing source configuration and immutable samples.</param>
     /// <returns>The reviewed binary sample paths paired with their feed routes.</returns>
     private static IEnumerable<(FeedType Feed, string File)> Samples(string root) =>
-            Directory.GetFiles(Path.Combine(root, "docs/sample-docs"), "*.txt")
+            Directory.GetFiles(Path.Combine(root, "docs/sample-docs"), "*.txt", SearchOption.AllDirectories)
                 .Where(file => Path.GetFileName(file).StartsWith("ACI", StringComparison.Ordinal) || Path.GetFileName(file).StartsWith("ETKT", StringComparison.Ordinal) ||
                     Path.GetFileName(file) == "PNR.txt" || Path.GetFileName(file).StartsWith("PNR_0", StringComparison.Ordinal))
                 .Select(file => (Path.GetFileName(file).StartsWith("ACI", StringComparison.Ordinal) ? FeedType.ACI : Path.GetFileName(file).StartsWith("ETKT", StringComparison.Ordinal) ? FeedType.ETKT : FeedType.PNR, file));

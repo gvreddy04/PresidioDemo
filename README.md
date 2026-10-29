@@ -200,7 +200,7 @@ A batch succeeds only when every input is published and acknowledged. Batch file
 
 - `src/`: startup, `Configuration/`, `Feeds/`, `Pipeline/`, `Protection/`, `Transport/` and `.venv/`.
 - `tests/unit-tests/`: Python tests; `tests/FeedPipelineChecks/`: .NET checks.
-- `docs/sample-docs/`: immutable source TXT files for review and testing; not required at runtime.
+- `docs/sample-docs/<feed>/`: immutable source TXT files for review and testing, one folder per feed (`ACI`, `ETKT`, `PNR`, `PNR-Linking`, `Seats`); not required at runtime. Files ending in `_Negative_Testing` are rejected by design. `--process-folder` includes subfolders, so the whole tree runs as one batch.
 - `docs/input-feeds/`, `output-feeds/`, `failed-feeds/`: one subfolder per feed.
 - `docs/feed-logs/`: one text file per transaction, named `<feed>.<message-id>.txt`.
 - `docs/feed-processing/`: active input files, with one subfolder per feed.

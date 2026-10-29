@@ -11,6 +11,7 @@ from test_seats_feed import payload, header
 
 
 from reference_feed_support import field_spans as reference_field_spans, verify_output as verify_reference_output
+from configuration_support import sample
 
 
 def field_spans():
@@ -50,13 +51,13 @@ class AciFeedTests(unittest.TestCase):
         return next(outputs.glob(pattern)).read_bytes()
 
     def test_actual_mq_export_preserves_all_bytes_except_configured_masks(self):
-        original = (PROJECT / "docs/sample-docs/ACI.txt").read_bytes()
+        original = sample("ACI.txt").read_bytes()
         self.assertEqual(verify_output(original, self.deliver("original-aci.txt", original)), {"Keep": 20, "Mask": 3})
         self.assertFalse(any("analyzed |" in line and "3 known | 0 analyzed" not in line
                              for line in self.listener.lines if "ACI" in line and "FIELDS" in line))
 
     def test_raw_payload_and_different_values_use_the_same_field_configuration(self):
-        raw = bytearray(payload((PROJECT / "docs/sample-docs/ACI.txt").read_bytes()))
+        raw = bytearray(payload(sample("ACI.txt").read_bytes()))
         values = {"/passengerName": "CARTER/EMMA", "/unresolvedIdentifier": "EMMAID00001",
                   "/pnr": "K7QX2M", "/unresolvedRecordReference/pnr": "K7QX2M", "/unresolvedRecordReference/Prefix": "000000002"}
         for name, start, length in field_spans():
@@ -67,7 +68,7 @@ class AciFeedTests(unittest.TestCase):
         self.assertEqual(verify_output(bytes(raw), self.deliver("changed-values.bin", raw), raw=True), {"Keep": 20, "Mask": 3})
 
     def test_changed_unclassified_binary_region_is_retained(self):
-        raw = bytearray(payload((PROJECT / "docs/sample-docs/ACI.txt").read_bytes()))
+        raw = bytearray(payload(sample("ACI.txt").read_bytes()))
         raw[3] = 3  # A different feed discriminator does not match this sequence.
         (self.docs / "input-feeds/ACI/changed-layout.bin").write_bytes(raw)
         rejected(self.docs, "ACI", "changed-layout.bin", bytes(raw), "expected constant")
@@ -77,7 +78,7 @@ class AciFeedTests(unittest.TestCase):
             root = Path(temp)
             sources = root / "sources"
             sources.mkdir()
-            original = (PROJECT / "docs/sample-docs/ACI.txt").read_bytes()
+            original = sample("ACI.txt").read_bytes()
             (sources / "ACI.txt").write_bytes(original)
             schema = ET.parse(PROJECT / "src/Configuration/feed-policies.xml")
             field = schema.find("feed[@type='ACI']/field[@name='/unresolvedIdentifier']")

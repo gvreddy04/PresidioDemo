@@ -6,6 +6,7 @@ import unittest
 from test_feed_listener import PROJECT, Listener, wait_for, rejected, processing_files
 from test_seats_feed import payload
 from reference_feed_support import field_spans, verify_output
+from configuration_support import sample
 
 PNR_ACTIONS = {"Keep": 74, "Mask": 80}
 PNR_02_ACTIONS = {"Keep": 33, "Mask": 24}
@@ -39,7 +40,7 @@ class PnrFeedTests(unittest.TestCase):
         return next(directory.glob(pattern)).read_bytes()
 
     def test_actual_reference_protects_every_selected_occurrence_and_preserves_other_bytes(self):
-        source = (PROJECT / "docs/sample-docs/PNR.txt").read_bytes()
+        source = sample("PNR.txt").read_bytes()
         output = self.deliver("original-pnr.txt", source)
         self.assertEqual(verify_output("PNR", source, output), PNR_ACTIONS)
         before, after = payload(source), payload(output)
@@ -50,10 +51,10 @@ class PnrFeedTests(unittest.TestCase):
         for value in (b"IAH", b"IAD", b"DUB", b"FQTR", b"1373X12OCT", b"0228X13OCT", b"TOTAL FARE - USD11.20",
                       b"TOTAL MILEAGE DEDUCTION - 55000 MILES", b"DOCSUAHK1", b"CTCEYYHK1", b"CTCMYYHK1", b"FWGV4L"):
             self.assertIn(value, after)
-        self.assertEqual((PROJECT / "docs/sample-docs/PNR.txt").read_bytes(), source)
+        self.assertEqual(sample("PNR.txt").read_bytes(), source)
 
     def test_second_sample_with_different_list_lengths_is_protected(self):
-        source = (PROJECT / "docs/sample-docs/PNR_02.txt").read_bytes()
+        source = sample("PNR_02.txt").read_bytes()
         output = self.deliver("second-pnr.txt", source)
         self.assertEqual(verify_output("PNR", source, output), PNR_02_ACTIONS)
         after = payload(output)
@@ -63,7 +64,7 @@ class PnrFeedTests(unittest.TestCase):
             self.assertIn(value, after)
 
     def test_raw_reference_can_change_selected_same_width_values_and_keep_pnr(self):
-        raw = bytearray(payload((PROJECT / "docs/sample-docs/PNR.txt").read_bytes()))
+        raw = bytearray(payload(sample("PNR.txt").read_bytes()))
         replacements = {"/pnr": "K7QX2M", "/surname": "SMITH", "/givenName": "EMMA"}
         for name, start, length in field_spans("PNR"):
             if name in replacements:
@@ -75,20 +76,20 @@ class PnrFeedTests(unittest.TestCase):
         self.assertEqual(output[84:90], b"K7QX2M")
 
     def test_unclassified_binary_changes_are_retained_without_output(self):
-        raw = bytearray(payload((PROJECT / "docs/sample-docs/PNR.txt").read_bytes()))
+        raw = bytearray(payload(sample("PNR.txt").read_bytes()))
         raw[3] ^= 1
         (self.docs / "input-feeds/PNR/changed-version.bin").write_bytes(raw)
         rejected(self.docs, "PNR", "changed-version.bin", bytes(raw), "error:")
 
     def test_unmodelled_list_content_is_retained_without_output(self):
-        raw = bytearray(payload((PROJECT / "docs/sample-docs/PNR.txt").read_bytes()))
+        raw = bytearray(payload(sample("PNR.txt").read_bytes()))
         # Offset 468 is a list that is empty in every sample; its element type is not modelled.
         raw[471] = 1
         (self.docs / "input-feeds/PNR/unmodelled-list.bin").write_bytes(raw)
         rejected(self.docs, "PNR", "unmodelled-list.bin", bytes(raw), "error:")
 
     def test_changed_counts_padding_and_frame_lengths_are_rejected(self):
-        source = payload((PROJECT / "docs/sample-docs/PNR.txt").read_bytes())
+        source = payload(sample("PNR.txt").read_bytes())
         for name, position in (("count", 403), ("padding", 409)):
             raw = bytearray(source)
             raw[position] ^= 1

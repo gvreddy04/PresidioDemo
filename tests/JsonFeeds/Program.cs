@@ -34,7 +34,7 @@ foreach (FeedType feed in new[] { FeedType.PnrLinking, FeedType.Seats })
     string name = linking ? "PNR_LINKING.txt" : "SEATS.txt";
     foreach (var sample in new[]
     {
-        (Name: name, Path: Path.Combine(project, "docs/sample-docs", name), Expected: linking ? 76 : 59),
+        (Name: name, Path: Path.Combine(project, "docs/sample-docs", linking ? "PNR-Linking" : "Seats", name), Expected: linking ? 76 : 59),
         (Name: "two-passengers.txt", Path: Path.Combine(project, "tests/unit-tests/fixtures",
             linking ? "pnr-linking-mq-export.txt" : "seats-mq-export.txt"), Expected: 0)
     })

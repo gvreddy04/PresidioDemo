@@ -19,7 +19,7 @@ var policies = FeedPolicyConfiguration.Load(Path.Combine(project, "src/Configura
 var codec = FeedCodecRegistry.Create(FeedType.ETKT, schemas, references);
 Check(codec is EtktFeedCodec, "configured ETKT route selects the dedicated module");
 var results = new List<object>();
-foreach (string file in Directory.GetFiles(Path.Combine(project, "docs/sample-docs"), "ETKT*.txt").Order())
+foreach (string file in Directory.GetFiles(Path.Combine(project, "docs/sample-docs/ETKT"), "ETKT*.txt").Order())
 {
     byte[] original = File.ReadAllBytes(file);
     var message = Message(original, Path.GetFileName(file));
@@ -74,7 +74,7 @@ foreach (string file in Directory.GetFiles(Path.Combine(project, "docs/sample-do
     Console.WriteLine($"PASS {Path.GetFileName(file)}: {decoded.PayloadLength} bytes, {decoded.Scalars.Count} fields, exact binary and export round trips");
 }
 
-byte[] baseline = FeedPayloadReader.Read(Message(File.ReadAllBytes(Path.Combine(project, "docs/sample-docs/ETKT.txt")), "ETKT.txt")).Payload;
+byte[] baseline = FeedPayloadReader.Read(Message(File.ReadAllBytes(Path.Combine(project, "docs/sample-docs/ETKT/ETKT.txt")), "ETKT.txt")).Payload;
 var baselineDocument = new EtktDecoder().Decode(baseline);
 Reject(() => new EtktDecoder().Decode(baseline[..^1]), "unaligned/truncated payload");
 Reject(() => new EtktDecoder().Decode(baseline[..^4]), "aligned truncation");
@@ -115,7 +115,7 @@ byte[] mutatedKept = baseline.ToArray();
 mutatedKept[terminal.ValueOffset] = (byte)'Z';
 Reject(() => codec.Validate(parsedBaseline, mutatedKept), "validation catches kept-field corruption");
 
-byte[] divideExport = File.ReadAllBytes(Path.Combine(project, "docs/sample-docs/ETKT_05.txt"));
+byte[] divideExport = File.ReadAllBytes(Path.Combine(project, "docs/sample-docs/ETKT/ETKT_05.txt"));
 var divideMessage = Message(divideExport, "ETKT_05.txt");
 var divideEnvelope = FeedPayloadReader.Read(divideMessage);
 var divideDocument = new EtktDecoder().Decode(divideEnvelope.Payload);

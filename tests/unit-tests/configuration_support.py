@@ -6,6 +6,14 @@ PROJECT = Path(__file__).resolve().parents[2]
 SCHEMA = PROJECT / "src/Configuration/xdr-layouts.xml"
 CATALOG = PROJECT / "src/Configuration/feed-policies.xml"
 REFERENCE = PROJECT / "src/Configuration/reference-layouts.xml"
+SAMPLES = PROJECT / "docs/sample-docs"
+
+
+def sample(name):
+    """Return a supplied sample by filename; samples live in one folder per feed."""
+    matches = list(SAMPLES.glob("*/" + name))
+    assert len(matches) == 1, "Expected exactly one supplied sample named " + name
+    return matches[0]
 
 # Supplied samples that parse or route correctly but must be rejected at a later stage, with the expected error.
 NEGATIVE_SAMPLES = {

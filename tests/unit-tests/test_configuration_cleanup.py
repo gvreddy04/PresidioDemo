@@ -4,7 +4,7 @@ import re
 import unittest
 import xml.etree.ElementTree as ET
 
-from configuration_support import SCHEMA, CATALOG, REFERENCE, catalog, json_rules
+from configuration_support import SCHEMA, CATALOG, REFERENCE, catalog, json_rules, sample
 from reference_feed_support import inspect_fields
 from test_feed_listener import PROJECT, DLL
 from test_seats_feed import payload
@@ -101,7 +101,7 @@ class ConfigurationCleanupTests(unittest.TestCase):
         for feed in ("ACI", "ETKT", "PNR"):
             rules.update({path: rule for path, rule in json_rules(feed).items() if "id" not in rule})
         count = 0
-        for source in (PROJECT / "docs/sample-docs").glob("*.txt"):
+        for source in (PROJECT / "docs/sample-docs").rglob("*.txt"):
             feed = ("ACI" if source.stem.startswith("ACI") else "ETKT" if source.stem.startswith("ETKT")
                     else "PNR" if source.stem == "PNR" or source.stem.startswith("PNR_0") else None)
             if not feed:
@@ -120,7 +120,7 @@ class ConfigurationCleanupTests(unittest.TestCase):
         self.assertEqual(count, 14)
 
     def json_paths(self, name):
-        document = json.loads(payload((PROJECT / "docs/sample-docs" / name).read_bytes()))
+        document = json.loads(payload(sample(name).read_bytes()))
         paths = set()
         def walk(value, path=""):
             if isinstance(value, dict):
@@ -135,9 +135,13 @@ class ConfigurationCleanupTests(unittest.TestCase):
         return paths
 
     def test_json_paths_and_pnr_preservation(self):
-        for feed, sample, size in (("Seats", "SEATS.txt", 39), ("PNR-Linking", "PNR_LINKING.txt", 49)):
+        for feed, names, size in (("Seats", ("SEATS.txt", "SEATS_03.txt"), 68), ("PNR-Linking", ("PNR_LINKING.txt",), 49)):
             rules = json_rules(feed)
-            self.assertEqual(set(rules), self.json_paths(sample))
+            supplied = set().union(*(self.json_paths(name) for name in names))
+            self.assertLessEqual(supplied, set(rules))
+            # Rules beyond the supplied samples may only mirror a reviewed Old-section rule for the New section.
+            for path in set(rules) - supplied:
+                self.assertIn(path.replace("/New/", "/Old/", 1), supplied, path)
             self.assertEqual(len(rules), size)
             for path, rule in rules.items():
                 if path.rsplit("/", 1)[-1].lower() in {"uarecloc", "uarecordlocator", "pnrowner"}:
@@ -152,7 +156,7 @@ class ConfigurationCleanupTests(unittest.TestCase):
         self.assertEqual(len(etkt.findall("string")), 26)
         self.assertFalse(any(node.get("name") == "Text0132" for node in etkt.iter()))
         for name in ("ETKT.txt", "ETKT_05.txt", "ETKT_06.txt"):
-            fields, _ = inspect_fields("ETKT", (PROJECT / "docs/sample-docs" / name).read_bytes())
+            fields, _ = inspect_fields("ETKT", sample(name).read_bytes())
             self.assertEqual([(start, length, kind) for _, start, length, _, kind in fields if start in (132, 136)],
                              [(132, 4, "word"), (136, 4, "word")])
 

@@ -37,7 +37,7 @@ internal static class RoundTripExamples
     {
         var examples = new List<RoundTripExample>();
         var baselines = new Dictionary<FeedType, (string Sample, FeedEnvelope Envelope)>();
-        foreach (string file in Directory.GetFiles(Path.Combine(root, "docs/sample-docs"), "*.txt").Order())
+        foreach (string file in Directory.GetFiles(Path.Combine(root, "docs/sample-docs"), "*.txt", SearchOption.AllDirectories).Order())
         {
             string sample = Path.GetFileName(file);
             if (sample.Contains("_Negative_Testing", StringComparison.Ordinal))
@@ -46,7 +46,7 @@ internal static class RoundTripExamples
                 continue;
             }
 
-            FeedType feed = Route(sample);
+            FeedType feed = Route(file);
             byte[] bytes = File.ReadAllBytes(file);
             var envelope = FeedPayloadReader.Read(Message(feed, sample, bytes));
             examples.Add(new(feed, sample + "/supplied-export", sample, "Supplied export", ".txt", bytes));
@@ -210,21 +210,14 @@ internal static class RoundTripExamples
     }
 
     /// <summary>
-    /// Resolves a supplied sample filename to its supported feed route.
+    /// Resolves a supplied sample to its feed route from the per-feed folder that contains it.
     /// </summary>
-    /// <param name="sample">The reviewed sample filename or complete source bytes.</param>
-    /// <returns>The supported feed route identified by the supplied sample name.</returns>
+    /// <param name="file">The complete path of a supplied sample under docs/sample-docs/&lt;feed&gt;.</param>
+    /// <returns>The supported feed route named by the sample's folder.</returns>
     /// <exception cref="Exception">A regression assertion fails or an expected rejection does not occur.</exception>
-    private static FeedType Route(string sample) => sample switch
-    {
-        "SEATS.txt" => FeedType.Seats,
-        "PNR_LINKING.txt" => FeedType.PnrLinking,
-        "PNR.txt" => FeedType.PNR,
-        _ when sample.StartsWith("PNR_0", StringComparison.Ordinal) => FeedType.PNR,
-        _ when sample.StartsWith("ACI", StringComparison.Ordinal) => FeedType.ACI,
-        _ when sample.StartsWith("ETKT", StringComparison.Ordinal) => FeedType.ETKT,
-        _ => throw new Exception("Unmapped sample feed: " + sample)
-    };
+    private static FeedType Route(string file) =>
+        FeedCatalog.All.SingleOrDefault(feed => feed.FolderName == Path.GetFileName(Path.GetDirectoryName(file)))?.Type
+            ?? throw new Exception("Sample is not in a feed folder: " + file);
 
     #endregion
 }

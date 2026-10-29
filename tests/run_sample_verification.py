@@ -64,8 +64,8 @@ def scalar_pairs(before, after, path=""):
 
 
 samples = PROJECT / "docs/sample-docs"
-sources = {source.name: source.read_bytes() for source in samples.glob("*.txt")}
-require(len(sources) == 19, "Expected exactly 19 sample source files")
+sources = {source.name: source.read_bytes() for source in samples.rglob("*.txt")}
+require(len(sources) == 20, "Expected exactly 20 sample source files")
 started = datetime.now(timezone(timedelta(hours=5, minutes=30)))
 run = PROJECT / ".test-runs" / ("e2e-" + started.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8])
 docs = run / "docs"
