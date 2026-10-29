@@ -111,7 +111,7 @@ def main():
             for feed in FEEDS:
                 path = docs / "input-feeds" / feed / "unconfigured.BIN"
                 path.write_bytes(binary)
-                rejected(docs, feed, path.name, binary, "malformed JSON" if feed in ("Seats", "PNR-Linking") else "XDR")
+                rejected(docs, feed, path.name, binary, {"Seats": "malformed JSON", "PNR-Linking": "malformed JSON", "ETKT": "unsupported structure"}.get(feed, "XDR"))
             check("raw binary routes retain unsupported input without publishing")
 
             partial = (PROJECT / "tests" / "unit-tests" / "fixtures" / "aci-mq-partial.txt").read_bytes()
@@ -124,7 +124,7 @@ def main():
             complete = b"AMQSBCG0 - starts here\nlength - 3 of 3 bytes\n00000000:  4142 43           'ABC'\n"
             path = docs / "input-feeds" / "ACI" / "complete.txt"
             path.write_bytes(complete)
-            rejected(docs, "ACI", path.name, complete, "not a multiple of four")
+            rejected(docs, "ACI", path.name, complete, "four-byte aligned")
             check("complete diagnostic dump is reconstructed and rejected for a sequence mismatch")
 
             gap = b"AMQSBCG0 - starts here\nlength - 2 bytes\n00000010:  4142 'AB'\n"
