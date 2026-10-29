@@ -4,7 +4,7 @@ import re
 import struct
 import xml.etree.ElementTree as ET
 
-from configuration_support import SCHEMA, REFERENCE, catalog, json_rules
+from configuration_support import SCHEMA, REFERENCE, catalog, json_rules, sample
 from test_seats_feed import payload, header
 
 
@@ -130,7 +130,7 @@ def inspect_fields(feed, original, raw=False, schema_file=None, reference_file=N
 def field_spans(feed, original=None, raw=False, schema_file=None):
     if original is None:
         from configuration_support import PROJECT
-        original = (PROJECT / "docs/sample-docs" / (feed + ".txt")).read_bytes()
+        original = sample(feed + ".txt").read_bytes()
     return [(name, start, length) for name, start, length, _, kind
             in inspect_fields(feed, original, raw, schema_file)[0] if kind == "text"]
 

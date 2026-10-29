@@ -8,6 +8,7 @@ import unittest
 import xml.etree.ElementTree as ET
 
 from test_feed_listener import PROJECT, Listener, wait_for, rejected, runtime_root, processing_files
+from configuration_support import sample
 
 
 def payload(raw):
@@ -97,7 +98,7 @@ class SeatsFeedTests(unittest.TestCase):
         return next(directory.glob(pattern)).read_bytes()
 
     def test_finalized_export_every_field(self):
-        original = (PROJECT / "docs" / "sample-docs" / "SEATS.txt").read_bytes()
+        original = sample("SEATS.txt").read_bytes()
         result = verify_output(original, self.deliver("finalized-seats-review.txt", original))
         self.assertEqual(result["scalar_values"], 59)
         self.assertEqual(result["unique_paths"], 39)

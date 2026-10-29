@@ -180,19 +180,19 @@ def main():
             assert not processing_files(docs, "Seats", "seats.txt")
             check("SEATS end-to-end processing preserves MQ metadata, PNR, passenger grouping, types and seats")
 
-            finalized = PROJECT / "docs" / "sample-docs"
+            from configuration_support import sample
             from reference_feed_support import verify_output as verify_pnr_output
-            original_pnr = (finalized / "PNR.txt").read_bytes()
+            original_pnr = sample("PNR.txt").read_bytes()
             pnr_input = docs / "input-feeds/PNR/original-pnr.txt"
             pnr_input.write_bytes(original_pnr)
             pnr_outputs = docs / "output-feeds/PNR"
             wait_for(lambda: len(list(pnr_outputs.glob("original-pnr.*.txt"))) == 1 and not pnr_input.exists()
                      and not processing_files(docs, "PNR", pnr_input.name), "PNR acknowledgment")
-            assert verify_pnr_output("PNR", original_pnr, next(pnr_outputs.glob("original-pnr.*.txt")).read_bytes()) == {"Keep": 30, "Mask": 76}
+            assert verify_pnr_output("PNR", original_pnr, next(pnr_outputs.glob("original-pnr.*.txt")).read_bytes()) == {"Keep": 74, "Mask": 80}
             check("the supplied PNR reference masks selected personal data and preserves PNR, record syntax and MQ metadata")
 
             from test_seats_feed import verify_output as verify_json_output
-            linking_original = (finalized / "PNR_LINKING.txt").read_bytes()
+            linking_original = sample("PNR_LINKING.txt").read_bytes()
             linking_input = docs / "input-feeds" / "PNR-Linking" / "finalized-linking.txt"
             linking_input.write_bytes(linking_original)
             linking_outputs = docs / "output-feeds" / "PNR-Linking"
@@ -204,7 +204,7 @@ def main():
             check("the complete supplied PNR-Linking export protects both passengers and preserves PNR, nulls and MQ metadata")
 
             from test_aci_feed import verify_output as verify_aci_output
-            aci_original = (finalized / "ACI.txt").read_bytes()
+            aci_original = sample("ACI.txt").read_bytes()
             aci_input = docs / "input-feeds" / "ACI" / "finalized-aci.txt"
             aci_input.write_bytes(aci_original)
             aci_outputs = docs / "output-feeds" / "ACI"
@@ -214,7 +214,7 @@ def main():
             check("the finalized ACI reference export is protected using configuration without NLP and preserves PNR and binary framing")
 
             from reference_feed_support import verify_output as verify_reference_output
-            etkt_original = (finalized / "ETKT.txt").read_bytes()
+            etkt_original = sample("ETKT.txt").read_bytes()
             etkt_input = docs / "input-feeds" / "ETKT" / "finalized-etkt.txt"
             etkt_input.write_bytes(etkt_original)
             etkt_outputs = docs / "output-feeds" / "ETKT"
@@ -224,7 +224,7 @@ def main():
             check("the finalized ETKT reference export preserves PNR, status text, framing and MQ metadata with five configured masks")
 
             path = docs / "input-feeds" / "Seats" / "finalized-seats.txt"
-            original = (finalized / "SEATS.txt").read_bytes()
+            original = sample("SEATS.txt").read_bytes()
             path.write_bytes(original)
             wait_for(lambda: len(list(outdir.glob("finalized-seats.*.txt"))) == 1 and not path.exists(), "supplied SEATS output")
             protected_actual = json.loads(decode_export(next(outdir.glob("finalized-seats.*.txt")).read_text(encoding="utf-8")))

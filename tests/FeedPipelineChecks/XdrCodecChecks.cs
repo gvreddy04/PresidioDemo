@@ -71,7 +71,7 @@ static class XdrCodecChecks
         Directory.CreateDirectory(workspace);
         CheckWordsShorthand(root, workspace);
         CheckLinkedList(workspace);
-        byte[] pnrSource = File.ReadAllBytes(Path.Combine(root, "docs", "sample-docs", "PNR.txt"));
+        byte[] pnrSource = File.ReadAllBytes(Path.Combine(root, "docs", "sample-docs", "PNR", "PNR.txt"));
         var pnrMessage = new FeedMessage(new(FeedType.PNR, Guid.Empty, "PNR.txt", "supplied-sample"), pnrSource);
         var pnrEnvelope = FeedPayloadReader.Read(pnrMessage);
         Check(pnrEnvelope.Payload.Length == 5452 && pnrEnvelope.Payload.Length % 4 == 0,
@@ -164,7 +164,7 @@ static class XdrCodecChecks
         expanded.Save(legacyFile);
         var legacy = XdrLayoutConfiguration.Load(legacyFile);
         int samples = 0;
-        foreach (string source in Directory.GetFiles(Path.Combine(root, "docs", "sample-docs"), "*.txt"))
+        foreach (string source in Directory.GetFiles(Path.Combine(root, "docs", "sample-docs"), "*.txt", SearchOption.AllDirectories))
         {
             string name = Path.GetFileNameWithoutExtension(source);
             FeedType? feed = name.StartsWith("ACI", StringComparison.Ordinal) ? FeedType.ACI :

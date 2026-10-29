@@ -39,7 +39,7 @@ static class PnrReferenceChecks
         };
         foreach (var sample in samples)
         {
-            byte[] source = File.ReadAllBytes(Path.Combine(root, "docs/sample-docs", sample.File));
+            byte[] source = File.ReadAllBytes(Path.Combine(root, "docs/sample-docs/PNR", sample.File));
             var delivery = new FeedDelivery(FeedType.PNR, Guid.Empty, sample.File, "reference-check");
             var message = new FeedMessage(delivery, source);
             var parsed = codec.Parse(message);
@@ -85,7 +85,7 @@ static class PnrReferenceChecks
             Reject(() => codec.Serialize(parsed, values), sample.File + " serializer rejects locator mutation");
         }
 
-        var baseline = FeedPayloadReader.ReadPayload(new(new(FeedType.PNR, Guid.Empty, "PNR.txt", ""), File.ReadAllBytes(Path.Combine(root, "docs/sample-docs/PNR.txt"))));
+        var baseline = FeedPayloadReader.ReadPayload(new(new(FeedType.PNR, Guid.Empty, "PNR.txt", ""), File.ReadAllBytes(Path.Combine(root, "docs/sample-docs/PNR/PNR.txt"))));
         var rawDelivery = new FeedDelivery(FeedType.PNR, Guid.Empty, "reference.bin", "reference-check");
         byte[] changed = (byte[])baseline.Clone();
         changed[3] ^= 1;
@@ -99,7 +99,7 @@ static class PnrReferenceChecks
         Reject(() => codec.Parse(new(rawDelivery, changed)), "PNR rejects an invalid SSR/OSI list presence word");
         Reject(() => codec.Parse(new(rawDelivery, baseline[..^4])), "PNR rejects aligned truncation");
         Reject(() => codec.Parse(new(rawDelivery, new byte[5456])), "PNR rejects different frame lengths");
-        string export = File.ReadAllText(Path.Combine(root, "docs/sample-docs/PNR_02.txt"));
+        string export = File.ReadAllText(Path.Combine(root, "docs/sample-docs/PNR/PNR_02.txt"));
         var copied = new FeedMessage(new(FeedType.PNR, Guid.Empty, "copied.txt", "reference-check"),
             Encoding.UTF8.GetBytes(export.Replace("A RTQ ", "A RTQ ", StringComparison.Ordinal)));
         try
@@ -116,7 +116,7 @@ static class PnrReferenceChecks
         void Invalid(Action<XElement> change, string label)
         {
             var entry = new XElement(XDocument.Load(config).Root!.Elements("feed").Single(feed => (string?)feed.Attribute("type") == "PNR"));
-            entry.SetAttributeValue("referenceFile", Path.Combine(root, "docs/sample-docs/PNR.txt"));
+            entry.SetAttributeValue("referenceFile", Path.Combine(root, "docs/sample-docs/PNR/PNR.txt"));
             change(entry);
             new XDocument(new XElement("referenceLayouts", entry)).Save(temporary);
             Reject(() => ReferenceLayoutConfiguration.Load(temporary, XdrLayoutConfiguration.Load(schemaFile)), label);

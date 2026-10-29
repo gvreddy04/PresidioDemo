@@ -41,7 +41,7 @@ public static class NoAnonymizationRoundTripChecks
             pair.Value.Fields.Values.Select(rule => new FieldPolicy(rule.Name, FieldIdentification.None, FieldAction.Keep))));
         IFeedCodec Codec(FeedType feed) => FeedCodecRegistry.Create(feed, schemas, references);
         var router = FeedWorkflowRouter.Create(new PresidioFeedProtector(), keepPolicies, Codec);
-        var sourceFiles = Directory.GetFiles(Path.Combine(root, "docs/sample-docs"), "*.txt")
+        var sourceFiles = Directory.GetFiles(Path.Combine(root, "docs/sample-docs"), "*.txt", SearchOption.AllDirectories)
             .ToDictionary(file => file, File.ReadAllBytes);
         var examples = RoundTripExamples.Create(root, Codec);
         var results = new List<object>();

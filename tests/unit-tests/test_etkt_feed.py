@@ -6,6 +6,7 @@ import unittest
 from test_feed_listener import PROJECT, Listener, wait_for, rejected, runtime_root, processing_files
 from test_seats_feed import payload
 from reference_feed_support import field_spans, verify_output
+from configuration_support import sample
 
 
 class EtktFeedTests(unittest.TestCase):
@@ -37,14 +38,14 @@ class EtktFeedTests(unittest.TestCase):
         return next(directory.glob(pattern)).read_bytes()
 
     def test_actual_etkt_export_preserves_every_byte_except_configured_masks(self):
-        original = (PROJECT / "docs/sample-docs/ETKT.txt").read_bytes()
+        original = sample("ETKT.txt").read_bytes()
         output = self.deliver("original-etkt.txt", original)
         self.assertEqual(verify_output("ETKT", original, output), {"Keep": 4, "Mask": 5})
-        self.assertEqual((PROJECT / "docs/sample-docs/ETKT.txt").read_bytes(), original)
+        self.assertEqual(sample("ETKT.txt").read_bytes(), original)
         self.assertIn(b"CHECKED-IN", payload(output))
 
     def test_raw_etkt_with_different_identifier_values_and_pnr(self):
-        raw = bytearray(payload((PROJECT / "docs/sample-docs/ETKT.txt").read_bytes()))
+        raw = bytearray(payload(sample("ETKT.txt").read_bytes()))
         changed = {"/pnr": "K7QX2M", "/Text0044": "USR", "/Text0072": "1234", "/Text0088": "000000000000123",
                    "/ticketNumber": "0161234567890", "/ticketStatusRecord/Prefix": "42B00012"}
         for name, start, length in field_spans("ETKT"):
@@ -55,13 +56,13 @@ class EtktFeedTests(unittest.TestCase):
         self.assertEqual(verify_output("ETKT", bytes(raw), self.deliver("changed-etkt.bin", raw), raw=True), {"Keep": 4, "Mask": 5})
 
     def test_etkt_rejects_changed_unclassified_binary_bytes(self):
-        raw = bytearray(payload((PROJECT / "docs/sample-docs/ETKT.txt").read_bytes()))
+        raw = bytearray(payload(sample("ETKT.txt").read_bytes()))
         raw[3] ^= 1
         (self.docs / "input-feeds/ETKT/changed-version.bin").write_bytes(raw)
         rejected(self.docs, "ETKT", "changed-version.bin", bytes(raw), "expected constant")
 
     def test_divide_event_preserves_new_and_old_pnrs(self):
-        original = (PROJECT / "docs/sample-docs/ETKT_05.txt").read_bytes()
+        original = sample("ETKT_05.txt").read_bytes()
         output = self.deliver("divide-etkt.txt", original)
         self.assertEqual(verify_output("ETKT", original, output), {"Keep": 5, "Mask": 5})
         fields = {name: payload(output)[start:start + length]
@@ -70,7 +71,7 @@ class EtktFeedTests(unittest.TestCase):
         self.assertEqual(fields["/oldPnr"], b"FWDZRF")
 
     def test_etkt_rejects_truncated_reference(self):
-        raw = payload((PROJECT / "docs/sample-docs/ETKT.txt").read_bytes())[:-4]
+        raw = payload(sample("ETKT.txt").read_bytes())[:-4]
         (self.docs / "input-feeds/ETKT/truncated-etkt.bin").write_bytes(raw)
         rejected(self.docs, "ETKT", "truncated-etkt.bin", raw, "Incomplete XDR field")
 

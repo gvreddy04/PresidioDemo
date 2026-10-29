@@ -269,10 +269,40 @@
     <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/FlightLegArrivalTime" identification="None" action="Keep" />
     <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/Source" identification="None" action="Keep" />
     <field name="/OrderChangeNotif/Old/Customers/*/ServiceItems/*/ActionType" identification="None" action="Keep" />
+    <!-- New holds the customer state after the change (for example a SeatAssign); its rules mirror Old. -->
+    <field name="/OrderChangeNotif/New/Customers/*/PaxId" identification="Known" action="Replace" entity="PASSENGER_ID" replacement="[PASSENGER_ID]" />
+    <field name="/OrderChangeNotif/New/Customers/*/SeqInPNR" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/FirstName" identification="Known" action="Replace" entity="PERSON" replacement="[PASSENGER_NAME]" />
+    <field name="/OrderChangeNotif/New/Customers/*/LastName" identification="Known" action="Replace" entity="PERSON" replacement="[PASSENGER_NAME]" />
+    <field name="/OrderChangeNotif/New/Customers/*/BookedAsName" identification="Known" action="Replace" entity="PERSON" replacement="[PASSENGER_NAME]" />
+    <field name="/OrderChangeNotif/New/Customers/*/UARecloc" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/UAReclocCreateDate" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/ChgReasonCode" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/ServiceItemId" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/OrderItemId" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/ServiceType" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/CreateDateTime" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/LastUpdateDateTime" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/BookingClass" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/Cabin" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/SeatNumber" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/Attributes/*" identification="Known" action="Replace" entity="SENSITIVE_ATTRIBUTE" replacement="[PROTECTED_ATTRIBUTE]" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/IATAAttributes/*" identification="Known" action="Replace" entity="SENSITIVE_ATTRIBUTE" replacement="[PROTECTED_ATTRIBUTE]" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/TTYAttributes/*" identification="Known" action="Replace" entity="SENSITIVE_ATTRIBUTE" replacement="[PROTECTED_ATTRIBUTE]" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/OccStatus" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/FlightSegRefId" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/FlightLegRefId" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/FlightLegOffPoint" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/FlightLegDepartureTime" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/FlightLegArrivalTime" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/Source" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/New/Customers/*/ServiceItems/*/ActionType" identification="None" action="Keep" />
     <field name="/OrderChangeNotif/EventDetail/ClientId" identification="None" action="Keep" />
     <field name="/OrderChangeNotif/EventDetail/EmpId" identification="Known" action="Replace" entity="EMPLOYEE_ID" replacement="[EMPLOYEE_ID]" />
     <field name="/OrderChangeNotif/EventDetail/LEID" identification="None" action="Keep" />
     <field name="/OrderChangeNotif/EventDetail/AAA" identification="None" action="Keep" />
     <field name="/OrderChangeNotif/EventDetail/AgentSine" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/EventDetail/ChannelId" identification="None" action="Keep" />
+    <field name="/OrderChangeNotif/EventDetail/ChannelName" identification="None" action="Keep" />
   </feed>
 </feedPolicies>

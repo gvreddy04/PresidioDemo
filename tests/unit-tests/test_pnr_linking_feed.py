@@ -6,6 +6,7 @@ import unittest
 
 from test_feed_listener import PROJECT, Listener, wait_for, rejected, runtime_root, processing_files
 from test_seats_feed import payload, header, verify_output
+from configuration_support import sample
 
 
 class PnrLinkingFeedTests(unittest.TestCase):
@@ -45,7 +46,7 @@ class PnrLinkingFeedTests(unittest.TestCase):
             self.assertNotIn(value, payload(output))
 
     def test_supplied_complete_linking_file_protects_both_passengers_and_preserves_nulls(self):
-        original = (PROJECT / "docs/sample-docs/PNR_LINKING.txt").read_bytes()
+        original = sample("PNR_LINKING.txt").read_bytes()
         inbox = self.docs / "input-feeds/PNR-Linking/supplied-linking.txt"
         inbox.write_bytes(original)
         outdir = self.docs / "output-feeds/PNR-Linking"
@@ -69,7 +70,7 @@ class PnrLinkingFeedTests(unittest.TestCase):
             self.assertEqual(protected["FlightLeg"], person["FlightLeg"])
 
     def test_transition_scalar_text_is_protected_and_nested_unreviewed_fields_are_rejected(self):
-        document = json.loads(payload((PROJECT / "docs/sample-docs/PNR_LINKING.txt").read_bytes()))
+        document = json.loads(payload(sample("PNR_LINKING.txt").read_bytes()))
         document[0]["transitionLinkSegments"] = "emily.carter@example.com"
         inbox = self.docs / "input-feeds/PNR-Linking/transition-text.bin"
         inbox.write_bytes(json.dumps(document).encode())
@@ -85,14 +86,14 @@ class PnrLinkingFeedTests(unittest.TestCase):
         rejected(self.docs, "PNR-Linking", "transition-object.bin", raw, "without a configured protection policy")
 
     def test_numeric_sensitive_field_rejects_instead_of_changing_json_type(self):
-        document = json.loads(payload((PROJECT / "docs/sample-docs/PNR_LINKING.txt").read_bytes()))
+        document = json.loads(payload(sample("PNR_LINKING.txt").read_bytes()))
         document[0]["Customers"][0]["PaxId"] = 1234567
         raw = json.dumps(document).encode()
         (self.docs / "input-feeds/PNR-Linking/numeric-id.bin").write_bytes(raw)
         rejected(self.docs, "PNR-Linking", "numeric-id.bin", raw, "Non-string JSON fields must remain unchanged")
 
     def test_truncated_linking_file_is_retained_without_inventing_its_tail(self):
-        supplied = (PROJECT / "docs/sample-docs/PNR_LINKING.txt").read_bytes()
+        supplied = sample("PNR_LINKING.txt").read_bytes()
         original = header(supplied) + b"X " + payload(supplied)[:1523].hex().upper().encode() + b"\r\n"
         (self.docs / "input-feeds/PNR-Linking/original-truncated.txt").write_bytes(original)
         rejected(self.docs, "PNR-Linking", "original-truncated.txt", original, "malformed JSON")

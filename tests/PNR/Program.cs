@@ -16,7 +16,7 @@ Directory.CreateDirectory(target);
 var reader = new PnrXdrReader(schemas[FeedType.PNR]);
 foreach (string sample in new[] { "PNR.txt", "PNR_02.txt" })
 {
-    byte[] source = File.ReadAllBytes(Path.Combine(root, "docs/sample-docs", sample));
+    byte[] source = File.ReadAllBytes(Path.Combine(root, "docs/sample-docs/PNR", sample));
     var message = new FeedMessage(new(FeedType.PNR, Guid.Empty, sample, ""), source);
     var document = PnrFeedCodec.Document(codec.Parse(message));
     var decoded = new PnrDecoder(reader).Decode(message);

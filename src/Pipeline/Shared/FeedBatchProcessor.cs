@@ -68,7 +68,8 @@ public static class FeedBatchProcessor
         var paths = new FeedWorkspacePaths(docsRoot);
         string runId = Guid.NewGuid().ToString("N");
         var jobs = new List<Job>();
-        foreach (string source in Directory.EnumerateFiles(Path.GetFullPath(sourceRoot)).Order())
+        // Subfolders are included so a source tree grouped by feed (such as docs/sample-docs) runs as one batch.
+        foreach (string source in Directory.EnumerateFiles(Path.GetFullPath(sourceRoot), "*", SearchOption.AllDirectories).Order())
         {
             string extension = Path.GetExtension(source);
             if (!new[] { ".txt", ".bin" }.Contains(extension, StringComparer.OrdinalIgnoreCase))

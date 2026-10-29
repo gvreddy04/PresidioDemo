@@ -80,12 +80,12 @@ class AllFeedBatchTests(unittest.TestCase):
             root = Path(temp)
             sources = root / "sources"
             shutil.copytree(PROJECT / "docs" / "sample-docs", sources)
-            before = {p.name: p.read_bytes() for p in sources.iterdir()}
+            before = {p.name: p.read_bytes() for p in sources.rglob("*") if p.is_file()}
             process, report = self.run_batch(sources, root / "docs")
             # Negative-testing samples are rejected by design, so the batch reports exit code 2.
             self.assertEqual(process.returncode, 2, process.stdout + process.stderr)
             self.assertFalse(report["AllPublished"])
-            self.assertEqual(len(report["Items"]), 19)
+            self.assertEqual(len(report["Items"]), 20)
             self.verify_transaction_logs(root / "docs", report)
             outcomes = {Path(item["SourceFile"]).name: item["Status"] for item in report["Items"]}
             self.assertEqual({name for name, status in outcomes.items() if status != "Published"}, set(NEGATIVE_SAMPLES))
@@ -119,7 +119,8 @@ class AllFeedBatchTests(unittest.TestCase):
                             self.assertEqual(payload(output)[424:437], b"*" * 13)
                     else:
                         result = verify_output(original, output, item["Feed"])
-                        expected = {"Keep": 30, "Replace": 29} if item["Feed"] == "Seats" else {"Keep": 54, "Replace": 22}
+                        expected = {"SEATS.txt": {"Keep": 30, "Replace": 29}, "SEATS_03.txt": {"Keep": 32, "Replace": 19},
+                                    "PNR_LINKING.txt": {"Keep": 54, "Replace": 22}}[Path(item["SourceFile"]).name]
                         self.assertEqual(result["actions"], expected)
                 else:
                     self.assertIsNone(item["OutputFile"])
