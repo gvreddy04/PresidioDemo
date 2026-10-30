@@ -33,9 +33,9 @@ public static class NoAnonymizationRoundTripChecks
     {
         Directory.CreateDirectory(outputDirectory);
         string reportPath = Path.Combine(outputDirectory, "verification.json");
-        var schemas = XdrLayoutConfiguration.Load(Path.Combine(root, "src/Configuration/xdr-layouts.xml"));
-        var references = ReferenceLayoutConfiguration.Load(Path.Combine(root, "src/Configuration/reference-layouts.xml"), schemas);
-        var configured = FeedPolicyConfiguration.Load(Path.Combine(root, "src/Configuration/feed-policies.xml"));
+        var schemas = XdrLayoutConfiguration.Load(Path.Combine(root, "src/PresidioDemo.Core/Configuration/xdr-layouts.xml"));
+        var references = ReferenceLayoutConfiguration.Load(Path.Combine(root, "src/PresidioDemo.Core/Configuration/reference-layouts.xml"), schemas);
+        var configured = FeedPolicyConfiguration.Load(Path.Combine(root, "src/PresidioDemo.Core/Configuration/feed-policies.xml"));
         // All-Keep exists only in this test assembly; source configuration files are never edited.
         var keepPolicies = configured.ToDictionary(pair => pair.Key, pair => new FeedPolicy(pair.Key,
             pair.Value.Fields.Values.Select(rule => new FieldPolicy(rule.Name, FieldIdentification.None, FieldAction.Keep))));

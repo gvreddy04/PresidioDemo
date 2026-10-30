@@ -1,7 +1,7 @@
 #region Execution
 
 string root = AppContext.BaseDirectory;
-while (!File.Exists(Path.Combine(root, "PresidioDemo.csproj")))
+while (!File.Exists(Path.Combine(root, "PresidioDemo.slnx")))
 {
     root = Directory.GetParent(root)?.FullName ?? throw new Exception("Project root not found.");
 }

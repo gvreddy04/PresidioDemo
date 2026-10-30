@@ -38,13 +38,13 @@ Style diagnostics appear in the editor. Build-time enforcement of IDE style rule
 From the project root, after restoring/building the projects, format application whitespace:
 
 ```powershell
-dotnet format whitespace PresidioDemo.csproj --no-restore --include src
+dotnet format whitespace PresidioDemo.slnx --no-restore --include src
 ```
 
 Apply only the selected built-in style rules (including suggestion-level rules):
 
 ```powershell
-dotnet format style PresidioDemo.csproj --no-restore --include src --severity info --diagnostics IDE0005 IDE0011 IDE0063 IDE0065 IDE0161
+dotnet format style PresidioDemo.slnx --no-restore --include src --severity info --diagnostics IDE0005 IDE0011 IDE0063 IDE0065 IDE0161
 ```
 
 Use the same commands with an individual check project's `.csproj` and `--include tests`, or process all five check projects:

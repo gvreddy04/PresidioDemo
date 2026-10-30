@@ -1,30 +1,104 @@
 # Presidio Feed Protection Demo
 
-Process airline feeds using configured field rules and local Presidio. PNR stays unchanged. Output is validated before publication; failed input is retained.
+Process airline feeds from a message broker using configured field rules and local Presidio. PNR stays unchanged. Output is validated and confirmed by the broker before the input is acknowledged; rejected input goes to the feed's restricted dead-letter queue.
 
 ## Solution organization
 
-The application remains one .NET project. Source folders and namespaces group files by responsibility:
+The solution separates feed processing from messaging. Broker-specific code lives only in its adapter project, so another broker (for example Kafka or IBM MQ) is added without touching the feed code.
 
 ```text
-src/
-├── Program.cs
-├── Configuration/        Three XML configuration files
-├── Feeds/
-│   ├── ACI/              ACI binary processing
-│   ├── ETKT/             ETKT binary processing
-│   ├── PNRLinking/       PNR-Linking JSON route
-│   ├── Seats/            Seats JSON route
-│   └── Shared/           Contracts, formats and shared codecs
-├── Pipeline/             Workflows, codec registry and batch processing
-├── Protection/           Field policies and embedded Presidio bridge
-│   └── python/           presidio_demo.py
-└── Transport/            Folder listener, transport, runtime paths and logs
+PresidioDemo.slnx
+├── src/
+│   ├── PresidioDemo.Core/              Feeds, parsers, serializers, protection, pipeline (no broker code)
+│   │   ├── Configuration/              feed-policies.xml, xdr-layouts.xml, reference-layouts.xml
+│   │   ├── FeedCodecs/ Models/ Parser/ Serializer/ Reporting/ Logging/   one subfolder per feed
+│   │   ├── Protection/                 field policies, embedded Presidio bridge, python/presidio_demo.py
+│   │   └── Pipeline/                   workflows, codec registry, FeedMessageProcessor
+│   ├── PresidioDemo.Messaging/         broker-neutral ports and models (no broker package)
+│   │   ├── Abstractions/               IMessagingConnection, IMessageConsumer, IMessagePublisher
+│   │   └── Models/                     InboundMessage, OutboundMessage, MessagingOptions, MessageRoute
+│   ├── PresidioDemo.Messaging.Solace/  the only project that references the Solace .NET client
+│   │   ├── Connection/                 SolaceOptions, SolaceConnection (session, TLS, reconnect, confirmations)
+│   │   ├── Listener/                   SolaceMessageConsumer (queue flow, client acknowledgment)
+│   │   ├── Publisher/                  SolaceMessagePublisher (persistent publish, waits for confirmation)
+│   │   ├── Models/                     SolaceMessageMapper (native message <-> broker-neutral records)
+│   │   └── SolaceMessaging.cs          AddSolaceMessaging registration
+│   └── PresidioDemo.Worker/            the deployable: Generic Host, appsettings.json, one FeedWorker per feed
+│       ├── Hosting/                    EnvironmentConfiguration, MessagingTransports, PresidioOptions
+│       └── Pipeline/                   FeedWorker, FeedWorkerService
+├── tests/
+│   ├── PresidioDemo.Messaging.Testing/ in-memory broker (tests only, never shipped)
+│   ├── Messaging.ContractTests/        the behaviour every broker adapter must pass
+│   ├── WorkerChecks/                   environments, settings validation, delivery rules (no Python)
+│   ├── FeedPipelineHarness/            runs files through the real workers and Presidio
+│   ├── FeedPipelineChecks/ FeedRoundTripChecks/ JsonFeeds/ ACI/ ETKT/ PNR/   feed and codec checks
+│   └── unit-tests/                     Python tests, driven through the harness
+├── tools/FeedSampleSender/             sends sample files to a running worker's input queues
+└── deploy/docker-compose.yml           local Solace broker
 ```
 
-Namespaces follow these folders: `PresidioDemo.Feeds.Shared`, `PresidioDemo.Pipeline`, `PresidioDemo.Protection` and `PresidioDemo.Transport`. Existing per-feed namespaces remain under `PresidioDemo.Feeds`. The Python environment stays at `src/.venv`; its setup commands are unchanged. Default configuration paths now use `src/Configuration`, and embedded Python loads `src/Protection/python/presidio_demo.py`. Custom configuration switches remain available.
+Project references point inward only: Worker → Core, Messaging and the adapters; adapters → Messaging. Core never references messaging, and Messaging never references a broker. Feed-code namespaces are unchanged (`PresidioDemo.Feeds.*`, `PresidioDemo.Pipeline`, `PresidioDemo.Protection`); new code uses `PresidioDemo.Messaging`, `PresidioDemo.Messaging.Solace` and `PresidioDemo.Worker`. The Python environment stays at `src/.venv`.
 
 ![Feed protection workflow](docs/diagrams/presidio-feed-workflow.svg)
+
+## Messaging design
+
+The worker runs one `FeedWorker` per feed route. Each message goes through the same steps on every broker:
+
+1. **Receive** from the feed's input queue (`IMessageConsumer`). The broker sends the next message only after this one is acknowledged, so each feed has one active message.
+2. **Process** with `FeedMessageProcessor` (Core): parse, protect with local Presidio, rebuild and validate.
+3. **Publish** (`IMessagePublisher`) and wait for the broker's confirmation:
+   - valid: the feed's output topic, with a stable transaction ID, the input correlation ID and only the headers listed in `Messaging:CopyHeaders`;
+   - invalid: the feed's restricted dead-letter queue, with the original bytes and the reason in the `presidio-reject-reason` header.
+4. **Acknowledge** the input (`InboundMessage.CompleteAsync`).
+
+A crash at any step means the broker redelivers the message, so nothing is lost. The transaction ID is derived from the broker's stable message ID, so a redelivered message produces output with the same ID and consumers can drop duplicates (at-least-once delivery). While the broker is unavailable, publishing is retried and the input stays unacknowledged. A message delivered more than `Messaging:MaxDeliveries` times goes to the dead-letter queue without processing. Producers send the feed bytes as the message body; the header `presidio-payload-format` is `raw` (default) or `mq-export` for an IBM MQ export with `A`/`X` lines.
+
+Rejected input and the full before/after comparison contain personal data. In production, rejected input goes only to the dead-letter queue (restrict it with broker access rules), and logs contain only the feed, transaction ID, outcome, field counts and timings. Full before/after logs are written only by the test harness.
+
+### Adding another broker (for example Kafka)
+
+Kafka is not implemented. To add it, or any other broker:
+
+1. Create `src/PresidioDemo.Messaging.Kafka/` with the same folders as the Solace adapter (`Connection/`, `Listener/`, `Publisher/`, `Models/`). Reference only `PresidioDemo.Messaging` and the broker's native client (for Kafka, `Confluent.Kafka`; don't use Schema Registry, which is HTTP).
+2. Implement the three ports:
+
+   | Port | Solace (implemented) | Kafka (to implement) |
+   | --- | --- | --- |
+   | `IMessagingConnection.ConnectAsync` | session over tcp:// or tcps:// | consumer and idempotent producer over SASL/TLS |
+   | `IMessageConsumer.ReadAsync` | queue flow, window 1, client acknowledgment | consumer group, `EnableAutoCommit=false`, one message at a time per partition |
+   | `InboundMessage.StableId` | replication-group message ID | `topic-partition-offset` |
+   | `InboundMessage.DeliveryCount` | broker delivery count | a retry-count header, or 1 |
+   | `InboundMessage.CompleteAsync` | `flow.Ack(id)` | `Commit(offset)` in partition order |
+   | `IMessagePublisher.PublishAsync` | persistent message, waits for the broker acknowledgment | `ProduceAsync` with `Acks=All` and `EnableIdempotence=true` |
+   | Dead-letter destination | Solace queue | dead-letter topic |
+
+3. Add `AddKafkaMessaging(...)` and one case in [MessagingTransports.cs](src/PresidioDemo.Worker/Hosting/MessagingTransports.cs), plus a `Kafka` section in the environments that use it, and set `Messaging:Transport` to `Kafka`.
+4. Add the adapter to the list in [tests/Messaging.ContractTests/Program.cs](tests/Messaging.ContractTests/Program.cs). It must pass the same contract as the in-memory broker and Solace.
+
+Nothing in Core, the feed code, the workers or the routes changes.
+
+## Configuration and environments
+
+All settings are in one file, [src/PresidioDemo.Worker/appsettings.json](src/PresidioDemo.Worker/appsettings.json):
+
+- **Shared settings** at the top: `Messaging` (transport, delivery limits, and one route per feed with `Input`, `Output` and `DeadLetter`), `Presidio` (the three XML files) and `Logging`.
+- **`Environments`**: one section per environment, holding only what differs. Today these are `Local` (local broker) and `Dev`. Adding `QA`, `UAT` or `Prod` means adding one more block.
+- **`CurrentEnvironment`**: the default when nothing else selects one (`Local`, for developer machines).
+
+The `DOTNET_ENVIRONMENT` variable selects the environment; if it isn't set, `CurrentEnvironment` in the file applies. On AWS, each environment's ECS task definition (or EKS pod spec) sets `DOTNET_ENVIRONMENT` (for example `QA`), so the same image runs everywhere. Values are applied in this order, with later ones winning: shared settings, then the selected environment's section, then environment variables with double underscores (for example `Solace__Host`). Each environment uses its own Solace Message VPN, so queue names are the same everywhere.
+
+Secrets are never in the file. `Solace:PasswordEnvironmentVariable` names the variable holding the password (`SOLACE_PASSWORD`). On AWS, the task definition's `secrets` field injects it from Secrets Manager when the task starts, so the application makes no AWS calls.
+
+Startup stops with one clear message for any of these:
+- an environment without a section
+- unknown sections or keys
+- a password in the file
+- an HTTP host, or `tcps://` without certificate validation
+- a feed without exactly one route, or shared or wildcard destinations
+- invalid XML configuration
+
+`Solace:ProvisionQueues` creates the input and dead-letter queues and is enabled only for `Local`; other environments use queues provisioned by the broker team.
 
 ## Architecture diagrams
 
@@ -49,7 +123,7 @@ The root [.editorconfig](.editorconfig) shares C# formatting preferences with Vi
 | PNR | Section structs and linked lists for repeating sections; 53 policy aliases; PNR.txt has 80 masked and 74 kept values |
 | PNR-Linking | Feed-specific codec with shared System.Text.Json processing; 49 existing policy paths |
 
-The three original XML formats remain: [reference mappings](src/Configuration/reference-layouts.xml), [feed policies](src/Configuration/feed-policies.xml), and [XDR structures](src/Configuration/xdr-layouts.xml). Each binary feed has one common structural definition. Optional extensions enable variable widths, optional groups, named capture mappings and 14 shared masking rules without replacing the original roots or feed sections. New structures use reviewed XML changes and a restart. Unsupported structures are retained without publication. `TKT.txt` routes to ETKT.
+The three original XML formats remain: [reference mappings](src/PresidioDemo.Core/Configuration/reference-layouts.xml), [feed policies](src/PresidioDemo.Core/Configuration/feed-policies.xml), and [XDR structures](src/PresidioDemo.Core/Configuration/xdr-layouts.xml). Each binary feed has one common structural definition. Optional extensions enable variable widths, optional groups, named capture mappings and 14 shared masking rules without replacing the original roots or feed sections. New structures use reviewed XML changes and a restart. Unsupported structures are retained without publication. `TKT.txt` routes to ETKT.
 
 XDR raw-word blocks use `<words name="..." count="..." />`, a compact alias for the original fixed array of `uint32` values. The loader supports both forms and expands the alias before processing; byte widths, field paths and validation remain unchanged.
 
@@ -57,7 +131,7 @@ All 15 supplied samples pass actual local Presidio processing and independent by
 
 ## ACI module and structure review
 
-[src/Feeds/ACI](src/Feeds/ACI) contains separate XDR reader/writer, decoder, parser, encoder, serializer, models, structure definitions, indicators, report formatter and feed codec. The normal ACI route uses this module through `aciStructures="true"` on its schema-driven reference entry. Older custom configurations without this opt-in retain their existing codec. The decoder follows the supplied C-structure declaration order; the encoder rebuilds the complete payload. Existing XML remains the reviewed policy projection for the supplied sample family. Every populated string must have policy coverage, and unreviewed processing shapes are rejected.
+[src/PresidioDemo.Core/FeedCodecs/ACI](src/PresidioDemo.Core/FeedCodecs/ACI) contains separate XDR reader/writer, decoder, parser, encoder, serializer, models, structure definitions, indicators, report formatter and feed codec. The normal ACI route uses this module through `aciStructures="true"` on its schema-driven reference entry. Older custom configurations without this opt-in retain their existing codec. The decoder follows the supplied C-structure declaration order; the encoder rebuilds the complete payload. Existing XML remains the reviewed policy projection for the supplied sample family. Every populated string must have policy coverage, and unreviewed processing shapes are rejected.
 
 The structure review corrects `seatNumber` to `departureGate`, `origin` to `terminatingCity`, and offset-based names to documented fields. Operational equipment, aircraft, gate, sector and process values are kept. Passenger names, actual passenger seat assignments, loyalty numbers and unresolved identifiers remain masked. PNR and numeric passenger IDs stay unchanged; the parser checks the `paxl_id` / `pax_id` association. This rewrite does not introduce tokenization.
 
@@ -73,7 +147,7 @@ Decoded analysis files intentionally contain original supplied values. The immut
 
 ## Dedicated ETKT module
 
-`src/Feeds/ETKT` separates the XDR reader, writer, decoder, parser, encoder, serializer, models, structure definitions, readable report and route adapter. The normal ETKT route selects this module through `etktStructures="true"` on its schema-driven reference entry. Custom configurations without that setting retain their existing codec.
+`src/PresidioDemo.Core/FeedCodecs/ETKT` separates the XDR reader, writer, decoder, parser, encoder, serializer, models, structure definitions, readable report and route adapter. The normal ETKT route selects this module through `etktStructures="true"` on its schema-driven reference entry. Custom configurations without that setting retain their existing codec.
 
 All six supplied messages begin with the observed framing words `5, 1, 0`. The screenshot enum declares only error=1, issue=2 and update=3. The implementation preserves the observed sample type 5 without assigning it an undocumented business meaning. Its body aligns with all 136 scalar slots in the screenshot history order. The encoder reconstructs the complete payload and original MQ envelope; XML remains the reviewed protection projection.
 
@@ -93,7 +167,7 @@ Checks cover exact binary and MQ-export round trips, agreement with an independe
 
 ## PNR-Linking and Seats JSON processing
 
-`src/Feeds/PNRLinking/PnrLinkingFeedCodec.cs` and `src/Feeds/Seats/SeatsFeedCodec.cs` keep the per-feed folders and own each feed's route and root contract: PNR-Linking requires a JSON array, and Seats requires a JSON object. Both inherit the common `src/Feeds/Shared/JsonFeedCodec.cs`. JSON processing uses only `System.Text.Json`; no additional JSON package is required.
+`src/PresidioDemo.Core/FeedCodecs/PNRLinking/PnrLinkingFeedCodec.cs` and `src/PresidioDemo.Core/FeedCodecs/Seats/SeatsFeedCodec.cs` keep the per-feed folders and own each feed's route and root contract: PNR-Linking requires a JSON array, and Seats requires a JSON object. Both inherit the common `src/PresidioDemo.Core/Parser/Shared/JsonFeedCodec.cs`. JSON processing uses only `System.Text.Json`; no additional JSON package is required.
 
 The shared implementation reads named JSON fields, resolves their existing wildcard XML policy paths, replaces selected string values and validates the rebuilt message. JSON supplies its own structure, so these feeds do not need separate structure definitions, domain models, decoders, encoders, parsers, serializers or report formatters. Four former JSON helper files are folded into the same shared class. Eighteen redundant source files were removed from the active project.
 
@@ -117,11 +191,11 @@ Reports include original supplied values and are saved under `.test-runs/json-fe
 | Presidio Analyzer / Anonymizer | 2.2.364 |
 | spaCy / en_core_web_lg | 3.8.16 / 3.8.0 |
 
-Python runs inside the .NET process. Processing makes no HTTP calls or model downloads.
+Python runs inside the .NET worker process. Processing makes no HTTP calls or model downloads; the broker connection uses the native Solace protocol.
 
 ## Setup and run
 
-Requires Windows, the .NET 10 SDK and Python 3.12. Run these steps in PowerShell from the project root.
+Requires Windows, the .NET 10 SDK and Python 3.12; running against a local broker also needs Docker or Podman. Run these steps in PowerShell from the project root.
 
 ### 1. Create the Python virtual environment
 
@@ -180,61 +254,82 @@ After package installation finishes, deactivate it:
 deactivate
 ```
 
-### Build and run the .NET demo
+### Build
 
 ```powershell
-dotnet build
+dotnet build PresidioDemo.slnx
 ```
 
-Process the actual feeds once, preserving the source files:
+### Run locally against a Solace broker
+
+The `Local` environment expects a Solace broker on `tcp://localhost:55555` and creates its queues on startup. Start one with Docker (or Podman), then run the worker:
 
 ```powershell
-dotnet run -- --process-folder D:/Bala_Support/Feeds
+$env:SOLACE_ADMIN_PASSWORD = "<choose an admin password>"
+docker compose -f deploy/docker-compose.yml up -d
+$env:SOLACE_PASSWORD = "<client password; any value on the default local broker>"
+dotnet run --project src/PresidioDemo.Worker
 ```
 
-For continuous listening, run `dotnet run`, wait for `READY`, then copy a `.txt` MQ export or `.bin` payload into `docs/input-feeds/<feed>`. Press Enter or Ctrl+C to stop. Use the folders `ACI`, `ETKT`, `PNR`, `PNR-Linking` and `Seats`.
+Wait for `READY`, then send the samples from another terminal:
 
-A batch succeeds only when every input is published and acknowledged. Batch filenames accept numeric suffixes such as `ACI_03.txt` and `ETKT_05.txt`; the listener routes by feed folder and accepts arbitrary filenames. Samples are review/test inputs and are not required at runtime. The schemas describe the structures supported by the supplied examples; a producer contract is still needed to confirm unknown binary meanings and general passenger associations.
+```powershell
+$env:SOLACE_PASSWORD = "<same value>"
+dotnet run --project tools/FeedSampleSender
+```
 
-## Folders and configuration
+Protected messages appear on the `airline/<feed>/protected` topics and rejected ones on the `q.<feed>.dlq` queues; the PubSub+ Manager at http://localhost:8080 shows both. Ctrl+C stops the worker after the current messages; unacknowledged messages are redelivered on the next start. The local broker and these commands have not yet been run on this machine (no Docker here); the broker-free checks below cover the same delivery rules with the in-memory broker.
 
-- `src/`: startup, `Configuration/`, `Feeds/`, `Pipeline/`, `Protection/`, `Transport/` and `.venv/`.
-- `tests/unit-tests/`: Python tests; `tests/FeedPipelineChecks/`: .NET checks.
-- `docs/sample-docs/<feed>/`: immutable source TXT files for review and testing, one folder per feed (`ACI`, `ETKT`, `PNR`, `PNR-Linking`, `Seats`); not required at runtime. Files ending in `_Negative_Testing` are rejected by design. `--process-folder` includes subfolders, so the whole tree runs as one batch.
-- `docs/input-feeds/`, `output-feeds/`, `failed-feeds/`: one subfolder per feed.
-- `docs/feed-logs/`: one text file per transaction, named `<feed>.<message-id>.txt`.
-- `docs/feed-processing/`: active input files, with one subfolder per feed.
-- `.runtime/docs/`: listener lock and batch reports.
+To run a deployed environment, set `DOTNET_ENVIRONMENT` (for example `Dev`) and `SOLACE_PASSWORD`, then start `PresidioDemo.Worker`. It exits with code 1 and one message if the settings are invalid or the broker is unreachable.
 
-The listener moves each ready file from `docs/input-feeds/<feed>` into `docs/feed-processing/<feed>/<original-stem>.<unique-id>.<extension>`. This removes it from the input folder before processing starts. The same ID follows the transaction through its log and output. Once output is saved, the processing file is deleted. Rejected input is saved in `docs/failed-feeds/<feed>` with an error report before the processing file is deleted. Interrupted transactions and temporary storage failures stay in `feed-processing` for retry after restart. Older `.runtime/docs/processing` deliveries are migrated on startup while preserving their IDs and bytes.
+### Process files without a broker
 
-Each transaction log has separate `BEFORE ANONYMIZATION` and `AFTER ANONYMIZATION` headings with divider lines. For MQ input, the before section shows the complete original feed data, decoded payload, a plain-text payload view, then parsed original fields (`location | policy field | value`). The plain-text view preserves readable UTF-8 text and whitespace; binary controls and invalid UTF-8 are shown as spaces. The after section shows the decoded anonymized payload followed by the complete rebuilt and validated feed data. Byte counts reflect the actual payload and feed sizes. Raw input or malformed MQ envelopes show complete input data and its plain-text view without a decoded payload. Binary data is shown as a hex dump with a readable character column. Rejected transactions retain the complete input data and any decoded payload and explain why no validated anonymized output is available. Retries reuse the same log file. If a log cannot be saved, input remains pending and is retried before publication or rejection.
+The test harness sends `.txt` (IBM MQ export) and `.bin` (raw payload) files through the real workers and Presidio over the in-memory broker. It replaces the former `--process-folder` batch:
 
-These logs contain original personal data and are excluded from Git. They are written under the selected `--docs-root` when a custom folder is used.
+```powershell
+dotnet run --project tests/FeedPipelineHarness -- --input docs/sample-docs --output .test-runs/samples
+```
 
-All three XML files are loaded and validated together before input is claimed. Reference mappings retain `name`, `offset` and `length`; with `schemaDriven="true"`, these numbers document the reviewed baseline while the XDR structure determines actual input positions and widths. Reference sample filenames and hashes are provenance only in this mode. Original reference configurations without this flag retain their existing sample-based behavior. Binary fields use Keep or Known full-width ASCII masks. PNRs and confirmed operational fields stay unchanged. Unknown readable identifiers are masked, including the two additional ETKT codes. The three catalog rules for loyalty, sensitive attributes and financial information use `#` to preserve `*` record separators; other masks use `*`. JSON retains its original inline policies, replacement behavior, nulls, types and grouping.
+It writes `published/<feed>/`, `dead-letter/<feed>/` (with a `.reason.txt` per file), full before/after logs in `logs/<feed>/` and `report.json`. The exit code is 0 when every file is published and 2 when any file is rejected. Files are routed by their feed folder, or by name (`ACI_03.txt`, `SEATS_02_Negative_Testing.txt`). The `--policy-file`, `--xdr-layout-file` and `--reference-layout-file` switches select alternate XML files; `--fail-publishes <n>` simulates a broker outage.
 
-Restart after changes. The existing switches `--reference-layout-file <xml>`, `--xdr-layout-file <xml>` and `--policy-file <xml>` select alternate files. See the [feed analysis](docs/feed-analysis.md) for commented XML examples, empty/optional values, per-sample results and verification commands.
+## Samples and configuration files
+
+- `docs/sample-docs/<feed>/`: immutable source files for review and testing, one folder per feed (`ACI`, `ETKT`, `PNR`, `PNR-Linking`, `Seats`). They aren't needed at runtime. Files ending in `_Negative_Testing` are rejected by design.
+- `src/PresidioDemo.Core/Configuration/`: the three XML files, copied next to the worker at build time.
+
+The harness logs have separate `BEFORE ANONYMIZATION` and `AFTER ANONYMIZATION` headings with divider lines:
+- **Before, for MQ input:** the complete original feed data, the decoded payload, a plain-text payload view, then the parsed original fields (`location | policy field | value`).
+- **After:** the decoded anonymized payload, then the complete rebuilt and validated feed data.
+- **Binary data:** shown as a hex dump with a readable character column.
+- **Rejected messages:** the complete input and the reason.
+
+These logs contain original personal data and are written only under `.test-runs/`, which is excluded from Git.
+
+All three XML files are loaded and validated together before the worker connects. Reference mappings keep `name`, `offset` and `length`. With `schemaDriven="true"`, these numbers document the reviewed baseline, while the XDR structure determines the actual input positions and widths; reference sample filenames and hashes are provenance only. Field protection rules:
+- **Binary fields** use Keep or Known full-width ASCII masks.
+- **PNRs and confirmed operational fields** stay unchanged.
+- **Unknown readable identifiers** are masked, including the two additional ETKT codes.
+- **Mask characters:** the three catalog rules for loyalty, sensitive attributes and financial information use `#` to preserve `*` record separators; other masks use `*`.
+- **JSON** keeps its original inline policies, replacement behavior, nulls, types and grouping.
+
+Restart the worker after changes. See the [feed analysis](docs/feed-analysis.md) for commented XML examples, empty/optional values, per-sample results and verification commands.
 
 ## Tests
 
-Run byte-exact round trips without anonymization for every feed type:
+| Command | What it checks | Needs |
+| --- | --- | --- |
+| `dotnet run --project tests/WorkerChecks` | Environment selection, settings validation, ack-after-publish, outage retry, redelivery, max deliveries, dead-lettering, header filtering | nothing |
+| `dotnet run --project tests/Messaging.ContractTests` | The broker contract, on the in-memory broker; also on Solace when `SOLACE_CONTRACT_TESTS=1` and the local broker runs | nothing (Solace: local broker) |
+| `dotnet run --project tests/FeedPipelineChecks` | Policies, codecs, real Presidio, per-feed scheduling and dead-lettering through `FeedWorker` | Python venv |
+| `dotnet run --project tests/FeedRoundTripChecks` | Byte-exact round trips without anonymization for every feed | nothing |
+| `dotnet run --project tests/JsonFeeds`, `tests/ACI/AciChecks.csproj`, `tests/ETKT/EtktChecks.csproj`, `tests/PNR/PnrChecks.csproj -- <report-folder>` | Feed-specific codecs | nothing |
+| `src/.venv/Scripts/python.exe -m unittest discover -s tests/unit-tests -p test_*.py` | Per-feed protection, byte preservation and samples, through the harness | built solution, Python venv |
+| `src/.venv/Scripts/python.exe tests/run_sample_verification.py` | All samples end to end, including the negative samples | built solution, Python venv |
 
-```powershell
-dotnet run --project tests/FeedRoundTripChecks
-```
-
-These checks load the normal codecs and workflows, with an in-memory All-Keep policy for this test only. They compare complete input/output byte arrays, decoded payloads and field values over three cycles per example. Coverage includes all supplied samples as raw payloads and MQ exports, binary string widths and padding, JSON whitespace/property order/escapes/numeric spelling/empty/null values, MQ line endings, hex casing, row widths and complete diagnostic dumps. Synthetic variants test supported encoding shapes; they do not establish new producer contracts. No Python initialization or application configuration change is required. Results and execution logs are written to a fresh `.test-runs/round-trip-*` folder; supply a directory argument to choose another location. The same checks also run in `FeedPipelineChecks`.
-
-```powershell
-src/.venv/Scripts/python.exe -m unittest discover -s tests/unit-tests -p test_*.py -v
-src/.venv/Scripts/python.exe tests/unit-tests/test_feed_listener.py
-dotnet run --project tests/FeedPipelineChecks
-src/.venv/Scripts/python.exe tests/run_sample_verification.py
-```
+The round-trip checks load the normal codecs and workflows with an in-memory All-Keep policy, and compare complete input and output bytes, decoded payloads and field values over three cycles per example. Results go to a fresh `.test-runs/round-trip-*` folder. The same checks also run in `FeedPipelineChecks`.
 
 [Implementation details](topics/feeds-demo/v14/feed-implementation-reference-v14.md) · [Feed format analysis](docs/feed-analysis.md)
 
 ## PNR sample mapping
 
-The PNR route lives in `src/FeedCodecs/PNR`. The XDR schema follows the P2 PNR Record Layout sections (keys 01, 10, 20, 30, 40, 43, 50, 60, 80, C0, D0, D2, D8). Repeating sections are rpcgen linked lists: a `1` word precedes each element and a `0` word ends the list. The spec describes the MQ/RTA P2 record and excludes the real-time C-structure feed, so it supplies field meanings, not wire order; element shapes are fitted to PNR.txt and PNR_02.txt, and lists that are empty in both samples reject any content. Mixed record texts (SSR/OSI facts, frequent-flyer accounts, remarks and fare references) use ordered variants keyed by record code, such as DOCS, CTCE, CTCM and TKNE: the first matching pattern masks the personal values, the record syntax stays unchanged, and a catch-all masks unrecognized records whole. Neither the spec nor the samples carry a stable passenger ID. Run `dotnet run --project tests/PNR/PnrChecks.csproj -- <report-folder>` to write a decoded report for each PNR sample; reports contain original sample values.
+The PNR route lives in `src/PresidioDemo.Core/FeedCodecs/PNR`. The XDR schema follows the P2 PNR Record Layout sections (keys 01, 10, 20, 30, 40, 43, 50, 60, 80, C0, D0, D2, D8). Repeating sections are rpcgen linked lists: a `1` word precedes each element and a `0` word ends the list. The spec describes the MQ/RTA P2 record and excludes the real-time C-structure feed, so it supplies field meanings, not wire order; element shapes are fitted to PNR.txt and PNR_02.txt, and lists that are empty in both samples reject any content. Mixed record texts (SSR/OSI facts, frequent-flyer accounts, remarks and fare references) use ordered variants keyed by record code, such as DOCS, CTCE, CTCM and TKNE: the first matching pattern masks the personal values, the record syntax stays unchanged, and a catch-all masks unrecognized records whole. Neither the spec nor the samples carry a stable passenger ID. Run `dotnet run --project tests/PNR/PnrChecks.csproj -- <report-folder>` to write a decoded report for each PNR sample; reports contain original sample values.

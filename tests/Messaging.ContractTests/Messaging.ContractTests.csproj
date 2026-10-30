@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The behaviour every broker adapter must provide. Runs on the in-memory broker always, and on Solace when
+       SOLACE_CONTRACT_TESTS=1 points it at a local broker. A new adapter adds one factory here. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/PresidioDemo.Messaging.Solace/PresidioDemo.Messaging.Solace.csproj" />
+    <ProjectReference Include="../PresidioDemo.Messaging.Testing/PresidioDemo.Messaging.Testing.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.12" />
+  </ItemGroup>
+
+</Project>

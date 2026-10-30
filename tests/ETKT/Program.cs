@@ -13,9 +13,9 @@ string project = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../
 string output = args.Length == 1 ? Path.GetFullPath(args[0]) : Path.Combine(project, ".test-runs/etkt-checks");
 Directory.CreateDirectory(output);
 var options = new JsonSerializerOptions { WriteIndented = true };
-var schemas = XdrLayoutConfiguration.Load(Path.Combine(project, "src/Configuration/xdr-layouts.xml"));
-var references = ReferenceLayoutConfiguration.Load(Path.Combine(project, "src/Configuration/reference-layouts.xml"), schemas);
-var policies = FeedPolicyConfiguration.Load(Path.Combine(project, "src/Configuration/feed-policies.xml"));
+var schemas = XdrLayoutConfiguration.Load(Path.Combine(project, "src/PresidioDemo.Core/Configuration/xdr-layouts.xml"));
+var references = ReferenceLayoutConfiguration.Load(Path.Combine(project, "src/PresidioDemo.Core/Configuration/reference-layouts.xml"), schemas);
+var policies = FeedPolicyConfiguration.Load(Path.Combine(project, "src/PresidioDemo.Core/Configuration/feed-policies.xml"));
 var codec = FeedCodecRegistry.Create(FeedType.ETKT, schemas, references);
 Check(codec is EtktFeedCodec, "configured ETKT route selects the dedicated module");
 var results = new List<object>();
@@ -140,7 +140,7 @@ foreach (string path in new[] { "/history/h_new_recloc", "/history/h_old_recloc"
 string configurationRoot = Path.Combine(project, ".test-runs", "etkt-config-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(configurationRoot);
 string configurationFile = Path.Combine(configurationRoot, "reference-layouts.xml");
-var originalConfiguration = XDocument.Load(Path.Combine(project, "src/Configuration/reference-layouts.xml"));
+var originalConfiguration = XDocument.Load(Path.Combine(project, "src/PresidioDemo.Core/Configuration/reference-layouts.xml"));
 var compatibilityConfiguration = new XDocument(originalConfiguration);
 compatibilityConfiguration.Root!.Elements("feed").Single(element => (string?)element.Attribute("type") == "ETKT").Attribute("etktStructures")!.Remove();
 compatibilityConfiguration.Save(configurationFile);

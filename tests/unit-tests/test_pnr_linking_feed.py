@@ -1,41 +1,58 @@
 """Review supplied PNR-Linking protection, schema changes and truncated input."""
-from pathlib import Path
 import json
-import tempfile
 import unittest
 
-from test_feed_listener import PROJECT, Listener, wait_for, rejected, runtime_root, processing_files
+from pipeline_harness import PROJECT, run
 from test_seats_feed import payload, header, verify_output
 from configuration_support import sample
+
+FIXTURE = PROJECT / "tests/unit-tests/fixtures/pnr-linking-mq-export.txt"
+
+
+def supplied_with(change):
+    document = json.loads(payload(sample("PNR_LINKING.txt").read_bytes()))
+    change(document[0])
+    return json.dumps(document).encode()
+
+
+def transition_text():
+    return supplied_with(lambda d: d.update(transitionLinkSegments="emily.carter@example.com"))
+
+
+def transition_object():
+    return supplied_with(lambda d: d.update(transitionLinkSegments=[{"UnreviewedEmail": "emily.carter@example.com"}]))
+
+
+def numeric_id():
+    return supplied_with(lambda d: d["Customers"][0].update(PaxId=1234567))
+
+
+def truncated():
+    supplied = sample("PNR_LINKING.txt").read_bytes()
+    return header(supplied) + b"X " + payload(supplied)[:1523].hex().upper().encode() + b"\r\n"
+
+
+def unconfigured():
+    document = json.loads(payload(FIXTURE.read_bytes()))
+    document[0]["Customers"][0]["UnreviewedEmail"] = "emily.carter@example.com"
+    return json.dumps(document).encode('ascii')
 
 
 class PnrLinkingFeedTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        (PROJECT / ".test-runs").mkdir(exist_ok=True)
-        cls.sandbox = tempfile.TemporaryDirectory(prefix="pnr-linking-", dir=PROJECT / ".test-runs")
-        cls.docs = Path(cls.sandbox.name) / "docs"
-        try:
-            cls.listener = Listener(cls.docs)
-        except BaseException:
-            cls.sandbox.cleanup()
-            raise
-
-    @classmethod
-    def tearDownClass(cls):
-        try:
-            cls.listener.stop()
-        finally:
-            cls.sandbox.cleanup()
+        cls.harness = run({"PNR-Linking/complete-linking.txt": FIXTURE.read_bytes(),
+                           "PNR-Linking/supplied-linking.txt": sample("PNR_LINKING.txt").read_bytes(),
+                           "PNR-Linking/transition-text.bin": transition_text(),
+                           "PNR-Linking/transition-object.bin": transition_object(),
+                           "PNR-Linking/numeric-id.bin": numeric_id(),
+                           "PNR-Linking/original-truncated.txt": truncated(),
+                           "PNR-Linking/unconfigured-linking.bin": unconfigured()}, expect=2, prefix="pnr-linking-")
+        cls.addClassCleanup(cls.harness.cleanup)
 
     def test_complete_mq_export_protects_every_configured_field_and_preserves_grouping(self):
-        original = (PROJECT / "tests/unit-tests/fixtures/pnr-linking-mq-export.txt").read_bytes()
-        inbox = self.docs / "input-feeds/PNR-Linking/complete-linking.txt"
-        inbox.write_bytes(original)
-        outdir = self.docs / "output-feeds/PNR-Linking"
-        wait_for(lambda: len(list(outdir.glob("complete-linking.*.txt"))) == 1 and not inbox.exists()
-                 and not processing_files(self.docs, "PNR-Linking", inbox.name), "complete linking publication and acknowledgment")
-        output = next(outdir.glob("complete-linking.*.txt")).read_bytes()
+        original = FIXTURE.read_bytes()
+        output = self.harness.published("PNR-Linking", "complete-linking.txt")
         result = verify_output(original, output, "PNR-Linking")
         self.assertGreater(result["actions"]["Replace"], 0)
         data = json.loads(payload(output))
@@ -47,12 +64,7 @@ class PnrLinkingFeedTests(unittest.TestCase):
 
     def test_supplied_complete_linking_file_protects_both_passengers_and_preserves_nulls(self):
         original = sample("PNR_LINKING.txt").read_bytes()
-        inbox = self.docs / "input-feeds/PNR-Linking/supplied-linking.txt"
-        inbox.write_bytes(original)
-        outdir = self.docs / "output-feeds/PNR-Linking"
-        wait_for(lambda: len(list(outdir.glob("supplied-linking.*.txt"))) == 1 and not inbox.exists()
-                 and not processing_files(self.docs, "PNR-Linking", inbox.name), "supplied linking acknowledgment")
-        output = next(outdir.glob("supplied-linking.*.txt")).read_bytes()
+        output = self.harness.published("PNR-Linking", "supplied-linking.txt")
         result = verify_output(original, output, "PNR-Linking")
         self.assertEqual(result["unique_paths"], 49)
         self.assertEqual(result["scalar_values"], 76)
@@ -70,40 +82,22 @@ class PnrLinkingFeedTests(unittest.TestCase):
             self.assertEqual(protected["FlightLeg"], person["FlightLeg"])
 
     def test_transition_scalar_text_is_protected_and_nested_unreviewed_fields_are_rejected(self):
-        document = json.loads(payload(sample("PNR_LINKING.txt").read_bytes()))
-        document[0]["transitionLinkSegments"] = "emily.carter@example.com"
-        inbox = self.docs / "input-feeds/PNR-Linking/transition-text.bin"
-        inbox.write_bytes(json.dumps(document).encode())
-        outdir = self.docs / "output-feeds/PNR-Linking"
-        wait_for(lambda: len(list(outdir.glob("transition-text.*.bin"))) == 1 and not inbox.exists()
-                 and not processing_files(self.docs, "PNR-Linking", inbox.name), "transition scalar protection")
-        output = next(outdir.glob("transition-text.*.bin")).read_bytes()
+        output = self.harness.published("PNR-Linking", "transition-text.bin")
         self.assertEqual(json.loads(output)[0]["transitionLinkSegments"], "[PROTECTED_ATTRIBUTE]")
         self.assertNotIn(b"emily.carter@example.com", output)
-        document[0]["transitionLinkSegments"] = [{"UnreviewedEmail": "emily.carter@example.com"}]
-        raw = json.dumps(document).encode()
-        (self.docs / "input-feeds/PNR-Linking/transition-object.bin").write_bytes(raw)
-        rejected(self.docs, "PNR-Linking", "transition-object.bin", raw, "without a configured protection policy")
+        self.harness.assert_rejected("PNR-Linking", "transition-object.bin", transition_object(),
+                                     "without a configured protection policy")
 
     def test_numeric_sensitive_field_rejects_instead_of_changing_json_type(self):
-        document = json.loads(payload(sample("PNR_LINKING.txt").read_bytes()))
-        document[0]["Customers"][0]["PaxId"] = 1234567
-        raw = json.dumps(document).encode()
-        (self.docs / "input-feeds/PNR-Linking/numeric-id.bin").write_bytes(raw)
-        rejected(self.docs, "PNR-Linking", "numeric-id.bin", raw, "Non-string JSON fields must remain unchanged")
+        self.harness.assert_rejected("PNR-Linking", "numeric-id.bin", numeric_id(),
+                                     "Non-string JSON fields must remain unchanged")
 
     def test_truncated_linking_file_is_retained_without_inventing_its_tail(self):
-        supplied = sample("PNR_LINKING.txt").read_bytes()
-        original = header(supplied) + b"X " + payload(supplied)[:1523].hex().upper().encode() + b"\r\n"
-        (self.docs / "input-feeds/PNR-Linking/original-truncated.txt").write_bytes(original)
-        rejected(self.docs, "PNR-Linking", "original-truncated.txt", original, "malformed JSON")
+        self.harness.assert_rejected("PNR-Linking", "original-truncated.txt", truncated(), "malformed JSON")
 
     def test_complete_unconfigured_personal_field_rejects_the_whole_message(self):
-        document = json.loads(payload((PROJECT / "tests/unit-tests/fixtures/pnr-linking-mq-export.txt").read_bytes()))
-        document[0]["Customers"][0]["UnreviewedEmail"] = "emily.carter@example.com"
-        raw = json.dumps(document).encode('ascii')
-        (self.docs / "input-feeds/PNR-Linking/unconfigured-linking.bin").write_bytes(raw)
-        rejected(self.docs, "PNR-Linking", "unconfigured-linking.bin", raw, "without a configured protection policy")
+        self.harness.assert_rejected("PNR-Linking", "unconfigured-linking.bin", unconfigured(),
+                                     "without a configured protection policy")
 
 
 if __name__ == "__main__":

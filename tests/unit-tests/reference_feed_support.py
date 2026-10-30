@@ -167,3 +167,15 @@ def verify_output(feed, original, protected, policy_file=None, raw=False, schema
         assert before[start:start + length] == after[start:start + length], "String count or padding changed"
     assert bytes(expected) == after, "Masking or preserved framing bytes differ"
     return dict(actions)
+
+
+def replace_fields(feed, raw, values):
+    """Overwrite same-width text values at their schema offsets in a raw payload."""
+    raw = bytearray(raw)
+    for name, start, length in field_spans(feed):
+        if name in values:
+            encoded = values[name].encode("ascii")
+            if len(encoded) != length:
+                raise AssertionError(f"{name} replacement must be {length} bytes")
+            raw[start:start + length] = encoded
+    return bytes(raw)

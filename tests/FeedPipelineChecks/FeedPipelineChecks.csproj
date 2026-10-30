@@ -6,7 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../PresidioDemo.csproj" />
+    <ProjectReference Include="../../src/PresidioDemo.Worker/PresidioDemo.Worker.csproj" />
+    <ProjectReference Include="../PresidioDemo.Messaging.Testing/PresidioDemo.Messaging.Testing.csproj" />
     <Compile Include="../FeedRoundTripChecks/NoAnonymizationRoundTripChecks.cs" Link="NoAnonymizationRoundTripChecks.cs" />
     <Compile Include="../FeedRoundTripChecks/RoundTripExamples.cs" Link="RoundTripExamples.cs" />
     <Compile Include="../FeedRoundTripChecks/JsonRoundTripExamples.cs" Link="JsonRoundTripExamples.cs" />

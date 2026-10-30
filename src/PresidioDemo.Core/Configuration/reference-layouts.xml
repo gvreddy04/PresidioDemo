@@ -1,0 +1,182 @@
+<?xml version='1.0' encoding='utf-8'?>
+<referenceLayouts>
+  <!-- Preserve the original field/part mapping format. schemaDriven opts into the matching
+       XDR sequence; without it the original reference-file/template behavior still applies.
+       In schemaDriven mode every XDR string must be mapped, including fixed syntax strings.
+       Restart applies changes only after all three configuration files validate together. -->
+  <!-- Confirmed top-level string names match XDR definitions and policy field names.
+       path is retained for nested optional fields; explicit aliases remain supported.
+       Rename only content identified in the samples. Uncertain codes keep their legacy names.
+       Numbered name occurrences identify wire order, not different passengers. Date-only
+       fields retain original names when their business purpose cannot be established. -->
+  <feed type="ACI" name="AciReference888" referenceFile="../../../docs/sample-docs/ACI/ACI.txt" referenceSha256="f038c05e590ade818748f6547c2a624d8d662a52c54d3596ad93649eafce022d" schemaDriven="true" aciStructures="true">
+    <!-- Business aliases verified against C-structure definitions and all six samples.
+         origin was actually terminating city; seatNumber was actually departure gate. -->
+    <!--Offsets/lengths retain reviewed baseline values. schemaDriven uses XDR for actual positions/widths; referenceFile/hash are provenance only in this mode.-->
+    <text name="airlineCode" offset="8" length="2" />
+    <text name="flightDate" offset="20" length="8" />
+    <text name="terminatingCity" offset="40" length="3" />
+    <text name="flightProcessName" offset="72" length="6" />
+    <text name="flightAciTimestamp" offset="88" length="21" />
+    <text name="legCity" offset="124" length="3" />
+    <text name="equipmentCode" offset="144" length="3" />
+    <text name="aircraftNumber" offset="152" length="4" />
+    <text name="departureGate" offset="160" length="4" />
+    <text name="sectorNumber" offset="172" length="4" />
+    <text name="estimatedDepartureDate" offset="188" length="8" />
+    <text name="scheduledDepartureDate" offset="204" length="8" />
+    <text name="boardingDate" offset="220" length="8" />
+    <text name="pnr" offset="404" length="6" pattern="[A-Z0-9]{6}" />
+    <text name="passengerName" offset="424" length="11" />
+    <text name="passengerProcessName" offset="468" length="6" />
+    <text name="passengerFlightAirline" offset="492" length="2" />
+    <text name="passengerFlightDate" offset="504" length="8" />
+    <text name="passengerSeatNumber" offset="672" length="3" path="/OptionalGroupA/value/Counted135" optional="true" />
+    <text name="frequentTravelerNumber" offset="680" length="8" path="/OptionalGroupB/value/Counted137" optional="true" />
+    <text name="unresolvedSeatString" offset="688" length="1" path="/OptionalGroupA/value/Counted138" optional="true" />
+    <text name="aciTransactionTime" offset="792" length="12" />
+    <text name="aciTransactionDate" offset="808" length="8" />
+    <text name="unresolvedIdentifier" offset="840" length="11" />
+    <text name="unresolvedRecordReference" offset="856" length="15" optional="true" pattern="(?&lt;Prefix&gt;[0-9*]*)(?&lt;pnr&gt;[A-Z0-9]{6})" allowEmpty="true">
+      <part name="Prefix" start="0" length="9" />
+      <part name="pnr" start="9" length="6" equalTo="/pnr" />
+    </text>
+  </feed>
+  <feed type="ETKT" name="EtktReference672" referenceFile="../../../docs/sample-docs/ETKT/ETKT.txt" referenceSha256="6a0f5f65a53ff39fee57fdf8dbb870a28dc4fe136296ba4c151c277e99b78cfa" schemaDriven="true" etktStructures="true">
+    <!-- ETKT screenshot mapping: legacy pnr occupies h_aaa_lniata, the agent terminal
+         address. Its new display label is provisional; the legacy alias and Keep
+         treatment remain unchanged. This route supports the observed type-5 family. -->
+    <!-- Text0132 is deliberately absent: the six samples identify raw words, not a string.
+         Zero baseline lengths below describe strings empty in the reference, not fixed widths.
+         Divide-event locators are provisionally mapped to newPnr/oldPnr and kept.
+         Their historical XDR path names remain as provenance. The legacy pnr
+         alias belongs to the provisional agent terminal address and is also kept. -->
+    <!--Offsets/lengths retain reviewed baseline values. schemaDriven uses XDR for actual positions/widths; referenceFile/hash are provenance only in this mode.-->
+    <text name="entryDate" offset="12" length="7" />
+    <text name="entryTime" offset="24" length="4" />
+    <text name="pnr" offset="32" length="6" pattern="[A-Z0-9]{6}" />
+    <text name="Text0044" offset="44" length="3" />
+    <text name="Text0072" offset="72" length="4" />
+    <text name="Text0088" offset="88" length="15" />
+    <text name="ticketNumber" offset="152" length="13" />
+    <text name="ticketStatusRecord" offset="172" length="65" optional="true" pattern="(?&lt;Prefix&gt;.{8})(?&lt;StatusText&gt;.*)" allowEmpty="true">
+      <part name="Prefix" start="0" length="8" />
+      <part name="StatusText" start="8" length="57" />
+    </text>
+    <text name="Flight1Airline" offset="376" length="0" />
+    <text name="Flight1Number" offset="380" length="0" />
+    <text name="Flight1Date" offset="384" length="0" />
+    <text name="Flight1DepartureTime" offset="388" length="0" />
+    <text name="Flight1ArrivalTime" offset="392" length="0" />
+    <text name="Flight1Origin" offset="396" length="0" />
+    <text name="Flight1Destination" offset="400" length="0" />
+    <text name="Flight1Class" offset="404" length="0" />
+    <text name="Flight1NumberRepeat" offset="416" length="0" />
+    <text name="Flight2Number" offset="436" length="0" />
+    <text name="Flight2Date" offset="440" length="0" />
+    <text name="Flight2DepartureTime" offset="444" length="0" />
+    <text name="Flight2ArrivalTime" offset="448" length="0" />
+    <text name="Flight2Origin" offset="452" length="0" />
+    <text name="Flight2Destination" offset="456" length="0" />
+    <text name="Flight2NumberRepeat" offset="476" length="0" />
+    <text name="newPnr" path="/UnconfirmedLocator1" offset="544" length="0" pattern="(?:[A-Z0-9]{6})?" />
+    <text name="oldPnr" path="/UnconfirmedLocator2" offset="548" length="0" pattern="(?:[A-Z0-9]{6})?" />
+  </feed>
+  <feed type="PNR" name="PnrReference" pnrStructures="true" referenceFile="../../../docs/sample-docs/PNR/PNR.txt" referenceSha256="75cc60895384395f8df28eff4c4abf6a0c58f1dc7960c5eee41cb294def0e4de" schemaDriven="true">
+    <!-- Every XDR string maps to one policy alias; baseline offsets do not apply to list items and are zero.
+         Mixed record texts use ordered variants: the first matching pattern selects the protected captures,
+         unmatched bytes stay unchanged, and each list ends with a catch-all that protects unknown records whole. -->
+    <text name="hostAirline" path="/general/hostAirline" offset="0" length="0" />
+    <text name="creationDate" path="/general/creationDate" offset="0" length="0" />
+    <text name="creationTime" path="/general/creationTime" offset="0" length="0" />
+    <text name="transactionDate" path="/general/transactionDate" offset="0" length="0" />
+    <text name="transactionTime" path="/general/transactionTime" offset="0" length="0" />
+    <text name="p2CreationTime" path="/general/p2CreationTime" offset="0" length="0" />
+    <text name="pnr" path="/general/pnr" offset="0" length="0" pattern="[A-Z0-9]{6}" />
+    <text name="indicatorText" path="/indicators/indicatorText" offset="0" length="0" />
+    <text name="originChangeIdentifier" path="/bookingOrigin/changeIdentifier" offset="0" length="0" />
+    <text name="originAgentSine" path="/bookingOrigin/agentSine" offset="0" length="0" />
+    <text name="originCity" path="/bookingOrigin/originCity" offset="0" length="0" />
+    <text name="originChangeDate" path="/bookingOrigin/changeDate" offset="0" length="0" />
+    <text name="originIdentifier" path="/bookingOrigin/originIdentifier" offset="0" length="0" />
+    <text name="originCarrier" path="/bookingOrigin/carrier" offset="0" length="0" />
+    <text name="originPointOfSale" path="/bookingOrigin/pointOfSale" offset="0" length="0" />
+    <text name="purgeFlight" path="/bookingOrigin/purgeFlight" offset="0" length="0" />
+    <text name="surname" path="/names/*/surname" offset="0" length="0" />
+    <text name="givenName" path="/firstNames/*/givenName" offset="0" length="0" />
+    <text name="factCode" path="/facts/*/factCode" offset="0" length="0" />
+    <text name="factText" path="/facts/*/text" offset="0" length="0">
+      <variant pattern="DOCS[A-Z0-9]{2}[A-Z]{2}[0-9]+/(?&lt;DocumentType&gt;[^/]*)/(?&lt;IssuingCountry&gt;[^/]*)/(?&lt;DocumentNumber&gt;[^/]*)/(?&lt;Nationality&gt;[^/]*)/(?&lt;DateOfBirth&gt;[^/]*)/(?&lt;Gender&gt;[^/]*)/(?&lt;DocumentExpiry&gt;[^/]*)/(?&lt;PassengerName&gt;[^-]*)(?:-[0-9]+(?&lt;AssociatedName&gt;.*))?" />
+      <variant pattern="CTCE[A-Z0-9]{2}[A-Z]{2}[0-9]+/(?&lt;EmailAddress&gt;.+?)-[0-9]+(?&lt;PassengerName&gt;.+)" />
+      <variant pattern="CTCM[A-Z0-9]{2}[A-Z]{2}[0-9]+/(?&lt;PhoneNumber&gt;.+?)-[0-9]+(?&lt;PassengerName&gt;.+)" />
+      <variant pattern="TKNE[A-Z0-9]+-[0-9]+(?&lt;PassengerName&gt;.+?)\.(?&lt;TicketNumber&gt;.+)C[0-9]+" />
+      <variant pattern="(?&lt;Text&gt;.*)" />
+    </text>
+    <text name="frequentFlyerFactCode" path="/frequentFlyers/*/factCode" offset="0" length="0" />
+    <text name="frequentFlyerServiceCode" path="/frequentFlyers/*/serviceCode" offset="0" length="0" />
+    <text name="frequentFlyerCarrier" path="/frequentFlyers/*/carrier" offset="0" length="0" />
+    <text name="frequentFlyerAccount" path="/frequentFlyers/*/account" offset="0" length="0">
+      <variant pattern="(?&lt;Account&gt;[^.]+)\.[0-9]+\*(?&lt;Status&gt;.+)" />
+      <variant pattern="(?&lt;Text&gt;.*)" />
+    </text>
+    <text name="frequentFlyerHolderName" path="/frequentFlyers/*/holderName" offset="0" length="0" />
+    <text name="phoneCity" path="/phones/*/city" offset="0" length="0" />
+    <text name="phoneAreaCode" path="/phones/*/areaCode" offset="0" length="0" />
+    <text name="phoneText" path="/phones/*/text" offset="0" length="0">
+      <variant pattern="\*(?&lt;PhoneRemark&gt;[^*].*)" />
+      <variant pattern="(?&lt;Text&gt;.*)" />
+    </text>
+    <text name="segmentActionCode" path="/itinerary/*/actionCode" offset="0" length="0" />
+    <text name="segmentDepartureDate" path="/itinerary/*/departureDate" offset="0" length="0" />
+    <text name="segmentDayOfWeek" path="/itinerary/*/dayOfWeek" offset="0" length="0" />
+    <text name="segmentCarrier" path="/itinerary/*/carrier" offset="0" length="0" />
+    <text name="segmentPreviousActionCode" path="/itinerary/*/previousActionCode" offset="0" length="0" />
+    <text name="segmentBoardPoint" path="/itinerary/*/boardPoint" offset="0" length="0" />
+    <text name="segmentOffPoint" path="/itinerary/*/offPoint" offset="0" length="0" />
+    <text name="segmentDepartureTime" path="/itinerary/*/departureTime" offset="0" length="0" />
+    <text name="segmentArrivalTime" path="/itinerary/*/arrivalTime" offset="0" length="0" />
+    <text name="segmentClassOfService" path="/itinerary/*/classOfService" offset="0" length="0" />
+    <text name="segmentStatusDate" path="/itinerary/*/statusDate" offset="0" length="0" />
+    <text name="segmentStatusCode" path="/itinerary/*/statusCode" offset="0" length="0" />
+    <text name="remarkText" path="/remarks/*/text" offset="0" length="0">
+      <variant pattern="X+(?&lt;CardSuffix&gt;.{4})" />
+      <variant pattern="WEB CLIENT IP (?&lt;IpAddress&gt;.+)" />
+      <variant pattern="ONE\*MBR (?&lt;MemberName&gt;.*?)\*ACCT (?&lt;MemberAccount&gt;[^*]+)\*(?&lt;MemberStatus&gt;[^*]+)\*WEBCO" />
+      <variant pattern="SPNSR\*ACCT (?&lt;SponsorAccount&gt;[^*]+)\*WEBCO" />
+      <variant pattern="ACCOUNT BALANCE (?&lt;Balance&gt;[^*]+)\*PIN CODE VERIFIED \* WEBCO" />
+      <variant pattern="(?&lt;MileageText&gt;TOTAL MILEAGE DEDUCTION - [0-9]+ MILES \* WEBCO)" />
+      <variant pattern="(?&lt;MileageQuoteText&gt;ESO OP/MILEAGE QUOTED [0-9]+ - FQ RESPONSE [0-9]+)" />
+      <variant pattern="IATA MSO ID - (?&lt;MsoIdentifier&gt;.+)" />
+      <variant pattern="EMAIL RQSTD (?&lt;RequestedEmail&gt;.+)" />
+      <variant pattern="(?&lt;FareText&gt;ONE[0-9]{2}[A-Z]{3}\*G\$[0-9.]+PP [0-9.]+TTL [A-Z0-9-]+ PPP [0-9.]+K CFL WEBBK)" />
+      <variant pattern="SFS FQID\*(?&lt;FareQuoteReference&gt;.+)" />
+      <variant pattern="PB TKT ORDERID\*(?&lt;TicketOrderReference&gt;.+)" />
+      <variant pattern="ADDRCITY (?&lt;AddressCity&gt;.+)" />
+      <variant pattern="ADDRSTATE (?&lt;AddressState&gt;.+)" />
+      <variant pattern="ADDRZIP (?&lt;AddressPostalCode&gt;.+)" />
+      <variant pattern="ADDR (?&lt;AddressText&gt;.+)" />
+      <variant pattern="RVI ID\*(?&lt;RviReference&gt;.+)" />
+      <variant pattern="RBY[^*]+\*APPR CC [A-Z]{2} (?&lt;ApprovalReference&gt;[^ ]+) \$[^ ]+ WEBCO" />
+      <variant pattern="PB MILES ORDERID\*(?&lt;MileageOrderReference&gt;.+)" />
+      <variant pattern="(?&lt;Text&gt;.*)" />
+    </text>
+    <text name="fareReferenceText" path="/fareReferences/*/text" offset="0" length="0">
+      <variant pattern="T/FQR/MP(?&lt;LoyaltyAccount&gt;[^/]+)/[^/]+/[^/]+/(?&lt;TicketReference&gt;[^/]+)/[^/]+//" />
+      <variant pattern="(?&lt;Text&gt;.*)" />
+    </text>
+    <text name="receivedFromCode" path="/referenceItems/*/receivedFrom/code" offset="0" length="0" />
+    <text name="receivedFromText" path="/referenceItems/*/receivedFrom/text" offset="0" length="0" />
+    <text name="remarkIndexText" path="/referenceItems/*/remarkIndex/text" offset="0" length="0">
+      <variant pattern="COCOM-[A-Z]{2}/(?&lt;LoyaltyAccount&gt;.+)-GUID/" />
+      <variant pattern="(?&lt;Text&gt;.*)" />
+    </text>
+    <text name="storedFareText" path="/storedFare/*/text" offset="0" length="0" />
+    <text name="etktPaymentType" path="/etktPayments/*/paymentType" offset="0" length="0" />
+    <text name="etktPassengerName" path="/etktPayments/*/passengerName" offset="0" length="0" />
+    <text name="historyAgentSine" path="/historyCredits/*/agentSine" offset="0" length="0" />
+    <text name="historyDate" path="/historyCredits/*/date" offset="0" length="0" />
+    <text name="historyTime" path="/historyCredits/*/time" offset="0" length="0" />
+    <text name="historyChangeIdentifier" path="/historyCredits/*/changeIdentifier" offset="0" length="0" />
+    <text name="passengerHistoryText" path="/passengerHistory/*/text" offset="0" length="0" />
+  </feed>
+</referenceLayouts>

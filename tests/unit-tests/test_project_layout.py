@@ -1,21 +1,35 @@
-"""Verify the agreed exchange folders and immutable finalized sample bytes."""
+"""Verify the solution layout, the docs folders and immutable finalized sample bytes."""
 import hashlib
+import re
 import unittest
-from test_feed_listener import PROJECT, FEEDS
+from pipeline_harness import PROJECT, FEEDS
+
+BROKER_PACKAGES = ("solace", "solclient", "ibmmq", "ibm.wmq", "ibm.xms", "rabbitmq", "kafka", "amqp", "activemq",
+                   "apache.nms", "azure.messaging", "awssdk.sqs", "awssdk.sns", "masstransit", "nservicebus")
 
 
 class ProjectLayoutTests(unittest.TestCase):
-    def test_exchange_and_processing_roots_have_exactly_the_five_route_folders(self):
+    def test_docs_holds_only_samples_and_diagrams(self):
         docs = PROJECT / "docs"
-        self.assertEqual({p.name for p in docs.iterdir() if p.is_dir()},
-                         {"sample-docs", "diagrams", "input-feeds", "output-feeds", "failed-feeds", "feed-logs", "feed-processing"})
-        self.assertTrue((docs / "feed-logs" / ".gitkeep").is_file())
-        for root in ["input-feeds", "output-feeds", "failed-feeds", "feed-processing"]:
-            self.assertEqual({p.name for p in (docs / root).iterdir()}, set(FEEDS))
-            for feed in FEEDS:
-                self.assertTrue((docs / root / feed / ".gitkeep").is_file())
-        for obsolete in ["input", "output", "solace-feeds", "batch-runs", ".processing", ".feed-listener.lock"]:
+        self.assertEqual({p.name for p in docs.iterdir() if p.is_dir()}, {"sample-docs", "diagrams"})
+        for obsolete in ["input-feeds", "output-feeds", "failed-feeds", "feed-logs", "feed-processing", "input", "output",
+                         "solace-feeds", "batch-runs", ".processing", ".feed-listener.lock"]:
             self.assertFalse((docs / obsolete).exists(), obsolete)
+
+    def test_solution_separates_core_messaging_broker_and_worker(self):
+        for project in ["src/PresidioDemo.Core", "src/PresidioDemo.Messaging", "src/PresidioDemo.Messaging.Solace",
+                        "src/PresidioDemo.Worker", "tests/PresidioDemo.Messaging.Testing"]:
+            folder = PROJECT / project
+            self.assertTrue((folder / (folder.name + ".csproj")).is_file(), project)
+        self.assertTrue((PROJECT / "src/PresidioDemo.Worker/appsettings.json").is_file())
+        core = (PROJECT / "src/PresidioDemo.Core/PresidioDemo.Core.csproj").read_text(encoding="utf-8")
+        self.assertNotIn("solclient", core.lower())
+        self.assertNotIn("solace", core.lower())
+        messaging = (PROJECT / "src/PresidioDemo.Messaging/PresidioDemo.Messaging.csproj").read_text(encoding="utf-8")
+        packages = [name.lower() for name in re.findall(r'<PackageReference\s+Include="([^"]+)"', messaging)]
+        for package in packages:
+            self.assertFalse(any(broker in package for broker in BROKER_PACKAGES), package)
+        self.assertNotIn("PresidioDemo.Messaging.Solace", messaging)
 
     def test_samples_are_finalized_txt_files_in_one_folder_per_feed_with_unchanged_bytes(self):
         expected = {

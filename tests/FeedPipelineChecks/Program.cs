@@ -2,14 +2,17 @@ using System.Buffers.Binary;
 using System.Text;
 using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
+using Microsoft.Extensions.Logging.Abstractions;
+using PresidioDemo.Messaging;
+using PresidioDemo.Messaging.Testing;
 using PresidioDemo.Protection;
-using PresidioDemo.Transport;
+using PresidioDemo.Worker;
 
 #region Execution
 
 // This codec is a regression fixture only. It is excluded from the app and is not an airline schema.
 string projectRoot = AppContext.BaseDirectory;
-while (!File.Exists(Path.Combine(projectRoot, "PresidioDemo.csproj")))
+while (!File.Exists(Path.Combine(projectRoot, "PresidioDemo.slnx")))
 {
     projectRoot = Directory.GetParent(projectRoot)?.FullName ?? throw new Exception("Project not found.");
 }
@@ -49,7 +52,7 @@ static void ExpectInvalid(Action action, string label)
 }
 static void CheckPolicies(string root, string workspace)
 {
-    var policies = FeedPolicyConfiguration.Load(Path.Combine(root, "src", "Configuration", "feed-policies.xml"));
+    var policies = FeedPolicyConfiguration.Load(Path.Combine(root, "src", "PresidioDemo.Core", "Configuration", "feed-policies.xml"));
     Check(policies.Count == 5 && policies[FeedType.Seats].Get("/OrderChangeNotif/Old/Customers/*/FirstName").Identification == FieldIdentification.Known, "Feed policies are not distinct.");
     Check(policies[FeedType.PnrLinking].Get("/*/Customers/*/UaRecordLocator").Action == FieldAction.Keep, "Linked PNR must be kept.");
     ExpectInvalid(() => policies[FeedType.Seats].Get("unconfiguredField"), "unknown fields fail closed");
@@ -98,101 +101,61 @@ static FeedPolicy TestFixturePolicy(FeedType feed) => new(feed, [
     new("sourcePassengerId", FieldIdentification.Known, FieldAction.Replace, "PASSENGER_ID", "[PASSENGER_ID]")
 ]);
 
-static async Task CheckScheduling(string workspace, PresidioFeedProtector protector, byte[] input, IReadOnlyDictionary<FeedType, FeedPolicy> policies)
+static MessagingOptions TestMessaging() => new()
+{
+    Transport = "InMemory",
+    MaxDeliveries = 5,
+    PublishAckTimeoutMs = 1000,
+    PublishRetryDelayMs = 50,
+    Routes = FeedCatalog.All.Select(f => new MessageRoute { Feed = f.FolderName, Input = "in." + f.FolderName, Output = "out/" + f.FolderName, DeadLetter = "dlq." + f.FolderName }).ToList()
+};
+static FeedWorker TestWorker(FeedType feed, MessagingOptions options, InMemoryMessageBroker broker, FeedWorkflowRouter router) =>
+    new(feed, options.Routes.Single(r => r.Feed == FeedCatalog.Get(feed).FolderName), options, broker, broker, new FeedMessageProcessor(router), NullLogger.Instance);
+
+static async Task CheckScheduling(PresidioFeedProtector protector, byte[] input, IReadOnlyDictionary<FeedType, FeedPolicy> policies)
 {
     using (var started = new ManualResetEventSlim())
     {
         using (var release = new ManualResetEventSlim())
         {
-            using (var transport = new FolderFeedTransport(Path.Combine(workspace, "scheduling")))
+            var routes = policies.ToDictionary(p => p.Key, p => p.Value);
+            routes[FeedType.ACI] = TestFixturePolicy(FeedType.ACI);
+            routes[FeedType.Seats] = TestFixturePolicy(FeedType.Seats);
+            var router = FeedWorkflowRouter.Create(protector, routes, feed => feed == FeedType.ACI ? new BlockingTestCodec(started, release) : new TestOnlyCodec());
+            var broker = new InMemoryMessageBroker();
+            var options = TestMessaging();
+            using (var cancellation = new CancellationTokenSource())
             {
-                transport.Initialize();
-                var routes = policies.ToDictionary(p => p.Key, p => p.Value);
-                routes[FeedType.ACI] = TestFixturePolicy(FeedType.ACI);
-                routes[FeedType.Seats] = TestFixturePolicy(FeedType.Seats);
-                var router = FeedWorkflowRouter.Create(protector, routes, feed => feed == FeedType.ACI ? new BlockingTestCodec(started, release) : new TestOnlyCodec());
-                using (var listener = new FolderFeedListener(transport, router))
+                Task aci = TestWorker(FeedType.ACI, options, broker, router).RunAsync(cancellation.Token);
+                Task seats = TestWorker(FeedType.Seats, options, broker, router).RunAsync(cancellation.Token);
+                try
                 {
-                    using (var cancellation = new CancellationTokenSource())
-                    {
-                        Task running = listener.RunAsync(cancellation.Token);
-                        try
-                        {
-                            await File.WriteAllBytesAsync(Path.Combine(transport.InputRoot, "ACI", "slow.bin"), input);
-                            await Wait(() => started.IsSet);
-                            await File.WriteAllBytesAsync(Path.Combine(transport.InputRoot, "ACI", "second.bin"), input);
-                            await File.WriteAllBytesAsync(Path.Combine(transport.InputRoot, "Seats", "fast.bin"), input);
-                            await Wait(() => Directory.EnumerateFiles(Path.Combine(transport.OutputRoot, "Seats"), "fast.*.bin").Any());
-                            Check(!Directory.EnumerateFiles(Path.Combine(transport.OutputRoot, "ACI"), "slow.*.bin").Any(), "Slow feed was not blocked.");
-                            Check(File.Exists(Path.Combine(transport.InputRoot, "ACI", "second.bin")), "Same feed ran concurrently.");
-                            Console.WriteLine("PASS fast feed delivers while another feed is blocked; only one active delivery per feed");
-                            cancellation.Cancel();
-                            await Task.Delay(100);
-                            Check(!running.IsCompleted, "Listener returned before draining active workers.");
-                            release.Set();
-                            await running;
-                            Check(Directory.EnumerateFiles(Path.Combine(new FeedWorkspacePaths(Path.Combine(workspace, "scheduling")).ProcessingRoot, "ACI"), "slow.*.bin", SearchOption.AllDirectories).Any(), "Cancelled input was discarded.");
-                            Check(!Directory.EnumerateFiles(Path.Combine(transport.OutputRoot, "ACI"), "slow.*.bin").Any(), "Cancelled processing was published.");
-                            Console.WriteLine("PASS shutdown drains active work before Python disposal and retains interrupted input");
-                        }
-                        finally { cancellation.Cancel(); release.Set(); await running; }
-                    }
+                    broker.Send("in.ACI", input);
+                    await Wait(() => started.IsSet);
+                    broker.Send("in.ACI", input);
+                    broker.Send("in.Seats", input);
+                    await Wait(() => broker.PublishedTo("out/Seats").Count == 1);
+                    Check(broker.PublishedTo("out/ACI").Count == 0, "Slow feed was not blocked.");
+                    Check(broker.Pending("in.ACI") == 2, "Same feed ran concurrently.");
+                    Console.WriteLine("PASS fast feed delivers while another feed is blocked; only one active message per feed");
+                    cancellation.Cancel();
+                    await Task.Delay(100);
+                    Check(!aci.IsCompleted, "Worker returned before draining active work.");
+                    release.Set();
+                    await Task.WhenAll(aci, seats);
+                    Check(broker.Pending("in.ACI") == 2 && broker.PublishedTo("out/ACI").Count == 0, "Interrupted message was acknowledged or published.");
+                    Console.WriteLine("PASS shutdown drains active work before Python disposal and leaves interrupted input unacknowledged for redelivery");
                 }
+                finally { cancellation.Cancel(); release.Set(); await Task.WhenAll(aci, seats); }
             }
         }
-    }
-}
-
-static void CheckWorkspacePaths(string workspace)
-{
-    string docs = Path.Combine(workspace, "layout", "docs");
-    var paths = new FeedWorkspacePaths(docs);
-    Check(!paths.RuntimeRoot.StartsWith(paths.DocsRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase), "Runtime state leaked into docs.");
-    Check(new FeedWorkspacePaths(docs + Path.DirectorySeparatorChar).RuntimeRoot == paths.RuntimeRoot, "Trailing separator changed lock scope.");
-    using (var owner = new FolderFeedTransport(docs))
-    {
-        owner.Initialize();
-        Check(Directory.EnumerateDirectories(docs).Select(Path.GetFileName).ToHashSet().SetEquals(new[] { "input-feeds", "output-feeds", "failed-feeds", "feed-logs", "feed-processing" }), "Transport recreated obsolete exchange folders.");
-        foreach (string root in new[] { owner.InputRoot, owner.ProcessingRoot, owner.OutputRoot, owner.FailedRoot })
-        {
-            Check(Directory.EnumerateDirectories(root).Select(Path.GetFileName).ToHashSet().SetEquals(FeedCatalog.All.Select(feed => feed.FolderName)), "Route folders differ between exchange roots.");
-        }
-
-        Check(File.Exists(paths.LockFile) && Directory.Exists(paths.ProcessingRoot), "Recovery paths were not initialized.");
-        using (var duplicate = new FolderFeedTransport(docs + Path.DirectorySeparatorChar))
-        {
-            try { duplicate.Initialize(); throw new Exception("Duplicate consumer acquired the lock."); }
-            catch (IOException) { }
-            using (var independent = new FolderFeedTransport(Path.Combine(workspace, "layout", "other-docs")))
-            {
-                independent.Initialize();
-                Check(new FeedWorkspacePaths(Path.Combine(workspace, "layout", "other-docs")).RuntimeRoot != paths.RuntimeRoot, "Different docs roots share recovery state.");
-            }
-        }
-    }
-    using (var reopened = new FolderFeedTransport(docs))
-    {
-        reopened.Initialize();
-    }
-
-    string legacy = Path.Combine(workspace, "legacy-docs");
-    Directory.CreateDirectory(Path.Combine(legacy, ".processing", "ACI"));
-    string retained = Path.Combine(legacy, ".processing", "ACI", "retained.bin");
-    File.WriteAllBytes(retained, [1, 2, 3]);
-    using (var blocked = new FolderFeedTransport(legacy))
-    {
-        ExpectInvalid(blocked.Initialize, "legacy working deliveries cannot be silently abandoned");
-        Check(File.ReadAllBytes(retained).AsSpan().SequenceEqual(new byte[] { 1, 2, 3 }), "Legacy retained bytes changed.");
-        Console.WriteLine("PASS exchange folders stay clean; runtime paths isolate workspaces and enforce exclusive ownership across restarts");
     }
 }
 
 bool started = false;
 try
 {
-    CheckWorkspacePaths(docsRoot);
-    await FeedTransactionLogChecks.RunAsync(docsRoot);
-    await FeedProcessingChecks.RunAsync(docsRoot);
+    FeedTransactionLogChecks.Run();
     CheckPolicies(projectRoot, docsRoot);
     UnconfiguredPolicyChecks.Run(projectRoot, docsRoot);
     JsonCodecChecks.Run(projectRoot);
@@ -214,60 +177,49 @@ try
     Check(input.AsSpan().SequenceEqual(unchanged), "Unchanged fixture failed its exact-byte round trip.");
     Console.WriteLine("PASS test-only binary fixture round trips without edits");
 
-    using (var transport = new FolderFeedTransport(docsRoot))
+    var policies = FeedPolicyConfiguration.Load(Path.Combine(projectRoot, "src", "PresidioDemo.Core", "Configuration", "feed-policies.xml"));
+    await CheckScheduling(protector, input, policies);
+    var fixturePolicies = policies.ToDictionary(pair => pair.Key, pair => pair.Value);
+    fixturePolicies[FeedType.ACI] = TestFixturePolicy(FeedType.ACI);
+    var router = FeedWorkflowRouter.Create(protector, fixturePolicies, _ => new TestOnlyCodec());
+    var broker = new InMemoryMessageBroker();
+    var options = TestMessaging();
+    using (var cancellation = new CancellationTokenSource())
     {
-        transport.Initialize();
-        var policies = FeedPolicyConfiguration.Load(Path.Combine(projectRoot, "src", "Configuration", "feed-policies.xml"));
-        await CheckScheduling(docsRoot, protector, input, policies);
-        var fixturePolicies = policies.ToDictionary(pair => pair.Key, pair => pair.Value);
-        fixturePolicies[FeedType.ACI] = TestFixturePolicy(FeedType.ACI);
-        var router = FeedWorkflowRouter.Create(protector, fixturePolicies, _ => new TestOnlyCodec());
-        using (var listener = new FolderFeedListener(transport, router))
+        Task running = TestWorker(FeedType.ACI, options, broker, router).RunAsync(cancellation.Token);
+        try
         {
-            using (var cancellation = new CancellationTokenSource())
-            {
-                Task running = listener.RunAsync(cancellation.Token);
-                try
-                {
-                    string inbox = Path.Combine(transport.InputRoot, "ACI", "fixture.bin");
-                    await File.WriteAllBytesAsync(inbox, input);
-                    string outputDirectory = Path.Combine(transport.OutputRoot, "ACI");
-                    await Wait(() => Directory.EnumerateFiles(outputDirectory, "fixture.*.bin").Any() && !File.Exists(inbox) &&
-                        !Directory.EnumerateFiles(Path.Combine(new FeedWorkspacePaths(docsRoot).ProcessingRoot, "ACI"), "fixture.*.bin", SearchOption.AllDirectories).Any());
-                    byte[] output = await File.ReadAllBytesAsync(Directory.EnumerateFiles(outputDirectory, "fixture.*.bin").Single());
-                    var rebuilt = codec.Parse(new(metadata, output));
-                    var values = rebuilt.Fields.Select(field => field.Value).ToArray();
-                    Check(values[0] == "K7QX2M", "PNR changed.");
-                    Check(values[1] == "[PASSENGER_NAME]" && values[4] == "[PASSENGER_NAME]", "Names not anonymized.");
-                    Check(values[2] == "[EMAIL_ADDRESS]" && values[5] == "[EMAIL_ADDRESS]", "Emails not anonymized.");
-                    Check(values[3] == "[PASSENGER_ID]" && values[6] == "[PASSENGER_ID]", "Passenger IDs were not anonymized.");
-                    Check(!Encoding.UTF8.GetString(output).Contains("PAX-TOKEN-"), "Unexpected tokenization.");
-                    Check(!Directory.Exists(Path.Combine(docsRoot, ".demo-token-vault")), "Unexpected token vault.");
-                    Console.WriteLine("PASS actual embedded Presidio anonymizes two passengers before binary rebuilding and delivery");
-                    Console.WriteLine("PASS successful output delivery deletes the working input");
+            broker.Send("in.ACI", input);
+            await Wait(() => broker.PublishedTo("out/ACI").Count == 1 && broker.Pending("in.ACI") == 0);
+            byte[] output = broker.PublishedTo("out/ACI").Single().Payload.ToArray();
+            var rebuilt = codec.Parse(new(metadata, output));
+            var values = rebuilt.Fields.Select(field => field.Value).ToArray();
+            Check(values[0] == "K7QX2M", "PNR changed.");
+            Check(values[1] == "[PASSENGER_NAME]" && values[4] == "[PASSENGER_NAME]", "Names not anonymized.");
+            Check(values[2] == "[EMAIL_ADDRESS]" && values[5] == "[EMAIL_ADDRESS]", "Emails not anonymized.");
+            Check(values[3] == "[PASSENGER_ID]" && values[6] == "[PASSENGER_ID]", "Passenger IDs were not anonymized.");
+            Check(!Encoding.UTF8.GetString(output).Contains("PAX-TOKEN-"), "Unexpected tokenization.");
+            Check(!Directory.Exists(Path.Combine(docsRoot, ".demo-token-vault")), "Unexpected token vault.");
+            Console.WriteLine("PASS actual embedded Presidio anonymizes two passengers before binary rebuilding and delivery");
+            Console.WriteLine("PASS the input is acknowledged only after the protected output is confirmed");
 
-                    byte[] unknown = (byte[])input.Clone();
-                    "RULE"u8.CopyTo(unknown);
-                    await File.WriteAllBytesAsync(Path.Combine(transport.InputRoot, "ACI", "unknown.bin"), unknown);
-                    await Wait(() => Directory.EnumerateFiles(Path.Combine(transport.FailedRoot, "ACI"), "unknown.*.error.txt").Any());
-                    await Wait(() => !Directory.EnumerateFiles(Path.Combine(transport.ProcessingRoot, "ACI"), "unknown.*.bin").Any());
-                    Check(File.ReadAllBytes(Directory.GetFiles(Path.Combine(transport.FailedRoot, "ACI"), "unknown.*.bin").Single()).AsSpan().SequenceEqual(unknown), "Rejected input was not preserved in failed-feeds.");
-                    Check(!Directory.EnumerateFiles(outputDirectory, "unknown.*").Any(), "Unknown-field input was published.");
-                    Console.WriteLine("PASS unconfigured field rejects entire delivery without output and cleans processing after quarantine");
+            byte[] unknown = (byte[])input.Clone();
+            "RULE"u8.CopyTo(unknown);
+            broker.Send("in.ACI", unknown);
+            await Wait(() => broker.PublishedTo("dlq.ACI").Count == 1 && broker.Pending("in.ACI") == 0);
+            var rejected = broker.PublishedTo("dlq.ACI").Single();
+            Check(rejected.Payload.Span.SequenceEqual(unknown) && rejected.Headers.ContainsKey(MessageHeaders.RejectReason), "Rejected input was not preserved in the dead-letter queue.");
+            Check(broker.PublishedTo("out/ACI").Count == 1, "Unknown-field input was published.");
+            Console.WriteLine("PASS unconfigured field rejects the entire message to the dead-letter queue without output");
 
-                    string malformed = Path.Combine(transport.InputRoot, "ACI", "trailing.bin");
-                    byte[] extra = [.. input, 0x00];
-                    await File.WriteAllBytesAsync(malformed, extra);
-                    string failureDirectory = Path.Combine(transport.FailedRoot, "ACI");
-                    await Wait(() => Directory.EnumerateFiles(failureDirectory, "trailing.*.error.txt").Any());
-                    await Wait(() => !Directory.EnumerateFiles(Path.Combine(transport.ProcessingRoot, "ACI"), "trailing.*.bin").Any());
-                    Check(File.ReadAllBytes(Directory.GetFiles(failureDirectory, "trailing.*.bin").Single()).AsSpan().SequenceEqual(extra), "Failed input was not preserved in failed-feeds.");
-                    Check(!Directory.EnumerateFiles(outputDirectory, "trailing.*").Any(), "Partial parse was published.");
-                    Console.WriteLine("PASS entire-file parsing rejects trailing bytes and retains the failed input");
-                }
-                finally { cancellation.Cancel(); await running; }
-            }
+            byte[] extra = [.. input, 0x00];
+            broker.Send("in.ACI", extra);
+            await Wait(() => broker.PublishedTo("dlq.ACI").Count == 2 && broker.Pending("in.ACI") == 0);
+            Check(broker.PublishedTo("dlq.ACI")[1].Payload.Span.SequenceEqual(extra), "Failed input was not preserved in the dead-letter queue.");
+            Check(broker.PublishedTo("out/ACI").Count == 1, "Partial parse was published.");
+            Console.WriteLine("PASS entire-message parsing rejects trailing bytes and keeps the failed input");
         }
+        finally { cancellation.Cancel(); await running; }
     }
 }
 finally
@@ -280,12 +232,6 @@ finally
     if (Directory.Exists(docsRoot) && Path.GetFullPath(docsRoot).StartsWith(testRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
     {
         Directory.Delete(docsRoot, recursive: true);
-    }
-
-    string runtime = new FeedWorkspacePaths(docsRoot).RuntimeRoot;
-    if (Directory.Exists(runtime) && Path.GetFullPath(runtime).StartsWith(testRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
-    {
-        Directory.Delete(runtime, recursive: true);
     }
 }
 

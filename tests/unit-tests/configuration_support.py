@@ -3,9 +3,9 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 PROJECT = Path(__file__).resolve().parents[2]
-SCHEMA = PROJECT / "src/Configuration/xdr-layouts.xml"
-CATALOG = PROJECT / "src/Configuration/feed-policies.xml"
-REFERENCE = PROJECT / "src/Configuration/reference-layouts.xml"
+SCHEMA = PROJECT / "src/PresidioDemo.Core/Configuration/xdr-layouts.xml"
+CATALOG = PROJECT / "src/PresidioDemo.Core/Configuration/feed-policies.xml"
+REFERENCE = PROJECT / "src/PresidioDemo.Core/Configuration/reference-layouts.xml"
 SAMPLES = PROJECT / "docs/sample-docs"
 
 

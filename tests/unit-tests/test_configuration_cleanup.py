@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 
 from configuration_support import SCHEMA, CATALOG, REFERENCE, catalog, json_rules, sample
 from reference_feed_support import inspect_fields
-from test_feed_listener import PROJECT, DLL
+from pipeline_harness import PROJECT, run
 from test_seats_feed import payload
 
 
@@ -161,28 +161,25 @@ class ConfigurationCleanupTests(unittest.TestCase):
                              [(132, 4, "word"), (136, 4, "word")])
 
     def test_invalid_catalog_is_rejected_before_input_is_claimed(self):
-        import subprocess
         import tempfile
         from pathlib import Path
         (PROJECT / ".test-runs").mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="invalid-catalog-", dir=PROJECT / ".test-runs") as temp:
-            root = Path(temp)
-            docs = root / "docs"
-            source = docs / "input-feeds/ACI/untouched.bin"
-            source.parent.mkdir(parents=True)
-            source.write_bytes(b"retain-before-validation")
             tree = ET.parse(CATALOG)
             rule = tree.find("catalog")[0]
             rule.tag = "field"  # Legacy field syntax is not a shared catalog entry.
             rule.set("name", rule.attrib.pop("id"))
-            invalid = root / "invalid.xml"
+            invalid = Path(temp) / "invalid.xml"
             tree.write(invalid, encoding="utf-8", xml_declaration=True)
-            result = subprocess.run(["dotnet", str(DLL), "--docs-root", str(docs), "--policy-file", str(invalid)],
-                                    cwd=PROJECT, capture_output=True, text=True, encoding="utf-8", timeout=30)
-            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-            self.assertNotIn("Initializing embedded", result.stdout)
-            self.assertEqual(source.read_bytes(), b"retain-before-validation")
-            self.assertFalse((docs / "feed-processing").exists())
+            result = run({"ACI/untouched.bin": b"retain-before-validation"}, ["--policy-file", invalid], expect=1,
+                         prefix="invalid-catalog-")
+            try:
+                self.assertTrue(result.stderr.startswith("Harness could not start:"), result.console)
+                self.assertNotIn("Initializing embedded", result.stdout)
+                self.assertEqual((result.input_root / "ACI/untouched.bin").read_bytes(), b"retain-before-validation")
+                self.assertFalse(result.output_root.exists())
+            finally:
+                result.cleanup()
 
 
 if __name__ == "__main__":

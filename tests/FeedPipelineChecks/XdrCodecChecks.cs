@@ -148,7 +148,7 @@ static class XdrCodecChecks
     /// <param name="workspace">The isolated directory used for runtime verification artifacts.</param>
     private static void CheckWordsShorthand(string root, string workspace)
     {
-        string active = Path.Combine(root, "src", "Configuration", "xdr-layouts.xml");
+        string active = Path.Combine(root, "src", "PresidioDemo.Core", "Configuration", "xdr-layouts.xml");
         var compact = XdrLayoutConfiguration.Load(active);
         var expanded = XDocument.Load(active);
         var blocks = expanded.Descendants("words").ToArray();

@@ -10,13 +10,13 @@ using PresidioDemo.Protection;
 #region Execution
 
 string project = AppContext.BaseDirectory;
-while (!File.Exists(Path.Combine(project, "PresidioDemo.csproj")))
+while (!File.Exists(Path.Combine(project, "PresidioDemo.slnx")))
 {
     project = Directory.GetParent(project)?.FullName ?? throw new Exception("Project root not found.");
 }
 string[] outputs = args.Length == 2 ? args.Select(Path.GetFullPath).ToArray() :
     [Path.Combine(project, ".test-runs/json-feeds/pnr-linking"), Path.Combine(project, ".test-runs/json-feeds/seats")];
-var policies = FeedPolicyConfiguration.Load(Path.Combine(project, "src/Configuration/feed-policies.xml"));
+var policies = FeedPolicyConfiguration.Load(Path.Combine(project, "src/PresidioDemo.Core/Configuration/feed-policies.xml"));
 var options = new JsonSerializerOptions { WriteIndented = true };
 int checks = 0;
 foreach (FeedType feed in new[] { FeedType.PnrLinking, FeedType.Seats })

@@ -21,12 +21,12 @@ static class PnrReferenceChecks
     /// <param name="workspace">The isolated directory used for runtime verification artifacts.</param>
     public static void Run(string root, string workspace)
     {
-        string config = Path.Combine(root, "src/Configuration/reference-layouts.xml");
-        string schemaFile = Path.Combine(root, "src/Configuration/xdr-layouts.xml");
+        string config = Path.Combine(root, "src/PresidioDemo.Core/Configuration/reference-layouts.xml");
+        string schemaFile = Path.Combine(root, "src/PresidioDemo.Core/Configuration/xdr-layouts.xml");
         var references = ReferenceLayoutConfiguration.Load(config, XdrLayoutConfiguration.Load(schemaFile));
         var codec = FeedCodecRegistry.Create(FeedType.PNR, new Dictionary<FeedType, XdrFeedSchema>(), references);
         Check(codec is PnrFeedCodec, "PNR registry selects the dedicated PNR codec");
-        var policy = FeedPolicyConfiguration.Load(Path.Combine(root, "src/Configuration/feed-policies.xml"))[FeedType.PNR];
+        var policy = FeedPolicyConfiguration.Load(Path.Combine(root, "src/PresidioDemo.Core/Configuration/feed-policies.xml"))[FeedType.PNR];
         var reader = new PnrXdrReader(XdrLayoutConfiguration.Load(schemaFile)[FeedType.PNR]);
         var samples = new[]
         {

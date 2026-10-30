@@ -99,7 +99,7 @@ static class ReferenceLayoutChecks
 
             string referenceFile = Path.Combine(workspace, "isolated-reference.xml");
             string policyFile = Path.Combine(workspace, "isolated-policies.xml");
-            var baseline = XDocument.Load(Path.Combine(root, "src/Configuration/reference-layouts.xml"));
+            var baseline = XDocument.Load(Path.Combine(root, "src/PresidioDemo.Core/Configuration/reference-layouts.xml"));
             foreach (var feed in baseline.Root!.Elements("feed"))
             {
                 feed.SetAttributeValue("referenceFile", "missing-review-only-sample.txt");
@@ -116,7 +116,7 @@ static class ReferenceLayoutChecks
             Invalid(doc => doc.Descendants("text").First().SetAttributeValue("pattern", "["), "invalid reference pattern fails startup");
             Invalid(doc => doc.Root!.Add(new XElement(doc.Root.Elements("feed").First())), "duplicate reference feed fails startup");
             Invalid(doc => doc.Descendants("part").First(p => p.Attribute("equalTo") is not null).SetAttributeValue("equalTo", "/Missing"), "unknown PNR reference target fails startup");
-            var policies = XDocument.Load(Path.Combine(root, "src/Configuration/feed-policies.xml"));
+            var policies = XDocument.Load(Path.Combine(root, "src/PresidioDemo.Core/Configuration/feed-policies.xml"));
             policies.Descendants("field").First().SetAttributeValue("policy", "Missing"); policies.Save(policyFile);
             Reject(() => FeedPolicyConfiguration.Load(policyFile), "unknown shared policy fails startup");
 
@@ -168,9 +168,9 @@ static class ReferenceLayoutChecks
     /// <returns>The complete validated configuration indexed by feed route, or its verification bundle.</returns>
     private static Configuration Load(string root, string? policy = null, string? reference = null)
     {
-        var schemas = XdrLayoutConfiguration.Load(Path.Combine(root, "src/Configuration/xdr-layouts.xml"));
-        return new(schemas, ReferenceLayoutConfiguration.Load(reference ?? Path.Combine(root, "src/Configuration/reference-layouts.xml"), schemas),
-            FeedPolicyConfiguration.Load(policy ?? Path.Combine(root, "src/Configuration/feed-policies.xml")));
+        var schemas = XdrLayoutConfiguration.Load(Path.Combine(root, "src/PresidioDemo.Core/Configuration/xdr-layouts.xml"));
+        return new(schemas, ReferenceLayoutConfiguration.Load(reference ?? Path.Combine(root, "src/PresidioDemo.Core/Configuration/reference-layouts.xml"), schemas),
+            FeedPolicyConfiguration.Load(policy ?? Path.Combine(root, "src/PresidioDemo.Core/Configuration/feed-policies.xml")));
     }
 
     /// <summary>

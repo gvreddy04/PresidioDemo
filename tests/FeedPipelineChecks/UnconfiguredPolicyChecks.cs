@@ -17,7 +17,7 @@ static class UnconfiguredPolicyChecks
     /// <param name="workspace">The isolated directory used for runtime verification artifacts.</param>
     public static void Run(string root, string workspace)
     {
-        string source = Path.Combine(root, "src", "Configuration", "feed-policies.xml");
+        string source = Path.Combine(root, "src", "PresidioDemo.Core", "Configuration", "feed-policies.xml");
         var policies = FeedPolicyConfiguration.Load(source);
         var pending = new FeedPolicy(FeedType.PNR, [], configured: false);
         Check(policies[FeedType.PNR].IsConfigured && policies[FeedType.PNR].Fields.Count == 92,
