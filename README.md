@@ -102,8 +102,8 @@ Startup stops with one clear message for any of these:
 
 ## Architecture diagrams
 
-- [PII infrastructure on AWS](docs/diagrams/aws-pii-infrastructure.svg): proposed dev environment, with one exclusive queue and one listener per feed.
-- [Feed protection workflow](docs/diagrams/presidio-feed-workflow.svg): how feeds move through the .NET listener, configured field identification and local Presidio, with validation before publication.
+- [PII infrastructure on AWS](docs/diagrams/aws-pii-infrastructure.svg): proposed dev environment with a Solace broker, one exclusive input queue per feed and acknowledgment after publish.
+- [Feed protection workflow](docs/diagrams/presidio-feed-workflow.svg): Solace input queues, the .NET worker (receive, parse, configured identification, local Presidio, rebuild and validate, publish then acknowledge), protected topics and restricted dead-letter queues.
 
 ## C# conventions
 
@@ -119,19 +119,19 @@ The root [.editorconfig](.editorconfig) shares C# formatting preferences with Vi
 | --- | --- |
 | ACI | Dedicated module decodes the documented structures and rebuilds all six samples; reviewed XML controls protection-field coverage |
 | ETKT | All six samples use one 136-slot definition; empty strings account for missing values |
-| Seats | Feed-specific codec with shared System.Text.Json processing; 39 existing policy paths |
-| PNR | Section structs and linked lists for repeating sections; 53 policy aliases; PNR.txt has 80 masked and 74 kept values |
+| Seats | Feed-specific codec with shared System.Text.Json processing; 68 policy paths covering SEATS.txt, SEATS_03.txt and the New-section mirrors of reviewed Old-section rules |
+| PNR | Section structs and linked lists for repeating sections; 53 string mappings and 92 policy fields; PNR.txt has 80 masked and 74 kept values, PNR_02.txt 24 and 33 |
 | PNR-Linking | Feed-specific codec with shared System.Text.Json processing; 49 existing policy paths |
 
-The three original XML formats remain: [reference mappings](src/PresidioDemo.Core/Configuration/reference-layouts.xml), [feed policies](src/PresidioDemo.Core/Configuration/feed-policies.xml), and [XDR structures](src/PresidioDemo.Core/Configuration/xdr-layouts.xml). Each binary feed has one common structural definition. Optional extensions enable variable widths, optional groups, named capture mappings and 14 shared masking rules without replacing the original roots or feed sections. New structures use reviewed XML changes and a restart. Unsupported structures are retained without publication. `TKT.txt` routes to ETKT.
+The three original XML formats remain: [reference mappings](src/PresidioDemo.Core/Configuration/reference-layouts.xml), [feed policies](src/PresidioDemo.Core/Configuration/feed-policies.xml), and [XDR structures](src/PresidioDemo.Core/Configuration/xdr-layouts.xml). Each binary feed has one common structural definition. Optional extensions enable variable widths, optional groups, named capture mappings and 14 shared masking rules without replacing the original roots or feed sections. New structures use reviewed XML changes and a restart. Unsupported structures go to the feed's dead-letter queue without publication. `TKT.txt` routes to ETKT.
 
 XDR raw-word blocks use `<words name="..." count="..." />`, a compact alias for the original fixed array of `uint32` values. The loader supports both forms and expands the alias before processing; byte widths, field paths and validation remain unchanged.
 
-All 15 supplied samples pass actual local Presidio processing and independent byte checks: 19 identified PNR occurrences, source bytes and binary framing stay unchanged. The former ETKT `Text0132` mapping is corrected to two preserved raw words. See [verification results](docs/feed-analysis.md#reviewed-samples-and-results).
+All 20 samples run through the real workers and local Presidio in the sample verification: 17 are published and the 3 `_Negative_Testing` samples are rejected with their expected reasons. Independent byte checks confirm that the 33 identified PNR occurrences, source bytes and binary framing stay unchanged. The former ETKT `Text0132` mapping is corrected to two preserved raw words. See [verification results](docs/feed-analysis.md#reviewed-samples-and-results).
 
 ## ACI module and structure review
 
-[src/PresidioDemo.Core/FeedCodecs/ACI](src/PresidioDemo.Core/FeedCodecs/ACI) contains separate XDR reader/writer, decoder, parser, encoder, serializer, models, structure definitions, indicators, report formatter and feed codec. The normal ACI route uses this module through `aciStructures="true"` on its schema-driven reference entry. Older custom configurations without this opt-in retain their existing codec. The decoder follows the supplied C-structure declaration order; the encoder rebuilds the complete payload. Existing XML remains the reviewed policy projection for the supplied sample family. Every populated string must have policy coverage, and unreviewed processing shapes are rejected.
+The ACI module is split across the Core concern folders: `Parser/ACI` (XDR reader, decoder, parser), `Serializer/ACI` (XDR writer, encoder, serializer), `Models/ACI` (models, structure definitions, indicators), `Reporting/ACI` (report formatter), `Logging/ACI` and `FeedCodecs/ACI` (feed codec), all under [src/PresidioDemo.Core](src/PresidioDemo.Core). The normal ACI route uses this module through `aciStructures="true"` on its schema-driven reference entry. Older custom configurations without this opt-in retain their existing codec. The decoder follows the supplied C-structure declaration order; the encoder rebuilds the complete payload. Existing XML remains the reviewed policy projection for the supplied sample family. Every populated string must have policy coverage, and unreviewed processing shapes are rejected.
 
 The structure review corrects `seatNumber` to `departureGate`, `origin` to `terminatingCity`, and offset-based names to documented fields. Operational equipment, aircraft, gate, sector and process values are kept. Passenger names, actual passenger seat assignments, loyalty numbers and unresolved identifiers remain masked. PNR and numeric passenger IDs stay unchanged; the parser checks the `paxl_id` / `pax_id` association. This rewrite does not introduce tokenization.
 
@@ -147,7 +147,7 @@ Decoded analysis files intentionally contain original supplied values. The immut
 
 ## Dedicated ETKT module
 
-`src/PresidioDemo.Core/FeedCodecs/ETKT` separates the XDR reader, writer, decoder, parser, encoder, serializer, models, structure definitions, readable report and route adapter. The normal ETKT route selects this module through `etktStructures="true"` on its schema-driven reference entry. Custom configurations without that setting retain their existing codec.
+The ETKT module uses the same layout under `src/PresidioDemo.Core`: `Parser/ETKT` (XDR reader, decoder, parser), `Serializer/ETKT` (XDR writer, encoder, serializer), `Models/ETKT` (models, structure definitions, indicators), `Reporting/ETKT` (readable report) and `FeedCodecs/ETKT` (route adapter). The normal ETKT route selects this module through `etktStructures="true"` on its schema-driven reference entry. Custom configurations without that setting retain their existing codec.
 
 All six supplied messages begin with the observed framing words `5, 1, 0`. The screenshot enum declares only error=1, issue=2 and update=3. The implementation preserves the observed sample type 5 without assigning it an undocumented business meaning. Its body aligns with all 136 scalar slots in the screenshot history order. The encoder reconstructs the complete payload and original MQ envelope; XML remains the reviewed protection projection.
 
@@ -328,7 +328,7 @@ Restart the worker after changes. See the [feed analysis](docs/feed-analysis.md)
 
 The round-trip checks load the normal codecs and workflows with an in-memory All-Keep policy, and compare complete input and output bytes, decoded payloads and field values over three cycles per example. Results go to a fresh `.test-runs/round-trip-*` folder. The same checks also run in `FeedPipelineChecks`.
 
-[Implementation details](topics/feeds-demo/v14/feed-implementation-reference-v14.md) · [Feed format analysis](docs/feed-analysis.md)
+[Feed format analysis](docs/feed-analysis.md) · [Earlier implementation notes](../../topics/feeds-demo/v14/feed-implementation-reference-v14.md) (workspace folder outside this repository; describes the earlier folder-based version)
 
 ## PNR sample mapping
 

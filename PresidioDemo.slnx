@@ -13,5 +13,11 @@
     <Project Path="tests/JsonFeeds/JsonFeedChecks.csproj" />
     <Project Path="tests/FeedRoundTripChecks/FeedRoundTripChecks.csproj" />
     <Project Path="tests/FeedPipelineChecks/FeedPipelineChecks.csproj" />
+    <Project Path="tests/FeedPipelineHarness/FeedPipelineHarness.csproj" />
+    <Project Path="tests/Messaging.ContractTests/Messaging.ContractTests.csproj" />
+    <Project Path="tests/WorkerChecks/WorkerChecks.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/FeedSampleSender/FeedSampleSender.csproj" />
   </Folder>
 </Solution>
