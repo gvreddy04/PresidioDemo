@@ -118,7 +118,7 @@ The root [.editorconfig](.editorconfig) shares C# formatting preferences with Vi
 | Feed | Actual input result |
 | --- | --- |
 | ACI | Dedicated module decodes the documented structures and rebuilds all six samples; reviewed XML controls protection-field coverage |
-| ETKT | All six samples use one 136-slot definition; empty strings account for missing values |
+| ETKT | All six samples use one 136-slot definition; all 69 documented strings are mapped and have policies, so populated optional values are protected rather than rejected |
 | Seats | Feed-specific codec with shared System.Text.Json processing; 68 policy paths covering SEATS.txt, SEATS_03.txt and the New-section mirrors of reviewed Old-section rules |
 | PNR | Section structs and linked lists for repeating sections; 53 string mappings and 92 policy fields; PNR.txt has 80 masked and 74 kept values, PNR_02.txt 24 and 33 |
 | PNR-Linking | Feed-specific codec with shared System.Text.Json processing; 49 existing policy paths |
@@ -151,7 +151,21 @@ The ETKT module uses the same layout under `src/PresidioDemo.Core`: `Parser/ETKT
 
 All six supplied messages begin with the observed framing words `5, 1, 0`. The screenshot enum declares only error=1, issue=2 and update=3. The implementation preserves the observed sample type 5 without assigning it an undocumented business meaning. Its body aligns with all 136 scalar slots in the screenshot history order. The encoder reconstructs the complete payload and original MQ envelope; XML remains the reviewed protection projection.
 
-The legacy `pnr` field is displayed as **Agent terminal address — provisional mapping**, matching `h_aaa_lniata` in the screenshot. Its value and legacy alias remain unchanged. The screenshot maps legacy `Text0088` to the ticket-number field, `ticketNumber` to the global history sequence number, and the `Flight1`/`Flight2` blocks to new/previous flight details. These are provisional meanings for the observed type-5 family. The divide-event fields now use `newPnr` and `oldPnr` Keep rules, with provisional new/old PNR labels and serializer guards against changes. For example, ETKT_05 retains `FWGXKN` and `FWDZRF`; the other protected values keep their existing masks. No passenger identity or tokenization is inferred from these records.
+ETKT field names follow the screenshot history declarations. `agentTerminalAddress` (`h_aaa_lniata`, formerly the legacy `pnr` alias) is shown as **Agent terminal address — provisional mapping** and stays unchanged under a serializer guard. `ticketNumber` is now the 15-digit `h_tkt_nbr` (formerly `Text0088`) with the ticket-reference mask, and `historySequenceNumber` is `glob_tkt_hist_seq_nbr` (formerly `ticketNumber`). `agentCityCode` and `agentSignInNumber` replace `Text0044` and `Text0072`. The former `Flight1`/`Flight2` blocks are `new*`/`previous*` flight-adjustment fields, and the operating flight numbers replace the `NumberRepeat` names. These are provisional meanings for the observed type-5 family. The divide-event `newPnr` and `oldPnr` fields are kept, with serializer guards against changes; for example, ETKT_05 retains `FWGXKN` and `FWDZRF`. Masks for the six samples are unchanged: their protected output is byte-identical to the previous release. No passenger identity or tokenization is inferred from these records.
+
+The issue, exchange, refund, name-adjustment, purge, FIM, ATO, commission and settlement strings are empty in all six samples. They are now declared and mapped individually, not hidden in raw-word blocks, so a populated value is protected instead of sent to the dead-letter queue:
+
+| Fields | Treatment |
+| --- | --- |
+| `passengerName`, `newPassengerName`, `previousPassengerName` | Person mask |
+| `formOfPayment`, `creditCardNumber` | Payment-reference mask |
+| `exchangeDocument`, `newTicketNumber`, `oldTicketNumber`, `fim1Coupon1`–`fim2Coupon4` | Ticket-reference mask |
+| `totalFare`, `reservationCommissionAmount`, `commissionPenaltyAmount`, `penaltyAmount` | Financial mask (`#`) |
+| `exchangeComment`, `newRefundComment`, `previousRefundComment`, the 14 `*Spare3`/`*Spare4` strings | Sensitive-attribute mask (`#`) |
+| `settlementAuthorizationCode` | Unclassified-identifier mask |
+| `createDate`, `newPurgeDate`, `newUnflownDate`, `oldPurgeDate`, `oldUnflownDate` | Keep |
+
+Character and integer slots, such as the carrier, duty code, sine, coupon flags and the previous flight's carrier and class, stay raw words; they are unchanged and appear in the decoded report.
 
 Focused checks generate readable decoded JSON and exact scalar locations:
 
@@ -159,7 +173,7 @@ Focused checks generate readable decoded JSON and exact scalar locations:
 dotnet run --project tests/ETKT/EtktChecks.csproj -- .test-runs/etkt-checks
 ```
 
-Status reports include provisional, most-significant-bit-first labels alongside the original signed number and hexadecimal word. For example, `0x00002000` is Checked in (provisional), and `0x00004000` is Divided ETKT (provisional). Reserved set bits remain visible. The report shows exchange destination only when Exchanged is set; displaying labels never changes payload values or protection rules. Other indicator words remain raw.
+Status reports include provisional, most-significant-bit-first labels alongside the original signed number and hexadecimal word. For example, `0x00002000` is Checked in (provisional), and `0x00004000` is Divided ETKT (provisional). Reserved set bits remain visible. The report shows exchange destination only when Exchanged is set; displaying labels never changes payload values or protection rules. The `h_indicator` word uses the same convention: document bits 0–2 hold the ID type (001 = ETKT), and documented bits such as 3 (ETKT was in PNR in AAA), 7 (Actioned all subsequent coupons) and 12 (Action for OA) are labelled. For example, ETKT_04's `0x34080000` shows ID type 1, bits 3 and 12, and unassigned bit 5 (`0x04000000`). Other words, such as the coupon actioned flags and status switch, have no documented meanings and remain raw.
 
 The immutable ETKT review and evidence are under `D:\Bala_Support\topics\etkt\v4`. The searchable reference covers the documented input, history, coupon, payment, tax, exchange, fare, passenger and project structures, union arms and indicator comments. It records the repeated `etkt_inds_2` declaration in the issue branch as a source conflict. Populated issue/error branches and other unreviewed shapes still require producer evidence.
 

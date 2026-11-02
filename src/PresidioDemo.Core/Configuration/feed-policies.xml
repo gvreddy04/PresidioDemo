@@ -56,36 +56,81 @@
     <field name="/unresolvedSeatString" policy="MaskUnclassifiedIdentifier" />
   </feed>
   <feed type="ETKT" configured="true">
-    <!-- ticketStatusRecord contains an uncertain prefix and readable status text.
-           Text0044/Text0072/Text0088 retain their existing policies.
-           Divide-event locators are approved provisional new/old PNRs and kept. -->
+    <!-- Aliases follow reference-layouts.xml. The agent terminal address, event date/time, flight details and
+         divide-event PNRs are kept. The ticket number, history sequence number and uncertain identifiers stay
+         masked; ticketStatusRecord masks its uncertain prefix and keeps the readable status text. Issue,
+         exchange, refund, name, payment, FIM, commission and settlement strings are empty in the six samples;
+         when populated they are masked by entity, and undocumented spare strings are masked whole. -->
     <field name="/entryDate" identification="None" action="Keep" />
     <field name="/entryTime" identification="None" action="Keep" />
-    <field name="/pnr" identification="None" action="Keep" />
-    <field name="/Text0044" policy="MaskUnclassifiedIdentifier" />
-    <field name="/Text0072" policy="MaskUnclassifiedIdentifier" />
-    <field name="/Text0088" policy="MaskUnclassifiedIdentifier" />
+    <field name="/agentTerminalAddress" identification="None" action="Keep" />
+    <field name="/agentCityCode" policy="MaskUnclassifiedIdentifier" />
+    <field name="/agentSignInNumber" policy="MaskUnclassifiedIdentifier" />
     <field name="/ticketNumber" policy="MaskTicketReference" />
+    <field name="/historySequenceNumber" policy="MaskUnclassifiedIdentifier" />
     <field name="/ticketStatusRecord/Prefix" policy="MaskUnclassifiedIdentifier" />
     <field name="/ticketStatusRecord/StatusText" identification="None" action="Keep" />
-    <field name="/Flight1Airline" identification="None" action="Keep" />
-    <field name="/Flight1Number" identification="None" action="Keep" />
-    <field name="/Flight1Date" identification="None" action="Keep" />
-    <field name="/Flight1DepartureTime" identification="None" action="Keep" />
-    <field name="/Flight1ArrivalTime" identification="None" action="Keep" />
-    <field name="/Flight1Origin" identification="None" action="Keep" />
-    <field name="/Flight1Destination" identification="None" action="Keep" />
-    <field name="/Flight1Class" identification="None" action="Keep" />
-    <field name="/Flight1NumberRepeat" identification="None" action="Keep" />
-    <field name="/Flight2Number" identification="None" action="Keep" />
-    <field name="/Flight2Date" identification="None" action="Keep" />
-    <field name="/Flight2DepartureTime" identification="None" action="Keep" />
-    <field name="/Flight2ArrivalTime" identification="None" action="Keep" />
-    <field name="/Flight2Origin" identification="None" action="Keep" />
-    <field name="/Flight2Destination" identification="None" action="Keep" />
-    <field name="/Flight2NumberRepeat" identification="None" action="Keep" />
+    <field name="/passengerName" policy="MaskPerson" />
+    <field name="/totalFare" policy="MaskFinancialInformation" />
+    <field name="/formOfPayment" policy="MaskPaymentReference" />
+    <field name="/exchangeDocument" policy="MaskTicketReference" />
+    <field name="/createDate" identification="None" action="Keep" />
+    <field name="/issueSpare3" policy="MaskSensitiveAttribute" />
+    <field name="/issueSpare4" policy="MaskSensitiveAttribute" />
+    <field name="/newTicketNumber" policy="MaskTicketReference" />
+    <field name="/exchangeComment" policy="MaskSensitiveAttribute" />
+    <field name="/oldTicketNumber" policy="MaskTicketReference" />
+    <field name="/exchangeSpare3" policy="MaskSensitiveAttribute" />
+    <field name="/exchangeSpare4" policy="MaskSensitiveAttribute" />
+    <field name="/newRefundComment" policy="MaskSensitiveAttribute" />
+    <field name="/previousRefundComment" policy="MaskSensitiveAttribute" />
+    <field name="/refundSpare3" policy="MaskSensitiveAttribute" />
+    <field name="/refundSpare4" policy="MaskSensitiveAttribute" />
+    <field name="/newPassengerName" policy="MaskPerson" />
+    <field name="/previousPassengerName" policy="MaskPerson" />
+    <field name="/nameSpare3" policy="MaskSensitiveAttribute" />
+    <field name="/nameSpare4" policy="MaskSensitiveAttribute" />
+    <field name="/newCarrier" identification="None" action="Keep" />
+    <field name="/newFlightNumber" identification="None" action="Keep" />
+    <field name="/newFlightDate" identification="None" action="Keep" />
+    <field name="/newDepartureTime" identification="None" action="Keep" />
+    <field name="/newArrivalTime" identification="None" action="Keep" />
+    <field name="/newBoardPoint" identification="None" action="Keep" />
+    <field name="/newOffPoint" identification="None" action="Keep" />
+    <field name="/newClass" identification="None" action="Keep" />
+    <field name="/newOperatingFlightNumber" identification="None" action="Keep" />
+    <field name="/previousFlightNumber" identification="None" action="Keep" />
+    <field name="/previousFlightDate" identification="None" action="Keep" />
+    <field name="/previousDepartureTime" identification="None" action="Keep" />
+    <field name="/previousArrivalTime" identification="None" action="Keep" />
+    <field name="/previousBoardPoint" identification="None" action="Keep" />
+    <field name="/previousOffPoint" identification="None" action="Keep" />
+    <field name="/previousOperatingFlightNumber" identification="None" action="Keep" />
+    <field name="/flightSpare3" policy="MaskSensitiveAttribute" />
+    <field name="/flightSpare4" policy="MaskSensitiveAttribute" />
+    <field name="/newPurgeDate" identification="None" action="Keep" />
+    <field name="/newUnflownDate" identification="None" action="Keep" />
+    <field name="/oldPurgeDate" identification="None" action="Keep" />
+    <field name="/oldUnflownDate" identification="None" action="Keep" />
+    <field name="/purgeSpare3" policy="MaskSensitiveAttribute" />
+    <field name="/purgeSpare4" policy="MaskSensitiveAttribute" />
     <field name="/newPnr" identification="None" action="Keep" />
     <field name="/oldPnr" identification="None" action="Keep" />
+    <field name="/fim1Coupon1" policy="MaskTicketReference" />
+    <field name="/fim2Coupon1" policy="MaskTicketReference" />
+    <field name="/fim1Coupon2" policy="MaskTicketReference" />
+    <field name="/fim2Coupon2" policy="MaskTicketReference" />
+    <field name="/fim1Coupon3" policy="MaskTicketReference" />
+    <field name="/fim2Coupon3" policy="MaskTicketReference" />
+    <field name="/fim1Coupon4" policy="MaskTicketReference" />
+    <field name="/fim2Coupon4" policy="MaskTicketReference" />
+    <field name="/creditCardNumber" policy="MaskPaymentReference" />
+    <field name="/reservationCommissionAmount" policy="MaskFinancialInformation" />
+    <field name="/commissionPenaltyAmount" policy="MaskFinancialInformation" />
+    <field name="/penaltyAmount" policy="MaskFinancialInformation" />
+    <field name="/settlementAuthorizationCode" policy="MaskUnclassifiedIdentifier" />
+    <field name="/involuntarySpare3" policy="MaskSensitiveAttribute" />
+    <field name="/involuntarySpare4" policy="MaskSensitiveAttribute" />
   </feed>
   <feed type="PNR" configured="true">
     <!-- Aliases follow reference-layouts.xml; variant captures use alias/capture names. Catch-all Text captures

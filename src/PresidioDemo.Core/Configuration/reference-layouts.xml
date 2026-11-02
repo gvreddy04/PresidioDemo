@@ -43,44 +43,85 @@
     </text>
   </feed>
   <feed type="ETKT" name="EtktReference672" referenceFile="../../../docs/sample-docs/ETKT/ETKT.txt" referenceSha256="6a0f5f65a53ff39fee57fdf8dbb870a28dc4fe136296ba4c151c277e99b78cfa" schemaDriven="true" etktStructures="true">
-    <!-- ETKT screenshot mapping: legacy pnr occupies h_aaa_lniata, the agent terminal
-         address. Its new display label is provisional; the legacy alias and Keep
-         treatment remain unchanged. This route supports the observed type-5 family. -->
-    <!-- Text0132 is deliberately absent: the six samples identify raw words, not a string.
-         Zero baseline lengths below describe strings empty in the reference, not fixed widths.
-         Divide-event locators are provisionally mapped to newPnr/oldPnr and kept.
-         Their historical XDR path names remain as provenance. The legacy pnr
-         alias belongs to the provisional agent terminal address and is also kept. -->
-    <!--Offsets/lengths retain reviewed baseline values. schemaDriven uses XDR for actual positions/widths; referenceFile/hash are provenance only in this mode.-->
+    <!-- Names follow the screenshot history declarations for the observed type-5 family. h_aaa_lniata is the
+         agent terminal address (formerly the legacy pnr alias) and stays unchanged. h_tkt_nbr is the ticket
+         number and glob_tkt_hist_seq_nbr the global history sequence number; these replace the former
+         Text0088/ticketNumber pair. Divide-event PNRs are kept. Every documented string is mapped, so a
+         populated issue, exchange, refund, name, payment or FIM value is protected rather than rejected.
+         The raw words at 132 and 136 are the history sequence number and indicator, not a string. -->
+    <!--Offsets/lengths are the ETKT.txt baseline (length-word offset). schemaDriven uses XDR for actual positions/widths; referenceFile/hash are provenance only in this mode.-->
     <text name="entryDate" offset="12" length="7" />
     <text name="entryTime" offset="24" length="4" />
-    <text name="pnr" offset="32" length="6" pattern="[A-Z0-9]{6}" />
-    <text name="Text0044" offset="44" length="3" />
-    <text name="Text0072" offset="72" length="4" />
-    <text name="Text0088" offset="88" length="15" />
-    <text name="ticketNumber" offset="152" length="13" />
+    <text name="agentTerminalAddress" offset="32" length="6" pattern="[A-Z0-9]{6}" />
+    <text name="agentCityCode" offset="44" length="3" />
+    <text name="agentSignInNumber" offset="72" length="4" />
+    <text name="ticketNumber" offset="88" length="15" />
+    <text name="historySequenceNumber" offset="152" length="13" />
     <text name="ticketStatusRecord" offset="172" length="65" optional="true" pattern="(?&lt;Prefix&gt;.{8})(?&lt;StatusText&gt;.*)" allowEmpty="true">
       <part name="Prefix" start="0" length="8" />
       <part name="StatusText" start="8" length="57" />
     </text>
-    <text name="Flight1Airline" offset="376" length="0" />
-    <text name="Flight1Number" offset="380" length="0" />
-    <text name="Flight1Date" offset="384" length="0" />
-    <text name="Flight1DepartureTime" offset="388" length="0" />
-    <text name="Flight1ArrivalTime" offset="392" length="0" />
-    <text name="Flight1Origin" offset="396" length="0" />
-    <text name="Flight1Destination" offset="400" length="0" />
-    <text name="Flight1Class" offset="404" length="0" />
-    <text name="Flight1NumberRepeat" offset="416" length="0" />
-    <text name="Flight2Number" offset="436" length="0" />
-    <text name="Flight2Date" offset="440" length="0" />
-    <text name="Flight2DepartureTime" offset="444" length="0" />
-    <text name="Flight2ArrivalTime" offset="448" length="0" />
-    <text name="Flight2Origin" offset="452" length="0" />
-    <text name="Flight2Destination" offset="456" length="0" />
-    <text name="Flight2NumberRepeat" offset="476" length="0" />
-    <text name="newPnr" path="/UnconfirmedLocator1" offset="544" length="0" pattern="(?:[A-Z0-9]{6})?" />
-    <text name="oldPnr" path="/UnconfirmedLocator2" offset="548" length="0" pattern="(?:[A-Z0-9]{6})?" />
+    <text name="passengerName" offset="244" length="0" />
+    <text name="totalFare" offset="248" length="0" />
+    <text name="formOfPayment" offset="252" length="0" />
+    <text name="exchangeDocument" offset="256" length="0" />
+    <text name="createDate" offset="260" length="0" />
+    <text name="issueSpare3" offset="276" length="0" />
+    <text name="issueSpare4" offset="280" length="0" />
+    <text name="newTicketNumber" offset="284" length="0" />
+    <text name="exchangeComment" offset="292" length="0" />
+    <text name="oldTicketNumber" offset="296" length="0" />
+    <text name="exchangeSpare3" offset="312" length="0" />
+    <text name="exchangeSpare4" offset="316" length="0" />
+    <text name="newRefundComment" offset="320" length="0" />
+    <text name="previousRefundComment" offset="324" length="0" />
+    <text name="refundSpare3" offset="340" length="0" />
+    <text name="refundSpare4" offset="344" length="0" />
+    <text name="newPassengerName" offset="348" length="0" />
+    <text name="previousPassengerName" offset="352" length="0" />
+    <text name="nameSpare3" offset="368" length="0" />
+    <text name="nameSpare4" offset="372" length="0" />
+    <text name="newCarrier" offset="376" length="0" />
+    <text name="newFlightNumber" offset="380" length="0" />
+    <text name="newFlightDate" offset="384" length="0" />
+    <text name="newDepartureTime" offset="388" length="0" />
+    <text name="newArrivalTime" offset="392" length="0" />
+    <text name="newBoardPoint" offset="396" length="0" />
+    <text name="newOffPoint" offset="400" length="0" />
+    <text name="newClass" offset="404" length="0" />
+    <text name="newOperatingFlightNumber" offset="416" length="0" />
+    <text name="previousFlightNumber" offset="436" length="0" />
+    <text name="previousFlightDate" offset="440" length="0" />
+    <text name="previousDepartureTime" offset="444" length="0" />
+    <text name="previousArrivalTime" offset="448" length="0" />
+    <text name="previousBoardPoint" offset="452" length="0" />
+    <text name="previousOffPoint" offset="456" length="0" />
+    <text name="previousOperatingFlightNumber" offset="476" length="0" />
+    <text name="flightSpare3" offset="500" length="0" />
+    <text name="flightSpare4" offset="504" length="0" />
+    <text name="newPurgeDate" offset="508" length="0" />
+    <text name="newUnflownDate" offset="512" length="0" />
+    <text name="oldPurgeDate" offset="516" length="0" />
+    <text name="oldUnflownDate" offset="520" length="0" />
+    <text name="purgeSpare3" offset="536" length="0" />
+    <text name="purgeSpare4" offset="540" length="0" />
+    <text name="newPnr" offset="544" length="0" pattern="(?:[A-Z0-9]{6})?" />
+    <text name="oldPnr" offset="548" length="0" pattern="(?:[A-Z0-9]{6})?" />
+    <text name="fim1Coupon1" offset="552" length="0" />
+    <text name="fim2Coupon1" offset="556" length="0" />
+    <text name="fim1Coupon2" offset="560" length="0" />
+    <text name="fim2Coupon2" offset="564" length="0" />
+    <text name="fim1Coupon3" offset="568" length="0" />
+    <text name="fim2Coupon3" offset="572" length="0" />
+    <text name="fim1Coupon4" offset="576" length="0" />
+    <text name="fim2Coupon4" offset="580" length="0" />
+    <text name="creditCardNumber" offset="584" length="0" />
+    <text name="reservationCommissionAmount" offset="588" length="0" />
+    <text name="commissionPenaltyAmount" offset="592" length="0" />
+    <text name="penaltyAmount" offset="596" length="0" />
+    <text name="settlementAuthorizationCode" offset="600" length="0" />
+    <text name="involuntarySpare3" offset="664" length="0" />
+    <text name="involuntarySpare4" offset="668" length="0" />
   </feed>
   <feed type="PNR" name="PnrReference" pnrStructures="true" referenceFile="../../../docs/sample-docs/PNR/PNR.txt" referenceSha256="75cc60895384395f8df28eff4c4abf6a0c58f1dc7960c5eee41cb294def0e4de" schemaDriven="true">
     <!-- Every XDR string maps to one policy alias; baseline offsets do not apply to list items and are zero.

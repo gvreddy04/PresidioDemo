@@ -33,7 +33,7 @@ public sealed class EtktSerializer
                     replacement.Length != binding.Field.Value.Length || replacement.Any(character => character is < ' ' or > '~') ||
                     MustPreserve(binding) && replacement != binding.Field.Value)
                 {
-                    throw new InvalidDataException("ETKT protection must preserve field widths, printable ASCII, PNRs and the legacy agent-terminal alias.");
+                    throw new InvalidDataException("ETKT protection must preserve field widths, printable ASCII, PNRs and the agent terminal address.");
                 }
                 replacement.CopyTo(0, value, binding.Start, replacement.Length);
             }
@@ -79,18 +79,18 @@ public sealed class EtktSerializer
         {
             if (!mutable[offset] && before.Envelope.Payload[offset] != after.Envelope.Payload[offset])
             {
-                throw new InvalidDataException("ETKT framing, numeric values, kept alias or unselected bytes changed.");
+                throw new InvalidDataException("ETKT framing, numeric values, kept fields or unselected bytes changed.");
             }
         }
     }
 
     /// <summary>
-    /// Determines whether an ETKT binding represents a PNR or another explicitly kept alias.
+    /// Determines whether an ETKT binding represents a PNR or the agent terminal address.
     /// </summary>
     /// <param name="binding">The reviewed association between a field and its containing scalar.</param>
-    /// <returns>True for a PNR or explicitly kept ETKT alias; otherwise, false.</returns>
+    /// <returns>True for a PNR or the agent terminal address; otherwise, false.</returns>
     private static bool MustPreserve(EtktTextBinding binding) => FieldPolicy.IsPnr(binding.Field.Name) ||
-            binding.Scalar.Path is "/history/h_new_recloc" or "/history/h_old_recloc";
+            binding.Scalar.Path is "/history/h_new_recloc" or "/history/h_old_recloc" or "/history/h_aaa_lniata";
 
     #endregion
 }

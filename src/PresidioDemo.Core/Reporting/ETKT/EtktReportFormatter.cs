@@ -24,21 +24,35 @@ public static class EtktReportFormatter
             {
                 Path = "/history/h_aaa_lniata",
                 Label = "Agent terminal address — provisional mapping",
-                LegacyAlias = "/pnr",
+                Alias = "/agentTerminalAddress",
                 Treatment = "Keep unchanged"
+            },
+            new
+            {
+                Path = "/history/h_tkt_nbr",
+                Label = "Ticket number",
+                Alias = "/ticketNumber",
+                Treatment = "Mask"
+            },
+            new
+            {
+                Path = "/history/glob_tkt_hist_seq_nbr",
+                Label = "Global ticket history sequence number",
+                Alias = "/historySequenceNumber",
+                Treatment = "Mask"
             },
             new
             {
                 Path = "/history/h_new_recloc",
                 Label = "New PNR — provisional",
-                LegacyAlias = "/UnconfirmedLocator1",
+                Alias = "/newPnr",
                 Treatment = "Keep unchanged"
             },
             new
             {
                 Path = "/history/h_old_recloc",
                 Label = "Old PNR — provisional",
-                LegacyAlias = "/UnconfirmedLocator2",
+                Alias = "/oldPnr",
                 Treatment = "Keep unchanged"
             }
         },
@@ -51,7 +65,7 @@ public static class EtktReportFormatter
             "Names describe a provisional structural match; type-5 business meanings need producer confirmation.",
             "Original sample values are intentionally visible in these local analysis artifacts.",
             "Zero-only fields do not establish support for their populated variants.",
-            "Status labels use the approved provisional MSB-first convention; original numeric and hex values are retained.",
+            "Status and indicator labels use the approved provisional MSB-first convention; original numeric and hex values are retained.",
             "No passenger identity or tokenization is inferred from names, PNRs or ticket numbers."
         }
     };
@@ -80,6 +94,10 @@ public static class EtktReportFormatter
         if (fields[0].Path == "/history/h_status")
         {
             return EtktIndicators.DescribeStatus(number);
+        }
+        if (fields[0].Path == "/history/h_indicator")
+        {
+            return EtktIndicators.DescribeIndicator(number);
         }
         return new { Number = number, Hex = $"0x{unchecked((uint)number):X8}" };
     }

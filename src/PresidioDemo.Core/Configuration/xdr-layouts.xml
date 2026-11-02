@@ -89,43 +89,95 @@
     <words name="Words167" count="3" />
   </feed>
   <feed type="ETKT" configured="true" preserveWidths="true">
+    <!-- Observed type-5 history record in source declaration order (EtktStructureDefinitions).
+         Every documented counted string is declared, so a populated value is mapped and protected
+         instead of hidden in a raw-word block. Character and integer slots stay raw words, named by
+         their first slot index; empty strings and words share one four-byte encoding. -->
     <uint32 name="Word000" expected="5" />
     <words name="Words001" count="2" />
     <string name="entryDate" max="4096" />
     <string name="entryTime" max="4096" />
-    <string name="pnr" max="6" />
-    <string name="Text0044" max="4096" />
+    <string name="agentTerminalAddress" max="6" />
+    <string name="agentCityCode" max="4096" />
     <words name="Words007" count="5" />
-    <string name="Text0072" max="4096" />
+    <string name="agentSignInNumber" max="4096" />
     <words name="Words013" count="2" />
-    <string name="Text0088" max="4096" />
-    <words name="Words016" count="11" />
     <string name="ticketNumber" max="4096" />
+    <words name="Words016" count="11" />
+    <string name="historySequenceNumber" max="4096" />
     <string name="ticketStatusRecord" max="4096" />
-    <words name="Words029" count="33" />
-    <string name="Flight1Airline" max="4096" />
-    <string name="Flight1Number" max="4096" />
-    <string name="Flight1Date" max="4096" />
-    <string name="Flight1DepartureTime" max="4096" />
-    <string name="Flight1ArrivalTime" max="4096" />
-    <string name="Flight1Origin" max="4096" />
-    <string name="Flight1Destination" max="4096" />
-    <string name="Flight1Class" max="4096" />
+    <string name="passengerName" max="4096" />
+    <string name="totalFare" max="4096" />
+    <string name="formOfPayment" max="4096" />
+    <string name="exchangeDocument" max="4096" />
+    <string name="createDate" max="4096" />
+    <words name="Words034" count="3" />
+    <string name="issueSpare3" max="4096" />
+    <string name="issueSpare4" max="4096" />
+    <string name="newTicketNumber" max="4096" />
+    <words name="Words040" count="1" />
+    <string name="exchangeComment" max="4096" />
+    <string name="oldTicketNumber" max="4096" />
+    <words name="Words043" count="3" />
+    <string name="exchangeSpare3" max="4096" />
+    <string name="exchangeSpare4" max="4096" />
+    <string name="newRefundComment" max="4096" />
+    <string name="previousRefundComment" max="4096" />
+    <words name="Words050" count="3" />
+    <string name="refundSpare3" max="4096" />
+    <string name="refundSpare4" max="4096" />
+    <string name="newPassengerName" max="4096" />
+    <string name="previousPassengerName" max="4096" />
+    <words name="Words057" count="3" />
+    <string name="nameSpare3" max="4096" />
+    <string name="nameSpare4" max="4096" />
+    <string name="newCarrier" max="4096" />
+    <string name="newFlightNumber" max="4096" />
+    <string name="newFlightDate" max="4096" />
+    <string name="newDepartureTime" max="4096" />
+    <string name="newArrivalTime" max="4096" />
+    <string name="newBoardPoint" max="4096" />
+    <string name="newOffPoint" max="4096" />
+    <string name="newClass" max="4096" />
     <words name="Words070" count="2" />
-    <string name="Flight1NumberRepeat" max="4096" />
+    <string name="newOperatingFlightNumber" max="4096" />
     <words name="Words073" count="4" />
-    <string name="Flight2Number" max="4096" />
-    <string name="Flight2Date" max="4096" />
-    <string name="Flight2DepartureTime" max="4096" />
-    <string name="Flight2ArrivalTime" max="4096" />
-    <string name="Flight2Origin" max="4096" />
-    <string name="Flight2Destination" max="4096" />
+    <string name="previousFlightNumber" max="4096" />
+    <string name="previousFlightDate" max="4096" />
+    <string name="previousDepartureTime" max="4096" />
+    <string name="previousArrivalTime" max="4096" />
+    <string name="previousBoardPoint" max="4096" />
+    <string name="previousOffPoint" max="4096" />
     <words name="Words083" count="4" />
-    <string name="Flight2NumberRepeat" max="4096" />
-    <words name="Words088" count="16" />
-    <string name="UnconfirmedLocator1" max="4096" />
-    <string name="UnconfirmedLocator2" max="4096" />
-    <words name="Words106" count="30" />
+    <string name="previousOperatingFlightNumber" max="4096" />
+    <words name="Words088" count="5" />
+    <string name="flightSpare3" max="4096" />
+    <string name="flightSpare4" max="4096" />
+    <string name="newPurgeDate" max="4096" />
+    <string name="newUnflownDate" max="4096" />
+    <string name="oldPurgeDate" max="4096" />
+    <string name="oldUnflownDate" max="4096" />
+    <words name="Words099" count="3" />
+    <string name="purgeSpare3" max="4096" />
+    <string name="purgeSpare4" max="4096" />
+    <string name="newPnr" max="4096" />
+    <string name="oldPnr" max="4096" />
+    <string name="fim1Coupon1" max="4096" />
+    <string name="fim2Coupon1" max="4096" />
+    <string name="fim1Coupon2" max="4096" />
+    <string name="fim2Coupon2" max="4096" />
+    <string name="fim1Coupon3" max="4096" />
+    <string name="fim2Coupon3" max="4096" />
+    <string name="fim1Coupon4" max="4096" />
+    <string name="fim2Coupon4" max="4096" />
+    <string name="creditCardNumber" max="4096" />
+    <string name="reservationCommissionAmount" max="4096" />
+    <string name="commissionPenaltyAmount" max="4096" />
+    <string name="penaltyAmount" max="4096" />
+    <string name="settlementAuthorizationCode" max="4096" />
+    <words name="Words119" count="15" />
+    <string name="involuntarySpare3" max="4096" />
+    <string name="involuntarySpare4" max="4096" />
   </feed>
   <feed type="PNR" configured="true" preserveWidths="true">
     <!-- Real-time C-structure PNR feed encoded as XDR. The P2 layout spec gives field meanings, not wire order.

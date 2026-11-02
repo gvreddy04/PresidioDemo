@@ -46,21 +46,35 @@ The ETKT module uses the same layout: `Parser/ETKT`, `Serializer/ETKT`, `Models/
 
 The six samples begin with `5, 1, 0`. The screenshot union defines error=1, issue=2 and update=3. The agreed implementation supports an explicitly observed type-5 profile while leaving its discriminator meaning unconfirmed. All 136 scalar slots align with the screenshot history order. The encoder rebuilds the entire payload, including empty string slots and four-byte character slots. A separate Python reader agrees on every value, type, offset and encoded width.
 
-The approved decoded label for `h_aaa_lniata` is **Agent terminal address — provisional mapping**. The legacy `/pnr` alias and its unchanged value are retained. Legacy `Text0044` maps to AAA city, `Text0072` to agent sign-in number, `Text0088` to the ticket-number field, and `ticketNumber` to the global history sequence number. The `Flight1` and `Flight2` fields map to new and previous flight details, including operating flight numbers rather than unexplained repeats. The populated `ticketStatusRecord` occupies a field declared as spare, so its undocumented business semantics remain unresolved.
+The approved decoded label for `h_aaa_lniata` is **Agent terminal address — provisional mapping**. XDR and policy names now follow the history declarations rather than legacy offsets:
 
-The sample ticket-number field has 15 characters although the screenshot comment says 13; the implementation preserves its actual counted width. Type-5 field meanings remain provisional. The approved divide-event mapping uses provisional new/old PNR labels and `newPnr`/`oldPnr` Keep rules. The historical XDR path names remain for provenance; serializer guards protect these locators even if an older alias is used. No ticket, PNR, name or ordinal is treated as a stable passenger identity.
+| Source declaration | Former name | Current name | Treatment |
+| --- | --- | --- | --- |
+| `h_aaa_lniata` | `pnr` | `agentTerminalAddress` | Keep; serializer guard by structure path |
+| `h_aaa_city_code` | `Text0044` | `agentCityCode` | Unclassified-identifier mask (unchanged) |
+| `h_aaa_sine_in_nbr` | `Text0072` | `agentSignInNumber` | Unclassified-identifier mask (unchanged) |
+| `h_tkt_nbr` | `Text0088` | `ticketNumber` | Ticket-reference mask (was unclassified identifier) |
+| `glob_tkt_hist_seq_nbr` | `ticketNumber` | `historySequenceNumber` | Unclassified-identifier mask (was ticket reference) |
+| `h_new_*` / `h_prev_*` strings | `Flight1*` / `Flight2*` | `new*` / `previous*` (for example `newBoardPoint`, `previousOperatingFlightNumber`) | Keep |
+| `h_new_recloc` / `h_old_recloc` | `UnconfirmedLocator1` / `UnconfirmedLocator2` | `newPnr` / `oldPnr` | Keep; serializer guard |
 
-The approved status report uses a provisional MSB-first convention, retains the original signed number and hex value, labels set documented flags, and exposes reserved set bits. `0x00002000` maps to Checked in, `0x00004000` to Divided ETKT, and `0x00010002` to Adjusted flight plus Re-accommodation. Exchange destination uses document bit 31 only when Exchanged is set. These are display interpretations, never serialization changes. ETKT_06's spare text says ADJUSTED while its status word maps to Checked in; the report retains both without assuming they describe the same event.
+Both swapped ticket policies mask every character with `*`, so the protected bytes are unchanged. The populated `ticketStatusRecord` occupies a field declared as spare, so its undocumented business semantics remain unresolved. Its text looks like four per-coupon `status&code` groups, but that layout is not documented, so it is not split further.
+
+The sample ticket-number field has 15 characters although the screenshot comment says 13; the implementation preserves its actual counted width. Type-5 field meanings remain provisional. No ticket, PNR, name or ordinal is treated as a stable passenger identity.
+
+The other 43 documented strings (issue, exchange, refund, name adjustment, flight and purge spares, purge dates, FIM, ATO, commission, settlement and involuntary spares) are empty in all six samples. They were previously folded into raw-word blocks, so a populated value failed the coverage check and was dead-lettered. Each one is now declared as a string with its own policy: names use the person mask, `formOfPayment` and `creditCardNumber` the payment-reference mask, exchange/new/old ticket and FIM numbers the ticket-reference mask, fare and commission amounts the financial mask, comments and undocumented spares the sensitive-attribute mask, `settlementAuthorizationCode` the unclassified-identifier mask, and the create, purge and unflown dates are kept. The ETKT checks populate all 61 strings that are empty in `ETKT.txt` and confirm each is masked or kept as configured.
+
+The approved status report uses a provisional MSB-first convention, retains the original signed number and hex value, labels set documented flags, and exposes reserved set bits. `0x00002000` maps to Checked in, `0x00004000` to Divided ETKT, and `0x00010002` to Adjusted flight plus Re-accommodation. Exchange destination uses document bit 31 only when Exchanged is set. The `h_indicator` word follows the same convention from the source comments: bits 0–2 are the ID type (001 = ETKT), bit 3 is ETKT was in PNR in AAA, bit 7 is Actioned all subsequent coupons and bit 12 is Action for OA. The samples hold `0x20000000`, `0x34000000`, `0x34080000` and `0x31000000`; bit 5 is set in two of them and stays visible as unassigned. These are display interpretations, never serialization changes. ETKT_06's spare text says ADJUSTED while its status word maps to Checked in; the report retains both without assuming they describe the same event.
 
 The local review, searchable reference for all documented structures, history transcription and sample checks are retained under `D:\Bala_Support\topics\etkt\v4`; earlier versions remain immutable. The issue/reissue declarations remain documentary because there are no populated supplied examples and the source repeats `etkt_inds_2`. The active decoder supports the verified type-5 history sample family; it does not silently enable the other documented union arms.
 
-Every ETKT example fits the same 110 raw words and 26 counted-string slots. Sixteen flight-information strings are empty in most examples and populated in ETKT_03. Two additional locator-like strings are empty except in ETKT_05.
+Every ETKT example fits the same 67 raw words and 69 counted-string slots. Sixteen flight-information strings are empty in most examples and populated in ETKT_03. The two divide-event PNR strings are empty except in ETKT_05.
 
 - ETKT/ETKT_02/ETKT_04/ETKT_06 are 672 bytes. ETKT and ETKT_02 are byte-identical.
 - ETKT_03 is 760 bytes: populated flight strings add 88 bytes to the same sequence.
 - ETKT_05 is 628 bytes: its status/reference text is eight rather than 65 characters, saving 60 encoded bytes including padding. Two newly populated six-character strings add 16 encoded bytes. Thus 672 - 60 + 16 = 628.
 
-Flight airlines/numbers, dates, departure/arrival times, routes, class and remaining status text are kept. The provisional agent terminal address (legacy `pnr`) and event date/time stay unchanged. Ticket numbers, uncertain identifiers and the initial eight-character reference prefix are masked. ETKT_05's new and old PNRs are now preserved: `FWGXKN` at value offset 488 and `FWDZRF` at value offset 500. Those positions are calculated from that input rather than stored as dynamic message offsets in XML. Comparing the old and new protected payloads shows exactly 12 changed bytes in these two approved spans; other sample outputs remain unchanged.
+Flight airlines/numbers, dates, departure/arrival times, routes, class and remaining status text are kept. The provisional agent terminal address and event date/time stay unchanged. Ticket numbers, uncertain identifiers and the initial eight-character reference prefix are masked. ETKT_05's new and old PNRs are now preserved: `FWGXKN` at value offset 488 and `FWDZRF` at value offset 500. Those positions are calculated from that input rather than stored as dynamic message offsets in XML. Comparing the old and new protected payloads shows exactly 12 changed bytes in these two approved spans; other sample outputs remain unchanged.
 
 ### Text0132 correction
 
@@ -121,7 +135,7 @@ The XDR file is not technically required as a separate physical file. However, i
 
 ## Reviewed field names
 
-ACI aliases use the documented meanings described above. ETKT aliases keep their earlier reviewed names, with unresolved business meanings labeled accordingly. PNR names follow the P2 record layout sections and replace the earlier fixed-offset aliases. JSON property paths are unchanged.
+ACI aliases use the documented meanings described above. ETKT names follow the screenshot history declarations (see the ETKT section), with unresolved business meanings labeled accordingly. PNR names follow the P2 record layout sections and replace the earlier fixed-offset aliases. JSON property paths are unchanged.
 
 | Feed | Original field | Policy alias | Evidence and limits |
 | --- | --- | --- | --- |

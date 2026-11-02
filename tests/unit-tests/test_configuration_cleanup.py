@@ -49,15 +49,8 @@ class ConfigurationCleanupTests(unittest.TestCase):
             for path, text in mappings.items():
                 alias = "/" + text.get("name")
                 if "/" not in path[1:]:
-                    # Reviewed divide-event labels retain their historical XDR paths as provenance.
-                    reviewed_aliases = {
-                        ("ETKT", "/UnconfirmedLocator1"): "/newPnr",
-                        ("ETKT", "/UnconfirmedLocator2"): "/oldPnr",
-                    }
-                    self.assertEqual(alias, reviewed_aliases.get((route, path), path),
-                                     route + " top-level names must match reviewed XML bindings")
-                    if (route, path) not in reviewed_aliases:
-                        self.assertNotIn("path", text.attrib, "Matching top-level names need no alias path")
+                    self.assertEqual(alias, path, route + " top-level names must match reviewed XML bindings")
+                    self.assertNotIn("path", text.attrib, "Matching top-level names need no alias path")
                 if text.find("variant") is not None:
                     for variant in text.findall("variant"):
                         expected.update(alias + "/" + group for group in re.findall(r"\(\?<([A-Za-z0-9_]+)>", variant.get("pattern")))
@@ -152,8 +145,9 @@ class ConfigurationCleanupTests(unittest.TestCase):
         self.assertEqual(len(aci.findall("optional")), 4)
         etkt = ET.parse(SCHEMA).find("feed[@type='ETKT']")
         word_count = sum(1 if node.tag == "uint32" else int(node.get("count")) if node.tag in {"fixedArray", "words"} else 0 for node in etkt)
-        self.assertEqual(word_count, 110)
-        self.assertEqual(len(etkt.findall("string")), 26)
+        # 136 history slots: every documented counted string is declared; character and integer slots are words.
+        self.assertEqual(word_count, 67)
+        self.assertEqual(len(etkt.findall("string")), 69)
         self.assertFalse(any(node.get("name") == "Text0132" for node in etkt.iter()))
         for name in ("ETKT.txt", "ETKT_05.txt", "ETKT_06.txt"):
             fields, _ = inspect_fields("ETKT", sample(name).read_bytes())

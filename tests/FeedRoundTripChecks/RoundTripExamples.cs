@@ -85,7 +85,7 @@ internal static class RoundTripExamples
                 string fieldName = feed switch
                 {
                     FeedType.ACI => "/passengerName",
-                    FeedType.ETKT => "/ticketNumber",
+                    FeedType.ETKT => "/historySequenceNumber",
                     _ => "/surname"
                 };
                 var parsed = codecFactory(feed).Parse(Message(feed, "example.bin", baseline.Envelope.Payload));

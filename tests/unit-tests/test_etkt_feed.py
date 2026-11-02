@@ -1,4 +1,5 @@
 """ETKT end-to-end checks for the supplied 672-byte reference frame."""
+import struct
 import unittest
 
 from pipeline_harness import run
@@ -9,8 +10,16 @@ from configuration_support import sample
 
 def changed_etkt():
     return replace_fields("ETKT", payload(sample("ETKT.txt").read_bytes()), {
-        "/pnr": "K7QX2M", "/Text0044": "USR", "/Text0072": "1234", "/Text0088": "000000000000123",
-        "/ticketNumber": "0161234567890", "/ticketStatusRecord/Prefix": "42B00012"})
+        "/agentTerminalAddress": "K7QX2M", "/agentCityCode": "USR", "/agentSignInNumber": "1234",
+        "/ticketNumber": "000000000000123", "/historySequenceNumber": "0161234567890",
+        "/ticketStatusRecord/Prefix": "42B00012"})
+
+
+def named_etkt():
+    """Populate h_pax_name, empty in every sample; its four-byte count sits at payload offset 244."""
+    raw = payload(sample("ETKT.txt").read_bytes())
+    assert raw[244:248] == bytes(4)
+    return raw[:244] + struct.pack(">I", 12) + b"EMILY CARTER" + raw[248:]
 
 
 def changed_version():
@@ -30,6 +39,7 @@ class EtktFeedTests(unittest.TestCase):
                            "ETKT/changed-etkt.bin": changed_etkt(),
                            "ETKT/changed-version.bin": changed_version(),
                            "ETKT/divide-etkt.txt": sample("ETKT_05.txt").read_bytes(),
+                           "ETKT/named-etkt.bin": named_etkt(),
                            "ETKT/truncated-etkt.bin": truncated()}, expect=2, prefix="etkt-reference-")
         cls.addClassCleanup(cls.harness.cleanup)
 
@@ -55,6 +65,13 @@ class EtktFeedTests(unittest.TestCase):
                   for name, start, length in field_spans("ETKT", original)}
         self.assertEqual(fields["/newPnr"], b"FWGXKN")
         self.assertEqual(fields["/oldPnr"], b"FWDZRF")
+
+    def test_populated_passenger_name_is_published_masked(self):
+        raw = named_etkt()
+        output = self.harness.published("ETKT", "named-etkt.bin")
+        self.assertEqual(verify_output("ETKT", raw, output, raw=True), {"Keep": 4, "Mask": 6})
+        self.assertNotIn(b"EMILY", output)
+        self.assertIn(b"************", output)
 
     def test_etkt_rejects_truncated_reference(self):
         self.harness.assert_rejected("ETKT", "truncated-etkt.bin", truncated(), "Incomplete XDR field")
