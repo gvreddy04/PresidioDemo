@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PresidioDemo.Feeds.Shared;
@@ -29,7 +30,12 @@ for (int i = 0; i < args.Length; i += 2)
 
 try
 {
-    var (configuration, environment) = EnvironmentConfiguration.Build(settingsFile);
+    var (settings, environment) = EnvironmentConfiguration.Build(settingsFile);
+    // The broker allows one connection per client name, so the sender must not reuse the running worker's name.
+    IConfiguration configuration = settings["Solace:ClientName"] is { Length: > 0 } clientName
+        ? new ConfigurationBuilder().AddConfiguration(settings)
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Solace:ClientName"] = clientName + "-sender" }).Build()
+        : settings;
     var messaging = MessagingOptions.Load(configuration);
     var routes = FeedWorkerService.Routes(messaging);
     string[] files = File.Exists(input) ? [input]

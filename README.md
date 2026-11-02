@@ -276,23 +276,24 @@ dotnet build PresidioDemo.slnx
 
 ### Run locally against a Solace broker
 
-The `Local` environment expects a Solace broker on `tcp://localhost:55555` and creates its queues on startup. Start one with Docker (or Podman), then run the worker:
+The `Local` environment expects a Solace broker on `tcp://localhost:55555` and creates its queues on startup. Start one with Docker Desktop (WSL2 backend), then run the worker. The broker admin password comes from `$env:SOLACE_ADMIN_PASSWORD` or from a git-ignored `deploy/.env` file containing `SOLACE_ADMIN_PASSWORD=<choose one>`:
 
 ```powershell
-$env:SOLACE_ADMIN_PASSWORD = "<choose an admin password>"
-docker compose -f deploy/docker-compose.yml up -d
+docker compose -f deploy/docker-compose.yml up -d   # first start takes about 30 seconds
 $env:SOLACE_PASSWORD = "<client password; any value on the default local broker>"
 dotnet run --project src/PresidioDemo.Worker
 ```
 
-Wait for `READY`, then send the samples from another terminal:
+Wait for `READY`, then send the samples from another terminal. The sender connects as `<ClientName>-sender`, because the broker allows one connection per client name and would otherwise disconnect the running worker:
 
 ```powershell
 $env:SOLACE_PASSWORD = "<same value>"
 dotnet run --project tools/FeedSampleSender
 ```
 
-Protected messages appear on the `airline/<feed>/protected` topics and rejected ones on the `q.<feed>.dlq` queues; the PubSub+ Manager at http://localhost:8080 shows both. Ctrl+C stops the worker after the current messages; unacknowledged messages are redelivered on the next start. The local broker and these commands have not yet been run on this machine (no Docker here); the broker-free checks below cover the same delivery rules with the in-memory broker.
+Protected messages are published to the `airline/<feed>/protected` topics and rejected ones go to the `q.<feed>.dlq` queues. A topic keeps nothing without a subscriber, so to inspect protected output locally, create a queue in the PubSub+ Manager (http://localhost:8080, user `admin`) with the subscription `airline/>` before sending. Ctrl+C stops the worker after the current messages; unacknowledged messages are redelivered on the next start. `docker compose -f deploy/docker-compose.yml down` removes the broker and its queues.
+
+Verified locally with Docker Desktop and broker 10.26.0.9163: the 20 sample files produced 17 protected messages and 3 dead-lettered negative-test messages, and all input queues drained.
 
 To run a deployed environment, set `DOTNET_ENVIRONMENT` (for example `Dev`) and `SOLACE_PASSWORD`, then start `PresidioDemo.Worker`. It exits with code 1 and one message if the settings are invalid or the broker is unreachable.
 
