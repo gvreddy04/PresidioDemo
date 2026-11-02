@@ -37,7 +37,7 @@ static class JsonCodecChecks
         Reject(() => codec.Parse(Message("{\"x\":\"a\"} {}")), "trailing JSON content rejects the complete message");
         Reject(() => codec.Parse(Message("{\"x\":\"unfinished")), "truncated JSON rejects the complete message");
         Reject(() => codec.Parse(Message("[]")), "incorrect feed root is rejected");
-        var policies = FeedPolicyConfiguration.Load(Path.Combine(root, "src", "Configuration", "feed-policies.xml"));
+        var policies = FeedPolicyConfiguration.Load(Path.Combine(root, "src", "PresidioDemo.Core", "Configuration", "feed-policies.xml"));
         Reject(() => ConfiguredPiiIdentifier.CreatePlan(codec.Parse(Message("{\"UnknownPersonalField\":\"Emily\"}")).Fields, policies[FeedType.Seats]), "unknown schema paths fail before anonymization");
         Reject(() => policies[FeedType.Seats].Get("/OrderChangeNotif/Old/Customers/*/firstname"), "JSON policy paths are case sensitive");
         Reject(() => new FieldPolicy("/Old/Customers/*/UARecloc", FieldIdentification.Known, FieldAction.Redact, "PNR").Validate(), "PNR aliases cannot be overridden in path policies");

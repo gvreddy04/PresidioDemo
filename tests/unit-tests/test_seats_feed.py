@@ -1,13 +1,10 @@
 """Complete SEATS verification for the supplied export and fictional two-passenger fixture."""
-from pathlib import Path
 from collections import Counter
 import hashlib
 import json
-import tempfile
 import unittest
-import xml.etree.ElementTree as ET
 
-from test_feed_listener import PROJECT, Listener, wait_for, rejected, runtime_root, processing_files
+from pipeline_harness import PROJECT, run
 from configuration_support import sample
 
 
@@ -69,45 +66,34 @@ def verify_output(original, protected, feed_type="Seats"):
             "json_structure_types_and_order_unchanged": True, "field_results": paths}
 
 
+FIXTURE = PROJECT / "tests" / "unit-tests" / "fixtures" / "seats-mq-export.txt"
+
+
+def unknown_path_document():
+    document = json.loads(payload(FIXTURE.read_bytes()))
+    document["OrderChangeNotif"]["Old"]["Customers"][0]["UnreviewedEmail"] = "emily.carter@example.com"
+    return json.dumps(document).encode()
+
+
 class SeatsFeedTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        (PROJECT / ".test-runs").mkdir(exist_ok=True)
-        cls.sandbox = tempfile.TemporaryDirectory(prefix="seats-review-", dir=PROJECT / ".test-runs")
-        cls.docs = Path(cls.sandbox.name) / "docs"
-        try:
-            cls.listener = Listener(cls.docs)
-        except BaseException:
-            cls.sandbox.cleanup()
-            raise
-
-    @classmethod
-    def tearDownClass(cls):
-        try:
-            cls.listener.stop()
-        finally:
-            cls.sandbox.cleanup()
-
-    def deliver(self, name, data):
-        inbox = self.docs / "input-feeds" / "Seats" / name
-        inbox.write_bytes(data)
-        directory = self.docs / "output-feeds" / "Seats"
-        pattern = Path(name).stem + ".*" + Path(name).suffix
-        wait_for(lambda: len(list(directory.glob(pattern))) == 1 and not inbox.exists()
-                 and not processing_files(self.docs, "Seats", name), "SEATS delivery and acknowledgment")
-        return next(directory.glob(pattern)).read_bytes()
+        cls.harness = run({"Seats/finalized-seats-review.txt": sample("SEATS.txt").read_bytes(),
+                           "Seats/two-passenger-seats-review.txt": FIXTURE.read_bytes(),
+                           "Seats/unknown-seats-review.bin": unknown_path_document()}, expect=2, prefix="seats-review-")
+        cls.addClassCleanup(cls.harness.cleanup)
 
     def test_finalized_export_every_field(self):
         original = sample("SEATS.txt").read_bytes()
-        result = verify_output(original, self.deliver("finalized-seats-review.txt", original))
+        result = verify_output(original, self.harness.published("Seats", "finalized-seats-review.txt"))
         self.assertEqual(result["scalar_values"], 59)
         self.assertEqual(result["unique_paths"], 39)
         self.assertEqual(result["actions"], {"Keep": 30, "Replace": 29})
         self.assertTrue(result["mq_metadata_unchanged"])
 
     def test_two_passenger_fixture_every_field(self):
-        original = (PROJECT / "tests" / "unit-tests" / "fixtures" / "seats-mq-export.txt").read_bytes()
-        output = self.deliver("two-passenger-seats-review.txt", original)
+        original = FIXTURE.read_bytes()
+        output = self.harness.published("Seats", "two-passenger-seats-review.txt")
         result = verify_output(original, output)
         customers = json.loads(payload(output))["OrderChangeNotif"]["Old"]["Customers"]
         self.assertEqual(len(customers), 2)
@@ -117,13 +103,8 @@ class SeatsFeedTests(unittest.TestCase):
         self.assertFalse(any(name in payload(output).decode() for name in ("Emily", "Carter", "Michael", "Brooks", "PAX-1001", "PAX-1002")))
 
     def test_unknown_sensitive_path_retains_entire_feed(self):
-        original = (PROJECT / "tests" / "unit-tests" / "fixtures" / "seats-mq-export.txt").read_bytes()
-        document = json.loads(payload(original))
-        document["OrderChangeNotif"]["Old"]["Customers"][0]["UnreviewedEmail"] = "emily.carter@example.com"
-        raw = json.dumps(document).encode()
-        name = "unknown-seats-review.bin"
-        (self.docs / "input-feeds" / "Seats" / name).write_bytes(raw)
-        rejected(self.docs, "Seats", name, raw, "without a configured protection policy")
+        self.harness.assert_rejected("Seats", "unknown-seats-review.bin", unknown_path_document(),
+                                     "without a configured protection policy")
 
 
 if __name__ == "__main__":

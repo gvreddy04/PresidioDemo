@@ -1,6 +1,6 @@
 # Feed sample review and common structure
 
-All 15 files in `docs/sample-docs` were reviewed without changing source bytes. Each is an MQ text export: `A` rows carry metadata and `X` rows carry hexadecimal payload bytes. There are 13 binary payloads and two JSON payloads.
+All 20 files in `docs/sample-docs/<feed>/` were reviewed without changing source bytes. Each is an MQ text export: `A` rows carry metadata and `X` rows carry hexadecimal payload bytes. There are 14 binary payloads (six ACI, six ETKT, two PNR) and six JSON payloads (three PNR-Linking, three Seats). Three of the JSON files end in `_Negative_Testing`: they parse or route correctly but must be rejected at a later stage.
 
 The application retains the three original XML formats: reference mappings, feed policies and XDR structures. All six ACI examples parse with the same sequence, and all six ETKT examples parse with the same sequence. Reference offsets and lengths remain as reviewed baseline documentation; dynamic parsing follows ordered XDR definitions instead of selecting per-sample templates. String scanning was used during review only. The active configurations do not read source samples at runtime.
 
@@ -8,7 +8,7 @@ The application retains the three original XML formats: reference mappings, feed
 
 The standard routes select `PNRLinking/PnrLinkingFeedCodec` and `Seats/SeatsFeedCodec`, retaining one codec in each feed folder. These classes own the route and required JSON root and inherit `JsonFeedCodec`. The shared class uses `System.Text.Json.Utf8JsonReader` and `JsonSerializer` for both feeds. There are no separate JSON decoder, encoder, parser, serializer, model, structure-definition or report-formatter files. Four former shared helper files are also folded into the class, removing 18 redundant source files from the active project.
 
-The PNR-Linking sample has 76 scalar occurrences across 49 configured policy paths; Seats has 59 across 39 paths. The existing XML policies remain authoritative. JSON field names and nesting supply the structure, while instance paths locate values and wildcard paths select the rules. Every populated scalar still needs a configured rule. Array position never establishes passenger identity.
+The PNR-Linking sample has 76 scalar occurrences across 49 configured policy paths. SEATS.txt has 59 occurrences across 39 paths and SEATS_03.txt has 51; the Seats policy has 68 paths, covering both samples and New-section mirrors of reviewed Old-section rules. The existing XML policies remain authoritative. JSON field names and nesting supply the structure, while instance paths locate values and wildcard paths select the rules. Every populated scalar still needs a configured rule. Array position never establishes passenger identity.
 
 Both routes retain original JSON bytes, scalar types and grouping, including empty arrays and objects. PNRs, passenger grouping, replacement settings, nulls and non-string values are unchanged. A protected output may differ only within changed string spans; MQ metadata and all other payload bytes are validated before publication. Comparing the byte gaps between scalars also detects changes to property names and empty containers. A parsed message from one feed cannot be serialized through the other feed's codec.
 
@@ -24,7 +24,7 @@ The initial ACI/PNR word is two; ETKT's is five. The schema checks these individ
 
 ## ACI: documented structures and a dedicated module
 
-The C-structure definitions were checked against all six supplied ACI payloads. The new `src/Feeds/ACI` folder separates the XDR reader, writer, decoder, parser, encoder, serializer, models, source definitions, indicators, readable reports and route adapter. The standard application route selects `AciFeedCodec` when the reviewed schema-driven ACI configuration is loaded.
+The C-structure definitions were checked against all six supplied ACI payloads. The ACI module is split across the concern folders of `src/PresidioDemo.Core`: `Parser/ACI` (XDR reader, decoder, parser), `Serializer/ACI` (XDR writer, encoder, serializer), `Models/ACI` (models, source definitions, indicators), `Reporting/ACI` (readable reports) and `FeedCodecs/ACI` (route adapter). The standard application route selects `AciFeedCodec` when the reviewed schema-driven ACI configuration is loaded.
 
 The decoder follows `seats_assigned` (ERROR=1 / DATA=2), flight/leg/compartment lists, passenger lists, passenger-flight items and nested seat, bag, registration, loyalty, profile, sequence, security, ticket, through-check-in, miscellaneous, history, consolidated-flight, codeshare, tier and transaction-time lists. Four-byte XDR scalar slots must not be confused with C memory sizes. Strings have length words and zero padding; null linked pointers have a zero presence word.
 
@@ -36,31 +36,45 @@ All six samples contain an additional block after transaction times that is not 
 
 Every supplied sample passes complete byte-exact decode/encode and original MQ-export round trips. A separate Python decoder agrees on every scalar value, path, offset and width. The serializer rebuilds the complete XDR payload with the ACI encoder rather than patching source bytes or calling the generic XDR writer. It preserves scalar values, lengths, pointer flags, padding, PNRs and MQ metadata.
 
-The existing XML sequence is retained as a conservative policy projection for this sample family. Every nonempty decoded string must be completely covered by a reviewed field rule. Unreviewed shapes are retained without publication. A synthetic two-passenger case verifies decoder identity links but is intentionally rejected by the current processing projection. No populated sample verifies some documented branches, including the unusual placement of `fcpr_list.next` before spare members. Updated producer XDR routines are still needed to establish wider production support.
+The existing XML sequence is retained as a conservative policy projection for this sample family. Every nonempty decoded string must be completely covered by a reviewed field rule. Unreviewed shapes go to the dead-letter queue without publication. A synthetic two-passenger case verifies decoder identity links but is intentionally rejected by the current processing projection. No populated sample verifies some documented branches, including the unusual placement of `fcpr_list.next` before spare members. Updated producer XDR routines are still needed to establish wider production support.
 
 The immutable workspace review, decoded examples, searchable transcription, verification evidence are under `D:\Bala_Support\topics\aci\v2`.
 
 ## ETKT: a dedicated module and one 136-slot sample profile
 
-`src/Feeds/ETKT` now owns separate XDR reader/writer, decoder, parser, encoder, serializer, structure definitions, models, report formatter and route adapter. The supplied configuration selects this module with `etktStructures="true"`; custom reference entries without that setting keep their previous codec. The existing XML remains a reviewed protection projection. Every nonempty decoded string needs complete policy coverage, and unsupported populated shapes are retained without publication.
+The ETKT module uses the same layout: `Parser/ETKT`, `Serializer/ETKT`, `Models/ETKT`, `Reporting/ETKT` and `FeedCodecs/ETKT` under `src/PresidioDemo.Core`. The supplied configuration selects this module with `etktStructures="true"`; custom reference entries without that setting keep their previous codec. The existing XML remains a reviewed protection projection. Every nonempty decoded string needs complete policy coverage, and unsupported populated shapes go to the dead-letter queue without publication.
 
 The six samples begin with `5, 1, 0`. The screenshot union defines error=1, issue=2 and update=3. The agreed implementation supports an explicitly observed type-5 profile while leaving its discriminator meaning unconfirmed. All 136 scalar slots align with the screenshot history order. The encoder rebuilds the entire payload, including empty string slots and four-byte character slots. A separate Python reader agrees on every value, type, offset and encoded width.
 
-The approved decoded label for `h_aaa_lniata` is **Agent terminal address — provisional mapping**. The legacy `/pnr` alias and its unchanged value are retained. Legacy `Text0044` maps to AAA city, `Text0072` to agent sign-in number, `Text0088` to the ticket-number field, and `ticketNumber` to the global history sequence number. The `Flight1` and `Flight2` fields map to new and previous flight details, including operating flight numbers rather than unexplained repeats. The populated `ticketStatusRecord` occupies a field declared as spare, so its undocumented business semantics remain unresolved.
+The approved decoded label for `h_aaa_lniata` is **Agent terminal address — provisional mapping**. XDR and policy names now follow the history declarations rather than legacy offsets:
 
-The sample ticket-number field has 15 characters although the screenshot comment says 13; the implementation preserves its actual counted width. Type-5 field meanings remain provisional. The approved divide-event mapping uses provisional new/old PNR labels and `newPnr`/`oldPnr` Keep rules. The historical XDR path names remain for provenance; serializer guards protect these locators even if an older alias is used. No ticket, PNR, name or ordinal is treated as a stable passenger identity.
+| Source declaration | Former name | Current name | Treatment |
+| --- | --- | --- | --- |
+| `h_aaa_lniata` | `pnr` | `agentTerminalAddress` | Keep; serializer guard by structure path |
+| `h_aaa_city_code` | `Text0044` | `agentCityCode` | Unclassified-identifier mask (unchanged) |
+| `h_aaa_sine_in_nbr` | `Text0072` | `agentSignInNumber` | Unclassified-identifier mask (unchanged) |
+| `h_tkt_nbr` | `Text0088` | `ticketNumber` | Ticket-reference mask (was unclassified identifier) |
+| `glob_tkt_hist_seq_nbr` | `ticketNumber` | `historySequenceNumber` | Unclassified-identifier mask (was ticket reference) |
+| `h_new_*` / `h_prev_*` strings | `Flight1*` / `Flight2*` | `new*` / `previous*` (for example `newBoardPoint`, `previousOperatingFlightNumber`) | Keep |
+| `h_new_recloc` / `h_old_recloc` | `UnconfirmedLocator1` / `UnconfirmedLocator2` | `newPnr` / `oldPnr` | Keep; serializer guard |
 
-The approved status report uses a provisional MSB-first convention, retains the original signed number and hex value, labels set documented flags, and exposes reserved set bits. `0x00002000` maps to Checked in, `0x00004000` to Divided ETKT, and `0x00010002` to Adjusted flight plus Re-accommodation. Exchange destination uses document bit 31 only when Exchanged is set. These are display interpretations, never serialization changes. ETKT_06's spare text says ADJUSTED while its status word maps to Checked in; the report retains both without assuming they describe the same event.
+Both swapped ticket policies mask every character with `*`, so the protected bytes are unchanged. The populated `ticketStatusRecord` occupies a field declared as spare, so its undocumented business semantics remain unresolved. Its text looks like four per-coupon `status&code` groups, but that layout is not documented, so it is not split further.
+
+The sample ticket-number field has 15 characters although the screenshot comment says 13; the implementation preserves its actual counted width. Type-5 field meanings remain provisional. No ticket, PNR, name or ordinal is treated as a stable passenger identity.
+
+The other 43 documented strings (issue, exchange, refund, name adjustment, flight and purge spares, purge dates, FIM, ATO, commission, settlement and involuntary spares) are empty in all six samples. They were previously folded into raw-word blocks, so a populated value failed the coverage check and was dead-lettered. Each one is now declared as a string with its own policy: names use the person mask, `formOfPayment` and `creditCardNumber` the payment-reference mask, exchange/new/old ticket and FIM numbers the ticket-reference mask, fare and commission amounts the financial mask, comments and undocumented spares the sensitive-attribute mask, `settlementAuthorizationCode` the unclassified-identifier mask, and the create, purge and unflown dates are kept. The ETKT checks populate all 61 strings that are empty in `ETKT.txt` and confirm each is masked or kept as configured.
+
+The approved status report uses a provisional MSB-first convention, retains the original signed number and hex value, labels set documented flags, and exposes reserved set bits. `0x00002000` maps to Checked in, `0x00004000` to Divided ETKT, and `0x00010002` to Adjusted flight plus Re-accommodation. Exchange destination uses document bit 31 only when Exchanged is set. The `h_indicator` word follows the same convention from the source comments: bits 0–2 are the ID type (001 = ETKT), bit 3 is ETKT was in PNR in AAA, bit 7 is Actioned all subsequent coupons and bit 12 is Action for OA. The samples hold `0x20000000`, `0x34000000`, `0x34080000` and `0x31000000`; bit 5 is set in two of them and stays visible as unassigned. These are display interpretations, never serialization changes. ETKT_06's spare text says ADJUSTED while its status word maps to Checked in; the report retains both without assuming they describe the same event.
 
 The local review, searchable reference for all documented structures, history transcription and sample checks are retained under `D:\Bala_Support\topics\etkt\v4`; earlier versions remain immutable. The issue/reissue declarations remain documentary because there are no populated supplied examples and the source repeats `etkt_inds_2`. The active decoder supports the verified type-5 history sample family; it does not silently enable the other documented union arms.
 
-Every ETKT example fits the same 110 raw words and 26 counted-string slots. Sixteen flight-information strings are empty in most examples and populated in ETKT_03. Two additional locator-like strings are empty except in ETKT_05.
+Every ETKT example fits the same 67 raw words and 69 counted-string slots. Sixteen flight-information strings are empty in most examples and populated in ETKT_03. The two divide-event PNR strings are empty except in ETKT_05.
 
 - ETKT/ETKT_02/ETKT_04/ETKT_06 are 672 bytes. ETKT and ETKT_02 are byte-identical.
 - ETKT_03 is 760 bytes: populated flight strings add 88 bytes to the same sequence.
 - ETKT_05 is 628 bytes: its status/reference text is eight rather than 65 characters, saving 60 encoded bytes including padding. Two newly populated six-character strings add 16 encoded bytes. Thus 672 - 60 + 16 = 628.
 
-Flight airlines/numbers, dates, departure/arrival times, routes, class and remaining status text are kept. The provisional agent terminal address (legacy `pnr`) and event date/time stay unchanged. Ticket numbers, uncertain identifiers and the initial eight-character reference prefix are masked. ETKT_05's new and old PNRs are now preserved: `FWGXKN` at value offset 488 and `FWDZRF` at value offset 500. Those positions are calculated from that input rather than stored as dynamic message offsets in XML. Comparing the old and new protected payloads shows exactly 12 changed bytes in these two approved spans; other sample outputs remain unchanged.
+Flight airlines/numbers, dates, departure/arrival times, routes, class and remaining status text are kept. The provisional agent terminal address and event date/time stay unchanged. Ticket numbers, uncertain identifiers and the initial eight-character reference prefix are masked. ETKT_05's new and old PNRs are now preserved: `FWGXKN` at value offset 488 and `FWDZRF` at value offset 500. Those positions are calculated from that input rather than stored as dynamic message offsets in XML. Comparing the old and new protected payloads shows exactly 12 changed bytes in these two approved spans; other sample outputs remain unchanged.
 
 ### Text0132 correction
 
@@ -68,13 +82,15 @@ The word at offset 132 is respectively 2, 2, 3, 4, 1 and 9 across the six sample
 
 ## PNR and JSON
 
-PNR has one available example. Its XDR definition is an ordered sequence with counted strings; the reference mappings provide named capture patterns for mixed records. DOCS, CTCE, CTCM, ticket, address, membership and payment syntax is retained while sensitive capture values are masked. It preserves the previous 76 protected spans, plus 30 kept fields containing the main PNR, operational dates/routes/flight details, fares and mileage. Forty-eight structural tag strings previously frozen inside hex templates are now represented as fixed reference parts. They remain unchanged and are excluded from the protected-field counts.
+PNR has two examples, PNR.txt (5,452 payload bytes) and PNR_02.txt (1,780). The XDR schema follows the sections of the P2 PNR Record Layout (keys 01, 10, 20, 30, 40, 43, 50, 60, 80, C0, D0, D2, D8). Repeating sections are rpcgen linked lists: a `1` word precedes each element and a `0` word ends the list. The spec describes the MQ/RTA P2 record and excludes the real-time C-structure feed, so it supplies field meanings, not wire order; element shapes are fitted to both samples, and lists that are empty in both samples reject any content. The reference layout maps 53 strings, and the PNR policy has 92 fields.
+
+Mixed record texts (SSR/OSI facts, frequent-flyer accounts, remarks and fare references) use ordered variants keyed by record code, such as DOCS, CTCE, CTCM and TKNE. The first matching pattern masks the personal values while the record syntax stays unchanged; a catch-all masks unrecognized records whole. PNR.txt has 80 masked and 74 kept values; PNR_02.txt has 24 and 33.
 
 Some PNR records use `*` between adjacent fields. Shared loyalty, sensitive-attribute and financial-information rules use `#` for masking so separators remain distinguishable when the protected record is parsed again. Other masks use `*`. The output is validated and can be processed a second time without changes.
 
-The single PNR sample does not establish a general producer contract, all collection shapes, unknown word meanings or passenger associations. Unsupported structures remain retained without publication until a reviewed schema represents them.
+The two PNR samples do not establish a general producer contract, all collection shapes, unknown word meanings or passenger associations, and neither the spec nor the samples carry a stable passenger ID. Unsupported structures go to the dead-letter queue without publication until a reviewed schema represents them.
 
-Seats and PNR-Linking retain their original inline feed policies with exact JSON scalar paths. Their 39 and 49 unique paths retain existing behavior: 30/54 kept scalar occurrences and 29/22 Replace occurrences. Of PNR-Linking's 22 Replace occurrences, eight are empty/null and remain unchanged. JSON property order, types, grouping, PNRs and nulls are preserved; unknown scalar paths reject the complete message.
+Seats and PNR-Linking retain their original inline feed policies with exact JSON scalar paths (68 and 49 paths). SEATS.txt has 30 kept scalar occurrences and 29 Replace occurrences, SEATS_03.txt 32 and 19, and PNR_LINKING.txt 54 and 22. Of PNR-Linking's 22 Replace occurrences, eight are empty/null and remain unchanged. JSON property order, types, grouping, PNRs and nulls are preserved; unknown scalar paths reject the complete message.
 
 ## Reviewed samples and results
 
@@ -94,15 +110,20 @@ Counts below describe populated binary text/capture fields. Fixed structural tag
 | ETKT_04.txt | 672 | 4 | 5 Mask |
 | ETKT_05.txt | 628 | 5 | 5 Mask |
 | ETKT_06.txt | 672 | 4 | 5 Mask |
-| PNR.txt | 5,452 | 30 | 76 Mask |
+| PNR.txt | 5,452 | 74 | 80 Mask |
+| PNR_02.txt | 1,780 | 33 | 24 Mask |
 | SEATS.txt | 1,362 | 30 | 29 Replace |
+| SEATS_03.txt | 1,329 | 32 | 19 Replace |
 | PNR_LINKING.txt | 2,217 | 54 | 22 Replace |
+| PNR_LINKING_02_Negative_Testing.txt | 2,236 | Rejected | Field without a configured protection policy |
+| PNR_LINKING_03_Negative_Testing.txt | 2,213 | Rejected | Non-string JSON field changed |
+| SEATS_02_Negative_Testing.txt | 1,362 | Rejected | MQ export without UTF-8 CCSID 1208 |
 
-All 15 published in the real application rerun. Independent sequential byte verification confirmed 19 unchanged identified PNR occurrences; exact source hashes, binary payload sizes, raw words, string counts, zero padding, record syntax, MQ headers, row framing and newline style; and the configured masks/replacements. No sample failed or remained pending. The latest retained run is linked below.
+In the latest sample verification, run through the real workers and local Presidio, the 17 production samples were published and the three negative samples were dead-lettered with their expected reasons. Independent byte verification confirmed 33 unchanged identified PNR occurrences; exact source hashes, binary payload sizes, raw words, string counts, zero padding, record syntax, MQ headers, row framing and newline style; and the configured masks/replacements. No production sample failed or remained pending.
 
 ## Configuration behavior
 
-All three files retain their original roots and feed sections. Startup validates them together before claiming input; restart applies changes. The responsibilities are:
+All three files retain their original roots and feed sections. The worker validates them together before it connects to the broker; a restart applies changes. The responsibilities are:
 
 | File | Responsibility |
 | --- | --- |
@@ -114,7 +135,7 @@ The XDR file is not technically required as a separate physical file. However, i
 
 ## Reviewed field names
 
-ACI aliases now use the documented meanings described above. Earlier ETKT and PNR alias work is retained, with unresolved business meanings labeled accordingly. JSON property paths are unchanged.
+ACI aliases use the documented meanings described above. ETKT names follow the screenshot history declarations (see the ETKT section), with unresolved business meanings labeled accordingly. PNR names follow the P2 record layout sections and replace the earlier fixed-offset aliases. JSON property paths are unchanged.
 
 | Feed | Original field | Policy alias | Evidence and limits |
 | --- | --- | --- | --- |
@@ -122,10 +143,10 @@ ACI aliases now use the documented meanings described above. Earlier ETKT and PN
 | ACI | `recordTime` | `aciTransactionTime` | Structure `trans_times_list.trans_time3` |
 | ACI | `secondaryAirlineCode` | `passengerFlightAirline` | Structure `paxflt_items.airline_code` |
 | ETKT | `Text0172` | `ticketStatusRecord` | Eight-character masked prefix followed by readable status text; the `StatusText` capture is kept |
-| PNR | `NameText0400`, `NameText0440` | `passengerSurname`, `passengerGivenName` | Match the surname/given-name pair in DOCS and contact records |
-| PNR | `Docs0496`, `ContactEmail0876`, `ContactPhone0972` | `travelDocumentRecord`, `emailContactRecord`, `phoneContactRecord` | Reviewed DOCS, CTCE and CTCM prefixes and named captures |
-| PNR | `NameText1880`, `NameText1984`, `NameText5276` | `passengerNameOccurrence1` through `passengerNameOccurrence3` | Repeated full-name occurrences; suffixes do not imply different passengers |
-| PNR | Address, membership, account, ticket and fare records with numeric offset suffixes | Descriptive record aliases such as `addressPostalCodeRecord`, `loyaltyMembershipRecord`, `accountBalanceRecord`, `ticketOrderRecord` and `totalFare` | Existing reviewed record syntax/content supports these names; actions and capture widths are unchanged |
+| PNR | `/names/*/surname`, `/firstNames/*/givenName` | `surname`, `givenName` | P2 key 20 `P20PSNM` and key 30 `P20PNAM`; one linked-list item per name, never a passenger identity |
+| PNR | `/facts/*/text` | `factText` | P2 key 40 `P20PFTX` SSR/OSI text; ordered variants for DOCS, CTCE, CTCM and other record codes |
+| PNR | `/frequentFlyers/*/account` | `frequentFlyerAccount` | P2 key 43 `P20PFQT`/`P20ESTX` FQTV number and tier text |
+| PNR | `/remarks/*/text`, `/fareReferences/*/text`, `/etktPayments/*/passengerName` | `remarkText`, `fareReferenceText`, `etktPassengerName` | Remark, fare-reference and ETKT payment records; variants mask personal captures and keep record syntax |
 
 Confirmed top-level string names now agree across all three XML files. For example, XDR declares `<string name="flightAciTimestamp" max="4096" />`, the reference declares `<text name="flightAciTimestamp" offset="88" length="21" />`, and policies declare `<field name="/flightAciTimestamp" identification="None" action="Keep" />`. The 38 redundant alias paths are removed. The three nested ACI optional-string paths remain explicit because their reference aliases differ from their structural paths. Existing explicit path aliases remain supported by the loader.
 
@@ -133,7 +154,7 @@ The XML projection retains field order, word counts, bounds, optional groups and
 
 ## Extensions to the original approach
 
-The listener, transport, workflows and Python host retain the original processing flow. Existing configuration filenames and CLI switches remain available. The reference codec delegates structural reading to the existing XDR codec only when `schemaDriven="true"`. Original reference configurations without this flag retain their pinned sample/template behavior and their runtime reference-file requirement. The JSON codec is unchanged; its registry adds the selection of schema-driven reference mappings before ordinary XDR routing.
+The workflows and Python host retain the original processing flow. The former folder listener and its command-line switches were replaced by the broker worker described in the README; configuration filenames are unchanged. The reference codec delegates structural reading to the existing XDR codec only when `schemaDriven="true"`. Original reference configurations without this flag retain their pinned sample/template behavior and their runtime reference-file requirement. The JSON codec is unchanged; its registry adds the selection of schema-driven reference mappings before ordinary XDR routing.
 
 Production changes extend the existing loaders/codecs for dynamic reference mappings, named captures, strict width/framing validation, optional shared policies, full-width masks and numbered batch filenames. No new production configuration-loader class or per-sample parser is introduced. Consecutive raw words use `words`, a compact alias expanded into the existing `fixedArray` primitive by the XML loader. Original `fixedArray` declarations remain supported unchanged.
 
@@ -146,7 +167,7 @@ The reference file keeps its original `name`, `offset` and `length` attributes:
 ```xml
 <referenceLayouts>
   <feed type="ACI" name="AciReference888" schemaDriven="true"
-        referenceFile="../../docs/sample-docs/ACI.txt"
+        referenceFile="../../../docs/sample-docs/ACI/ACI.txt"
         referenceSha256="f038c05e590ade818748f6547c2a624d8d662a52c54d3596ad93649eafce022d">
     <!-- Baseline positions for review; actual positions come from XDR. -->
     <text name="passengerName" offset="424" length="11" />
@@ -215,20 +236,20 @@ Mixed record mappings stay in the reference file:
 
 Part starts/lengths retain the baseline review values. Named captures determine actual spans in schema-driven mode; literal syntax outside captures stays unchanged. The copied PNR must equal the main PNR. `path` optionally maps an existing field alias to a nested XDR path; `optional` allows absence and `allowEmpty` permits an empty mixed record. Patterns match the complete string with bounded-time non-backtracking matching. Mismatches, overlapping/repeated captures and conflicting PNR copies reject input.
 
-Invalid references, missing field rules, PNR policy overrides and incompatible binary actions fail startup. Runtime rejects truncation, trailing regions, invalid optional states, nonprintable text and nonzero padding. Unknown structure is retained without publication. Values and widths within the defined structure need no configuration changes; new structural variations require reviewed XML. A wire encoding outside the existing primitives would require an adapter.
+Invalid references, missing field rules, PNR policy overrides and incompatible binary actions fail startup. Runtime rejects truncation, trailing regions, invalid optional states, nonprintable text and nonzero padding. Unknown structure goes to the dead-letter queue without publication. Values and widths within the defined structure need no configuration changes; new structural variations require reviewed XML. A wire encoding outside the existing primitives would require an adapter.
 
 ## Reproduce verification
 
 ```powershell
-dotnet build
+dotnet build PresidioDemo.slnx
 dotnet run --project tests/FeedPipelineChecks
+dotnet run --project tests/WorkerChecks
 src/.venv/Scripts/python.exe -m unittest discover -s tests/unit-tests -p test_*.py -v
-src/.venv/Scripts/python.exe tests/unit-tests/test_feed_listener.py
 src/.venv/Scripts/python.exe tests/run_sample_verification.py
 ```
 
-The verification command retains outputs, transaction logs and a value-free `verification.json` in a fresh `.test-runs/e2e-*` folder. After the approved ACI corrections, the 15 supplied samples have 123 populated Mask fields, 268 kept fields and 51 JSON scalars with Replace policies. Forty-three replacements changed; eight empty/null values remained unchanged. All 19 identified PNR occurrences, source hashes and binary framing were preserved.
+The sample verification runs all 20 samples through `tests/FeedPipelineHarness`. It keeps the outputs, dead letters, transaction logs and a value-free `verification.json` in a fresh `.test-runs/e2e-*` folder. In the latest run, the 17 published samples had 149 Mask fields, 379 kept fields and 70 JSON scalars with Replace policies. All 33 identified PNR occurrences, source hashes and binary framing were preserved. The harness exits with code 2 because the three negative samples are rejected by design.
 
-The application run published all 15 supplied feeds, with zero failures and zero pending inputs. Review evidence is retained in the workspace topic folder. The separate ACI checks cover exact XDR/MQ round trips, scalar-by-scalar independent decoder agreement, numeric passenger identity links, malformed framing, unmapped text, PNR preservation and a synthetic two-passenger decoder case. The .NET pipeline suite and 15 selected Python ACI/configuration/batch/layout regression tests passed.
+The separate ACI checks cover exact XDR/MQ round trips, scalar-by-scalar independent decoder agreement, numeric passenger identity links, malformed framing, unmapped text, PNR preservation and a synthetic two-passenger decoder case. The latest run passed the .NET pipeline and worker checks and all 53 Python tests.
 
-ACI output differs from the earlier run where approved operational fields are now kept. Other feed rules remain unchanged. Earlier verification runs and historical artifacts are preserved. The new `aciStructures="true"` reference setting selects the ACI module; older custom configurations without the setting keep their existing codecs.
+ACI output differs from earlier runs where approved operational fields are now kept. Earlier verification runs and historical artifacts are preserved. The `aciStructures="true"` reference setting selects the ACI module; older custom configurations without the setting keep their existing codecs.

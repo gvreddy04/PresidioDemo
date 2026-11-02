@@ -7,18 +7,4 @@ __pycache__/
 .test-runs/
 .runtime/
 
-# Runtime feeds: retain all five route folders without tracking customer data.
-/docs/input-feeds/*/*
-!/docs/input-feeds/*/.gitkeep
-/docs/feed-processing/*/*
-!/docs/feed-processing/*/.gitkeep
-/docs/output-feeds/*/*
-!/docs/output-feeds/*/.gitkeep
-/docs/failed-feeds/*/*
-!/docs/failed-feeds/*/.gitkeep
-
-# Transaction logs include original data; keep only the folder placeholder in Git.
-/docs/feed-logs/*
-!/docs/feed-logs/.gitkeep
-
 topics/feeds-demo/v9/actual-run/

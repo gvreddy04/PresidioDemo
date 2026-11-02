@@ -1,3 +1,23 @@
 <Solution>
-  <Project Path="PresidioDemo.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/PresidioDemo.Core/PresidioDemo.Core.csproj" />
+    <Project Path="src/PresidioDemo.Messaging/PresidioDemo.Messaging.csproj" />
+    <Project Path="src/PresidioDemo.Messaging.Solace/PresidioDemo.Messaging.Solace.csproj" />
+    <Project Path="src/PresidioDemo.Worker/PresidioDemo.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PresidioDemo.Messaging.Testing/PresidioDemo.Messaging.Testing.csproj" />
+    <Project Path="tests/ACI/AciChecks.csproj" />
+    <Project Path="tests/ETKT/EtktChecks.csproj" />
+    <Project Path="tests/PNR/PnrChecks.csproj" />
+    <Project Path="tests/JsonFeeds/JsonFeedChecks.csproj" />
+    <Project Path="tests/FeedRoundTripChecks/FeedRoundTripChecks.csproj" />
+    <Project Path="tests/FeedPipelineChecks/FeedPipelineChecks.csproj" />
+    <Project Path="tests/FeedPipelineHarness/FeedPipelineHarness.csproj" />
+    <Project Path="tests/Messaging.ContractTests/Messaging.ContractTests.csproj" />
+    <Project Path="tests/WorkerChecks/WorkerChecks.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/FeedSampleSender/FeedSampleSender.csproj" />
+  </Folder>
 </Solution>

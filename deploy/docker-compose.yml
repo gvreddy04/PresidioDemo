@@ -1,0 +1,22 @@
+# Local Solace broker for the Local environment in src/PresidioDemo.Worker/appsettings.json.
+# Start:  SOLACE_ADMIN_PASSWORD=<choose one> docker compose -f deploy/docker-compose.yml up -d
+# Stop:   docker compose -f deploy/docker-compose.yml down
+# The worker connects over the native protocol on 55555. Port 8080 is the PubSub+ Manager web UI for people;
+# the application never calls it. Pin the image to your organization's approved version before sharing.
+services:
+  solace:
+    image: solace/solace-pubsub-standard:latest
+    container_name: presidio-solace
+    shm_size: 1g
+    ulimits:
+      core: -1
+      nofile:
+        soft: 2448
+        hard: 6592
+    ports:
+      - "55555:55555"
+      - "8080:8080"
+    environment:
+      - username_admin_globalaccesslevel=admin
+      - username_admin_password=${SOLACE_ADMIN_PASSWORD:?Set SOLACE_ADMIN_PASSWORD for the broker admin user}
+      - system_scaling_maxconnectioncount=100

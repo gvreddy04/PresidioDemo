@@ -13,9 +13,9 @@ string project = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../
 string output = args.Length == 1 ? Path.GetFullPath(args[0]) : Path.Combine(project, ".test-runs/etkt-checks");
 Directory.CreateDirectory(output);
 var options = new JsonSerializerOptions { WriteIndented = true };
-var schemas = XdrLayoutConfiguration.Load(Path.Combine(project, "src/Configuration/xdr-layouts.xml"));
-var references = ReferenceLayoutConfiguration.Load(Path.Combine(project, "src/Configuration/reference-layouts.xml"), schemas);
-var policies = FeedPolicyConfiguration.Load(Path.Combine(project, "src/Configuration/feed-policies.xml"));
+var schemas = XdrLayoutConfiguration.Load(Path.Combine(project, "src/PresidioDemo.Core/Configuration/xdr-layouts.xml"));
+var references = ReferenceLayoutConfiguration.Load(Path.Combine(project, "src/PresidioDemo.Core/Configuration/reference-layouts.xml"), schemas);
+var policies = FeedPolicyConfiguration.Load(Path.Combine(project, "src/PresidioDemo.Core/Configuration/feed-policies.xml"));
 var codec = FeedCodecRegistry.Create(FeedType.ETKT, schemas, references);
 Check(codec is EtktFeedCodec, "configured ETKT route selects the dedicated module");
 var results = new List<object>();
@@ -98,14 +98,47 @@ Check(new EtktDecoder().Decode(changedNumeric).Field(numeric.Path).Number == 123
 Reject(() => new EtktEncoder().Encode(baselineDocument, new Dictionary<string, string> { ["/missing"] = "x" }), "unknown replacement path");
 byte[] expanded = new EtktEncoder().Encode(baselineDocument, new Dictionary<string, string> { ["/history/h_pax_name"] = "Emily Carter" });
 Check(new EtktDecoder().Decode(expanded).Field("/history/h_pax_name").Text == "Emily Carter", "structural encoder handles a counted string becoming populated");
-Reject(() => codec.Parse(Message(expanded, "expanded.bin")), "unreviewed populated field cannot pass the existing processing projection");
+var expandedParsed = codec.Parse(Message(expanded, "expanded.bin"));
+Check(expandedParsed.Fields.Single(field => field.Name == "/passengerName").Value == "Emily Carter", "populated passenger name is mapped");
+Check(new EtktDecoder().Decode(Protect(expandedParsed)).Field("/history/h_pax_name").Text == "************", "populated passenger name is masked");
+
+// Every documented string that is empty in the samples is mapped, and protected as configured once populated.
+var optionalStrings = baselineDocument.Scalars.Where(scalar => scalar.Kind == EtktWireKind.String && scalar.Text!.Length == 0)
+    .Select((scalar, index) => (scalar.Path, Value: scalar.Path is "/history/h_new_recloc" or "/history/h_old_recloc"
+        ? "K7QX2" + (char)('A' + index % 26) : $"Q {index:D2}")).ToDictionary(item => item.Path, item => item.Value);
+Check(optionalStrings.Count == 61, "the baseline leaves 61 documented strings empty");
+var populatedParsed = codec.Parse(Message(new EtktEncoder().Encode(baselineDocument, optionalStrings), "all-populated.bin"));
+var populatedAfter = new EtktDecoder().Decode(Protect(populatedParsed));
+var keptStrings = new HashSet<string>(["/createDate", "/newCarrier", "/newFlightNumber", "/newFlightDate", "/newDepartureTime",
+    "/newArrivalTime", "/newBoardPoint", "/newOffPoint", "/newClass", "/newOperatingFlightNumber", "/previousFlightNumber",
+    "/previousFlightDate", "/previousDepartureTime", "/previousArrivalTime", "/previousBoardPoint", "/previousOffPoint",
+    "/previousOperatingFlightNumber", "/newPurgeDate", "/newUnflownDate", "/oldPurgeDate", "/oldUnflownDate", "/newPnr", "/oldPnr"]);
+foreach (var (path, value) in optionalStrings)
+{
+    var field = populatedParsed.Fields.Single(field => field.Value == value);
+    var policy = policies[FeedType.ETKT].Get(field.Name);
+    Check(policy.Action == (keptStrings.Contains(field.Name) ? FieldAction.Keep : FieldAction.Mask), "reviewed treatment for " + field.Name);
+    string after = populatedAfter.Field(path).Text!;
+    Check(policy.Action == FieldAction.Keep ? after == value : after == new string(policy.MaskCharacter[0], value.Length),
+        "populated documented string is kept or masked as configured: " + field.Name);
+}
+foreach (var (alias, entity) in new[] { ("/passengerName", "PERSON"), ("/newPassengerName", "PERSON"), ("/previousPassengerName", "PERSON"),
+    ("/formOfPayment", "PAYMENT_REFERENCE"), ("/creditCardNumber", "PAYMENT_REFERENCE"), ("/totalFare", "FINANCIAL_INFORMATION"),
+    ("/newTicketNumber", "TICKET_REFERENCE"), ("/oldTicketNumber", "TICKET_REFERENCE"), ("/fim1Coupon1", "TICKET_REFERENCE") })
+{
+    Check(policies[FeedType.ETKT].Get(alias).Entity == entity, "personal, payment and ticket text uses its entity: " + alias);
+}
 
 var parsedBaseline = codec.Parse(Message(baseline, "baseline.bin"));
 var preserved = parsedBaseline.Fields.ToDictionary(field => field.Id, field => field.Value);
-var legacyPnr = parsedBaseline.Fields.Single(field => field.Name == "/pnr");
-var alteredAlias = new Dictionary<string, string>(preserved) { [legacyPnr.Id] = "K7QX2M" };
-Reject(() => codec.Serialize(parsedBaseline, alteredAlias), "legacy PNR alias remains unchanged");
-var ticket = parsedBaseline.Fields.Single(field => field.Name == "/Text0088");
+var terminalField = parsedBaseline.Fields.Single(field => field.Name == "/agentTerminalAddress");
+var alteredTerminal = new Dictionary<string, string>(preserved) { [terminalField.Id] = "K7QX2M" };
+Reject(() => codec.Serialize(parsedBaseline, alteredTerminal), "agent terminal address remains unchanged");
+var ticket = parsedBaseline.Fields.Single(field => field.Name == "/ticketNumber");
+Check(ticket.Value == baselineDocument.Field("/history/h_tkt_nbr").Text &&
+    policies[FeedType.ETKT].Get("/ticketNumber").Entity == "TICKET_REFERENCE", "ticket number maps to h_tkt_nbr as a ticket reference");
+Check(parsedBaseline.Fields.Single(field => field.Name == "/historySequenceNumber").Value ==
+    baselineDocument.Field("/history/glob_tkt_hist_seq_nbr").Text, "history sequence number maps to glob_tkt_hist_seq_nbr");
 var alteredWidth = new Dictionary<string, string>(preserved) { [ticket.Id] = "*" };
 Reject(() => codec.Serialize(parsedBaseline, alteredWidth), "processing serializer rejects width changes");
 byte[] tampered = baseline.ToArray();
@@ -140,7 +173,7 @@ foreach (string path in new[] { "/history/h_new_recloc", "/history/h_old_recloc"
 string configurationRoot = Path.Combine(project, ".test-runs", "etkt-config-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(configurationRoot);
 string configurationFile = Path.Combine(configurationRoot, "reference-layouts.xml");
-var originalConfiguration = XDocument.Load(Path.Combine(project, "src/Configuration/reference-layouts.xml"));
+var originalConfiguration = XDocument.Load(Path.Combine(project, "src/PresidioDemo.Core/Configuration/reference-layouts.xml"));
 var compatibilityConfiguration = new XDocument(originalConfiguration);
 compatibilityConfiguration.Root!.Elements("feed").Single(element => (string?)element.Attribute("type") == "ETKT").Attribute("etktStructures")!.Remove();
 compatibilityConfiguration.Save(configurationFile);
@@ -163,6 +196,16 @@ Check(EtktIndicators.DescribeStatus(0x1C).UnassignedSetBits == "0x0000001C", "re
 Check(EtktIndicators.DescribeStatus(1).ExchangeDestination is null, "bit 31 alone does not create an exchanged status");
 Check(EtktIndicators.DescribeStatus(0x01000000).ExchangeDestination == "ETKT (provisional)" &&
     EtktIndicators.DescribeStatus(0x01000001).ExchangeDestination == "Paper (provisional)", "exchange destination follows bit 31 only for exchanged status");
+var plainIndicator = EtktIndicators.DescribeIndicator(0x20000000);
+Check(plainIndicator.IdType == 1 && plainIndicator.IdTypeLabel == "ETKT (provisional)" && plainIndicator.SetDocumentedFlags.Count == 0 &&
+    plainIndicator.UnassignedSetBits == "0x00000000", "indicator bits 0-2 hold the ETKT ID type");
+var subsequentIndicator = EtktIndicators.DescribeIndicator(0x31000000);
+Check(subsequentIndicator.SetDocumentedFlags.Select(flag => flag.Label).SequenceEqual(
+    ["ETKT was in PNR in AAA (provisional)", "Actioned all subsequent coupons (provisional)"]), "ETKT_05 indicator labels");
+var oaIndicator = EtktIndicators.DescribeIndicator(0x34080000);
+Check(oaIndicator.SetDocumentedFlags.Select(flag => flag.DocumentBit).SequenceEqual([3, 12]) &&
+    oaIndicator.UnassignedSetBits == "0x04000000", "undocumented indicator bit 5 remains visible");
+Check(EtktIndicators.DescribeIndicator(unchecked((int)0xE0000000)).IdTypeLabel is null, "undocumented ID types are not labelled");
 
 File.WriteAllText(Path.Combine(output, "verification.json"), JsonSerializer.Serialize(new
 {
@@ -173,6 +216,17 @@ File.WriteAllText(Path.Combine(output, "verification.json"), JsonSerializer.Seri
 Console.WriteLine("PASS malformed-input, coverage, width, metadata and kept-field checks");
 
 FeedMessage Message(byte[] bytes, string name) => new(new(FeedType.ETKT, Guid.Empty, name, ""), bytes);
+byte[] Protect(ParsedFeed parsed)
+{
+    var values = parsed.Fields.ToDictionary(field => field.Id, field =>
+    {
+        var policy = policies[FeedType.ETKT].Get(field.Name);
+        return policy.Action == FieldAction.Mask ? new string(policy.MaskCharacter[0], field.Value.Length) : field.Value;
+    });
+    byte[] protectedBytes = codec.Serialize(parsed, values);
+    codec.Validate(parsed, protectedBytes);
+    return protectedBytes;
+}
 void Check(bool condition, string message)
 {
     if (!condition)

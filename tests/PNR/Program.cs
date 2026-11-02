@@ -4,8 +4,8 @@ using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
 
 string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../"));
-var schemas = XdrLayoutConfiguration.Load(Path.Combine(root, "src/Configuration/xdr-layouts.xml"));
-var references = ReferenceLayoutConfiguration.Load(Path.Combine(root, "src/Configuration/reference-layouts.xml"), schemas);
+var schemas = XdrLayoutConfiguration.Load(Path.Combine(root, "src/PresidioDemo.Core/Configuration/xdr-layouts.xml"));
+var references = ReferenceLayoutConfiguration.Load(Path.Combine(root, "src/PresidioDemo.Core/Configuration/reference-layouts.xml"), schemas);
 var codec = FeedCodecRegistry.Create(FeedType.PNR, schemas, references);
 if (codec is not PnrFeedCodec)
 {

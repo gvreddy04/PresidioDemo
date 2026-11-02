@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 
 from configuration_support import SCHEMA, CATALOG, REFERENCE, catalog, json_rules, sample
 from reference_feed_support import inspect_fields
-from test_feed_listener import PROJECT, DLL
+from pipeline_harness import PROJECT, run
 from test_seats_feed import payload
 
 
@@ -49,15 +49,8 @@ class ConfigurationCleanupTests(unittest.TestCase):
             for path, text in mappings.items():
                 alias = "/" + text.get("name")
                 if "/" not in path[1:]:
-                    # Reviewed divide-event labels retain their historical XDR paths as provenance.
-                    reviewed_aliases = {
-                        ("ETKT", "/UnconfirmedLocator1"): "/newPnr",
-                        ("ETKT", "/UnconfirmedLocator2"): "/oldPnr",
-                    }
-                    self.assertEqual(alias, reviewed_aliases.get((route, path), path),
-                                     route + " top-level names must match reviewed XML bindings")
-                    if (route, path) not in reviewed_aliases:
-                        self.assertNotIn("path", text.attrib, "Matching top-level names need no alias path")
+                    self.assertEqual(alias, path, route + " top-level names must match reviewed XML bindings")
+                    self.assertNotIn("path", text.attrib, "Matching top-level names need no alias path")
                 if text.find("variant") is not None:
                     for variant in text.findall("variant"):
                         expected.update(alias + "/" + group for group in re.findall(r"\(\?<([A-Za-z0-9_]+)>", variant.get("pattern")))
@@ -152,8 +145,9 @@ class ConfigurationCleanupTests(unittest.TestCase):
         self.assertEqual(len(aci.findall("optional")), 4)
         etkt = ET.parse(SCHEMA).find("feed[@type='ETKT']")
         word_count = sum(1 if node.tag == "uint32" else int(node.get("count")) if node.tag in {"fixedArray", "words"} else 0 for node in etkt)
-        self.assertEqual(word_count, 110)
-        self.assertEqual(len(etkt.findall("string")), 26)
+        # 136 history slots: every documented counted string is declared; character and integer slots are words.
+        self.assertEqual(word_count, 67)
+        self.assertEqual(len(etkt.findall("string")), 69)
         self.assertFalse(any(node.get("name") == "Text0132" for node in etkt.iter()))
         for name in ("ETKT.txt", "ETKT_05.txt", "ETKT_06.txt"):
             fields, _ = inspect_fields("ETKT", sample(name).read_bytes())
@@ -161,28 +155,25 @@ class ConfigurationCleanupTests(unittest.TestCase):
                              [(132, 4, "word"), (136, 4, "word")])
 
     def test_invalid_catalog_is_rejected_before_input_is_claimed(self):
-        import subprocess
         import tempfile
         from pathlib import Path
         (PROJECT / ".test-runs").mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="invalid-catalog-", dir=PROJECT / ".test-runs") as temp:
-            root = Path(temp)
-            docs = root / "docs"
-            source = docs / "input-feeds/ACI/untouched.bin"
-            source.parent.mkdir(parents=True)
-            source.write_bytes(b"retain-before-validation")
             tree = ET.parse(CATALOG)
             rule = tree.find("catalog")[0]
             rule.tag = "field"  # Legacy field syntax is not a shared catalog entry.
             rule.set("name", rule.attrib.pop("id"))
-            invalid = root / "invalid.xml"
+            invalid = Path(temp) / "invalid.xml"
             tree.write(invalid, encoding="utf-8", xml_declaration=True)
-            result = subprocess.run(["dotnet", str(DLL), "--docs-root", str(docs), "--policy-file", str(invalid)],
-                                    cwd=PROJECT, capture_output=True, text=True, encoding="utf-8", timeout=30)
-            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-            self.assertNotIn("Initializing embedded", result.stdout)
-            self.assertEqual(source.read_bytes(), b"retain-before-validation")
-            self.assertFalse((docs / "feed-processing").exists())
+            result = run({"ACI/untouched.bin": b"retain-before-validation"}, ["--policy-file", invalid], expect=1,
+                         prefix="invalid-catalog-")
+            try:
+                self.assertTrue(result.stderr.startswith("Harness could not start:"), result.console)
+                self.assertNotIn("Initializing embedded", result.stdout)
+                self.assertEqual((result.input_root / "ACI/untouched.bin").read_bytes(), b"retain-before-validation")
+                self.assertFalse(result.output_root.exists())
+            finally:
+                result.cleanup()
 
 
 if __name__ == "__main__":

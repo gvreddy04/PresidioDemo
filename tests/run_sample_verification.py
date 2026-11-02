@@ -1,4 +1,4 @@
-"""Run all supplied samples through the real CLI and retain value-free verification evidence."""
+"""Run all supplied samples through the real feed workers and retain value-free verification evidence."""
 
 from collections import Counter
 from datetime import datetime, timedelta, timezone
@@ -16,6 +16,7 @@ sys.path.insert(0, str(PROJECT / "tests/unit-tests"))
 from reference_feed_support import field_spans, inspect_fields, verify_output as verify_binary
 from configuration_support import NEGATIVE_SAMPLES, catalog, json_rules
 from test_seats_feed import header, payload, verify_output as verify_json
+from pipeline_harness import HARNESS
 
 POLICIES = {feed: json_rules(feed) for feed in ("Seats", "PNR-Linking")}
 CATALOG = catalog()
@@ -68,39 +69,42 @@ sources = {source.name: source.read_bytes() for source in samples.rglob("*.txt")
 require(len(sources) == 20, "Expected exactly 20 sample source files")
 started = datetime.now(timezone(timedelta(hours=5, minutes=30)))
 run = PROJECT / ".test-runs" / ("e2e-" + started.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8])
-docs = run / "docs"
+output_root = run / "harness"
 run.mkdir(parents=True)
-command = ["dotnet", str(PROJECT / "bin/Debug/net10.0/PresidioDemo.dll"),
-           "--docs-root", str(docs), "--process-folder", str(samples)]
+require(HARNESS.is_file(), "Build tests/FeedPipelineHarness first; missing " + str(HARNESS))
+command = ["dotnet", str(HARNESS), "--input", str(samples), "--output", str(output_root)]
 with (run / "application.log").open("w", encoding="utf-8") as log:
-    completed = subprocess.run(command, cwd=PROJECT, stdout=log, stderr=subprocess.STDOUT, timeout=180)
+    completed = subprocess.run(command, cwd=PROJECT, stdout=log, stderr=subprocess.STDOUT, timeout=600)
 
-reports = list((run / ".runtime/docs/reports").glob("feed-batch-*.json"))
-require(len(reports) == 1, "Application did not create exactly one batch report; inspect " + str(run / "application.log"))
-batch = json.loads(reports[0].read_text(encoding="utf-8"))
+report_file = output_root / "report.json"
+require(report_file.is_file(), "Harness did not create a report; inspect " + str(run / "application.log"))
+batch = json.loads(report_file.read_text(encoding="utf-8"))
 results = []
 totals = Counter()
 expected_failures = set()
 for item in batch["Items"]:
-    name = Path(item["SourceFile"]).name
+    name = Path(item["Source"]).name
     result = {"sample": name, "feed": item["Feed"], "status": item["Status"], "checks": {}}
     try:
         original = sources[name]
-        require(Path(item["SourceFile"]).read_bytes() == original, "Source bytes changed")
-        require(item["SourceSha256"] == digest(original), "Source hash in batch report differs")
+        require(Path(item["Source"]).read_bytes() == original, "Source bytes changed")
+        require(item["Sha256"] == digest(original), "Source hash in batch report differs")
+        require(item["Bytes"] == len(original), "Source size in batch report differs")
         if name in NEGATIVE_SAMPLES:
             # Negative-testing samples must be rejected at their intended stage and retained unchanged.
-            require(item["Status"] == "Rejected" and item["OutputFile"] is None, "Negative sample outcome: " + item["Status"])
-            require(Path(item["RetainedFile"]).read_bytes() == original, "Retained negative sample changed")
-            error = Path(item["ErrorReport"]).read_text(encoding="utf-8")
-            require("error: " + NEGATIVE_SAMPLES[name] in error, "Unexpected rejection reason: " + error.strip().splitlines()[-1])
-            expected_failures.update({str(Path(item["RetainedFile"])), str(Path(item["ErrorReport"]))})
+            require(item["Status"] == "Rejected" and "Output" not in item, "Negative sample outcome: " + item["Status"])
+            require(Path(item["DeadLetter"]).read_bytes() == original, "Dead-lettered negative sample changed")
+            error = Path(item["DeadLetter"] + ".reason.txt").read_text(encoding="utf-8")
+            require(NEGATIVE_SAMPLES[name] in error, "Unexpected rejection reason: " + error.strip())
+            require(not (output_root / "published" / item["Feed"] / name).exists(), "Negative sample was published")
+            require(Path(item["Log"]).is_file(), "Transaction log is missing")
+            expected_failures.update({str(Path(item["DeadLetter"])), str(Path(item["DeadLetter"] + ".reason.txt"))})
             result["checks"].update(source_unchanged=True, rejected_with_expected_reason=True)
             result["verification"] = "Passed"
             results.append(result)
             continue
         require(item["Status"] == "Published", "Application outcome: " + item["Status"])
-        output_path = Path(item["OutputFile"])
+        output_path = Path(item["Output"])
         output = output_path.read_bytes()
         before, after = payload(original), payload(output)
         result.update(source_sha256=digest(original), output_sha256=digest(output),
@@ -157,9 +161,9 @@ for item in batch["Items"]:
             result["empty_or_null_replacements_preserved"] = sum(left is None or left == "" for left, _ in replacements)
         result["actions"] = {action: actions.get(action, 0) for action in ("Keep", "Mask", "Replace")}
         totals.update(result["actions"])
-        transaction = output_path.stem.rsplit(".", 1)[-1]
-        log_file = docs / "feed-logs" / (item["Feed"] + "." + transaction + ".txt")
+        log_file = Path(item["Log"])
         require(log_file.is_file(), "Transaction log is missing")
+        require("Transaction: " + item["MessageId"] in log_file.read_text(encoding="utf-8"), "Transaction log ID differs")
         result["checks"]["transaction_log_present"] = True
         result["verification"] = "Passed"
     except (ValueError, AssertionError, OSError, KeyError) as error:
@@ -169,10 +173,10 @@ for item in batch["Items"]:
 
 statuses = Counter(item["Status"] for item in batch["Items"])
 require({result["sample"] for result in results} == set(sources), "Batch did not cover every supplied source")
-pending = [str(path) for folder in (docs / "input-feeds", docs / "feed-processing") for path in folder.rglob("*") if path.is_file()]
-failed_files = [str(path) for path in (docs / "failed-feeds").rglob("*") if path.is_file() and str(path) not in expected_failures]
+pending = [item["Source"] for item in batch["Items"] if item["Status"] not in ("Published", "Rejected")]
+failed_files = [str(path) for path in (output_root / "dead-letter").rglob("*") if path.is_file() and str(path) not in expected_failures]
 summary = dict(started_at=started.isoformat(), command=command, application_exit_code=completed.returncode,
-               batch_report=str(reports[0]), application_log=str(run / "application.log"),
+               batch_report=str(report_file), application_log=str(run / "application.log"),
                total_samples=len(results), statuses=dict(statuses), totals=dict(totals),
                total_identified_pnr_occurrences=sum(r.get("identified_pnr_occurrences", 0) for r in results),
                all_checks_passed=completed.returncode == (2 if NEGATIVE_SAMPLES else 0) and all(r["verification"] == "Passed" for r in results) and not pending and not failed_files,

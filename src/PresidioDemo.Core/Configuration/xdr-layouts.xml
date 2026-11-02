@@ -1,0 +1,369 @@
+<?xml version='1.0' encoding='utf-8'?>
+<xdrLayouts>
+  <!--Original structural format. One sequence per binary feed; no policies or JSON paths are embedded here.-->
+  <!-- Confirmed string names match reference mappings and policy fields. Uncertain names
+       remain unchanged. Nested optional strings use explicit paths in the reference file.
+       Capture names/patterns belong to reference mappings; masking actions belong to policies. -->
+  <!-- Strings carry a big-endian length word and zero padding to a four-byte boundary;
+       length zero means an empty value. Optional groups use a 0/1 presence word.
+       preserveWidths requires masks to retain framing, raw words and unselected bytes.
+       Unknown trailing bytes or unsupported optional states retain input without publication. -->
+  <!-- words is shorthand for fixedArray of N uint32 Value members: exactly N * 4 bytes,
+       with no count prefix. The original fixedArray syntax remains supported.
+       The loader expands words before processing, so paths, offsets and validation are unchanged.
+       Keep strings, expected constants and optional boundaries explicit and in wire order. -->
+  <feed type="ACI" configured="true" preserveWidths="true">
+    <!-- Reviewed policy projection for the supplied sample family. The ACI module owns
+         semantic linked-list decoding and full encoding; this sequence constrains policy coverage. -->
+    <uint32 name="Word000" expected="2" />
+    <uint32 name="Word001" />
+    <string name="airlineCode" max="4096" />
+    <uint32 name="Word003" />
+    <string name="flightDate" max="4096" />
+    <words name="Words005" count="2" />
+    <string name="terminatingCity" max="4096" />
+    <words name="Words008" count="6" />
+    <string name="flightProcessName" max="4096" />
+    <uint32 name="Word015" />
+    <string name="flightAciTimestamp" max="4096" />
+    <words name="Words017" count="2" />
+    <string name="legCity" max="4096" />
+    <words name="Words020" count="3" />
+    <string name="equipmentCode" max="4096" />
+    <string name="aircraftNumber" max="4096" />
+    <string name="departureGate" max="4096" />
+    <uint32 name="Word026" />
+    <string name="sectorNumber" max="4096" />
+    <words name="Words028" count="2" />
+    <string name="estimatedDepartureDate" max="4096" />
+    <uint32 name="Word031" />
+    <string name="scheduledDepartureDate" max="4096" />
+    <uint32 name="Word033" />
+    <string name="boardingDate" max="4096" />
+    <words name="Words035" count="43" />
+    <string name="pnr" max="6" />
+    <words name="Words079" count="2" />
+    <string name="passengerName" max="4096" />
+    <words name="Words082" count="7" />
+    <string name="passengerProcessName" max="4096" />
+    <words name="Words090" count="3" />
+    <string name="passengerFlightAirline" max="4096" />
+    <uint32 name="Word094" />
+    <string name="passengerFlightDate" max="4096" />
+    <words name="Words096" count="34" />
+    <optional name="OptionalGroupA">
+      <struct name="Body">
+        <words name="Words131" count="4" />
+        <string name="Counted135" max="4096" />
+        <words name="Words136" count="2" />
+        <string name="Counted138" max="4096" />
+        <uint32 name="Word139" />
+      </struct>
+    </optional>
+    <words name="Words131" count="2" />
+    <optional name="OptionalGroupB">
+      <struct name="Body">
+        <words name="Words134" count="3" />
+        <string name="Counted137" max="4096" />
+        <words name="Words138" count="5" />
+      </struct>
+    </optional>
+    <words name="Words134" count="2" />
+    <optional name="OptionalGroupC">
+      <struct name="Body">
+        <words name="Words137" count="7" />
+      </struct>
+    </optional>
+    <words name="Words137" count="11" />
+    <optional name="OptionalGroupD">
+      <struct name="Body">
+        <words name="Words167" count="7" />
+      </struct>
+    </optional>
+    <words name="Words149" count="9" />
+    <string name="aciTransactionTime" max="4096" />
+    <string name="aciTransactionDate" max="4096" />
+    <words name="Words160" count="5" />
+    <string name="unresolvedIdentifier" max="4096" />
+    <string name="unresolvedRecordReference" max="4096" />
+    <words name="Words167" count="3" />
+  </feed>
+  <feed type="ETKT" configured="true" preserveWidths="true">
+    <!-- Observed type-5 history record in source declaration order (EtktStructureDefinitions).
+         Every documented counted string is declared, so a populated value is mapped and protected
+         instead of hidden in a raw-word block. Character and integer slots stay raw words, named by
+         their first slot index; empty strings and words share one four-byte encoding. -->
+    <uint32 name="Word000" expected="5" />
+    <words name="Words001" count="2" />
+    <string name="entryDate" max="4096" />
+    <string name="entryTime" max="4096" />
+    <string name="agentTerminalAddress" max="6" />
+    <string name="agentCityCode" max="4096" />
+    <words name="Words007" count="5" />
+    <string name="agentSignInNumber" max="4096" />
+    <words name="Words013" count="2" />
+    <string name="ticketNumber" max="4096" />
+    <words name="Words016" count="11" />
+    <string name="historySequenceNumber" max="4096" />
+    <string name="ticketStatusRecord" max="4096" />
+    <string name="passengerName" max="4096" />
+    <string name="totalFare" max="4096" />
+    <string name="formOfPayment" max="4096" />
+    <string name="exchangeDocument" max="4096" />
+    <string name="createDate" max="4096" />
+    <words name="Words034" count="3" />
+    <string name="issueSpare3" max="4096" />
+    <string name="issueSpare4" max="4096" />
+    <string name="newTicketNumber" max="4096" />
+    <words name="Words040" count="1" />
+    <string name="exchangeComment" max="4096" />
+    <string name="oldTicketNumber" max="4096" />
+    <words name="Words043" count="3" />
+    <string name="exchangeSpare3" max="4096" />
+    <string name="exchangeSpare4" max="4096" />
+    <string name="newRefundComment" max="4096" />
+    <string name="previousRefundComment" max="4096" />
+    <words name="Words050" count="3" />
+    <string name="refundSpare3" max="4096" />
+    <string name="refundSpare4" max="4096" />
+    <string name="newPassengerName" max="4096" />
+    <string name="previousPassengerName" max="4096" />
+    <words name="Words057" count="3" />
+    <string name="nameSpare3" max="4096" />
+    <string name="nameSpare4" max="4096" />
+    <string name="newCarrier" max="4096" />
+    <string name="newFlightNumber" max="4096" />
+    <string name="newFlightDate" max="4096" />
+    <string name="newDepartureTime" max="4096" />
+    <string name="newArrivalTime" max="4096" />
+    <string name="newBoardPoint" max="4096" />
+    <string name="newOffPoint" max="4096" />
+    <string name="newClass" max="4096" />
+    <words name="Words070" count="2" />
+    <string name="newOperatingFlightNumber" max="4096" />
+    <words name="Words073" count="4" />
+    <string name="previousFlightNumber" max="4096" />
+    <string name="previousFlightDate" max="4096" />
+    <string name="previousDepartureTime" max="4096" />
+    <string name="previousArrivalTime" max="4096" />
+    <string name="previousBoardPoint" max="4096" />
+    <string name="previousOffPoint" max="4096" />
+    <words name="Words083" count="4" />
+    <string name="previousOperatingFlightNumber" max="4096" />
+    <words name="Words088" count="5" />
+    <string name="flightSpare3" max="4096" />
+    <string name="flightSpare4" max="4096" />
+    <string name="newPurgeDate" max="4096" />
+    <string name="newUnflownDate" max="4096" />
+    <string name="oldPurgeDate" max="4096" />
+    <string name="oldUnflownDate" max="4096" />
+    <words name="Words099" count="3" />
+    <string name="purgeSpare3" max="4096" />
+    <string name="purgeSpare4" max="4096" />
+    <string name="newPnr" max="4096" />
+    <string name="oldPnr" max="4096" />
+    <string name="fim1Coupon1" max="4096" />
+    <string name="fim2Coupon1" max="4096" />
+    <string name="fim1Coupon2" max="4096" />
+    <string name="fim2Coupon2" max="4096" />
+    <string name="fim1Coupon3" max="4096" />
+    <string name="fim2Coupon3" max="4096" />
+    <string name="fim1Coupon4" max="4096" />
+    <string name="fim2Coupon4" max="4096" />
+    <string name="creditCardNumber" max="4096" />
+    <string name="reservationCommissionAmount" max="4096" />
+    <string name="commissionPenaltyAmount" max="4096" />
+    <string name="penaltyAmount" max="4096" />
+    <string name="settlementAuthorizationCode" max="4096" />
+    <words name="Words119" count="15" />
+    <string name="involuntarySpare3" max="4096" />
+    <string name="involuntarySpare4" max="4096" />
+  </feed>
+  <feed type="PNR" configured="true" preserveWidths="true">
+    <!-- Real-time C-structure PNR feed encoded as XDR. The P2 layout spec gives field meanings, not wire order.
+         Repeating sections are rpcgen linked lists (1 before each element, 0 ends the list); element
+         shapes were fitted to PNR.txt and PNR_02.txt, and unknown words remain neutral. -->
+    <uint32 name="version" expected="2" />
+    <!-- Key 01 (P20HALC, P20KCDT, P20KTIM, P20TDAT, P20TTIM, P20PTIM, P20KRLO); the locator follows the times on the wire. -->
+    <struct name="general">
+      <string name="hostAirline" max="4096" />
+      <string name="creationDate" max="4096" />
+      <string name="creationTime" max="4096" />
+      <string name="transactionDate" max="4096" />
+      <string name="transactionTime" max="4096" />
+      <string name="p2CreationTime" max="4096" />
+      <string name="pnr" max="6" />
+    </struct>
+    <!-- Key 10 indicator characters and counters as uint32 words (P20PETK, P20PTRM, P20PSTF, P20PPTA, P20PPNH, ...). -->
+    <struct name="indicators">
+      <words name="flags" count="11" />
+      <string name="indicatorText" max="4096" />
+    </struct>
+    <!-- Booking origin and purge flight; the spec lists these under key 90 (not detailed for this proof of concept). -->
+    <struct name="bookingOrigin">
+      <words name="words1" count="6" />
+      <string name="changeIdentifier" max="4096" />
+      <string name="agentSine" max="4096" />
+      <string name="originCity" max="4096" />
+      <string name="changeDate" max="4096" />
+      <words name="words2" count="19" />
+      <string name="originIdentifier" max="4096" />
+      <string name="carrier" max="4096" />
+      <string name="pointOfSale" max="4096" />
+      <words name="words3" count="6" />
+      <string name="purgeFlight" max="4096" />
+      <words name="words4" count="10" />
+    </struct>
+    <!-- Key 20 name items. Both samples hold one name item and one first name, so the 20/30 grouping is unverified for multi-passenger PNRs. -->
+    <list name="names" max="99">
+      <struct name="name">
+        <uint32 name="itemNumber" />
+        <uint32 name="partySize" />
+        <uint32 name="nameWord" />
+        <string name="surname" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <list name="firstNames" max="999">
+      <struct name="firstName">
+        <uint32 name="itemNumber" />
+        <string name="givenName" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <!-- Empty linked lists in every sample: a nonzero word means an unmodelled element type and the message is rejected. -->
+    <uint32 name="unresolvedList1" expected="0" />
+    <uint32 name="unresolvedList2" expected="0" />
+    <!-- Key 40 OSI/SSR items; continuation items repeat the prime item number. -->
+    <list name="facts" max="999">
+      <struct name="fact">
+        <uint32 name="itemNumber" />
+        <uint32 name="factType" />
+        <string name="factCode" max="4096" />
+        <string name="text" max="4096" />
+        <words name="tail" count="6" />
+      </struct>
+    </list>
+    <uint32 name="unresolvedList3" expected="0" />
+    <!-- Key 43 FQTV/FQTR/FCPR items; item numbers are shared with key 40. -->
+    <list name="frequentFlyers" max="99">
+      <struct name="frequentFlyer">
+        <uint32 name="itemNumber" />
+        <uint32 name="action" />
+        <string name="factCode" max="4096" />
+        <string name="serviceCode" max="4096" />
+        <string name="carrier" max="4096" />
+        <string name="account" max="4096" />
+        <string name="holderName" max="4096" />
+        <words name="tail" count="8" />
+      </struct>
+    </list>
+    <!-- Key 50 phone items. -->
+    <list name="phones" max="99">
+      <struct name="phone">
+        <uint32 name="phoneType" />
+        <string name="city" max="4096" />
+        <string name="areaCode" max="4096" />
+        <string name="text" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <!-- Key 80 itinerary segments; flightNumber is binary (P20PFL1). -->
+    <list name="itinerary" max="99">
+      <struct name="segment">
+        <uint32 name="itemNumber" />
+        <uint32 name="segmentType" />
+        <string name="actionCode" max="4096" />
+        <string name="departureDate" max="4096" />
+        <string name="dayOfWeek" max="4096" />
+        <uint32 name="partySize" />
+        <string name="carrier" max="4096" />
+        <string name="previousActionCode" max="4096" />
+        <string name="boardPoint" max="4096" />
+        <string name="offPoint" max="4096" />
+        <string name="departureTime" max="4096" />
+        <string name="arrivalTime" max="4096" />
+        <string name="classOfService" max="4096" />
+        <words name="words1" count="3" />
+        <uint32 name="flightNumber" />
+        <words name="words2" count="17" />
+        <string name="statusDate" max="4096" />
+        <string name="statusCode" max="4096" />
+        <words name="tail" count="1" />
+      </struct>
+    </list>
+    <!-- Key 60 remarks; the item count matches the key 10 remarks counter in both samples. -->
+    <list name="remarks" max="999">
+      <struct name="remark">
+        <uint32 name="itemNumber" />
+        <string name="text" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <list name="fareReferences" max="99">
+      <struct name="fareReference">
+        <uint32 name="itemType" />
+        <string name="text" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <uint32 name="unresolvedList4" expected="0" />
+    <!-- Union items: 49 = received-from (RXX...), 54 = remark index (RI-...). -->
+    <list name="referenceItems" max="99">
+      <union name="referenceItem">
+        <case value="49">
+          <struct name="receivedFrom">
+            <string name="code" max="4096" />
+            <string name="text" max="4096" />
+            <words name="tail" count="4" />
+          </struct>
+        </case>
+        <case value="54">
+          <struct name="remarkIndex">
+            <uint32 name="word" />
+            <string name="text" max="4096" />
+            <words name="tail" count="4" />
+          </struct>
+        </case>
+      </union>
+    </list>
+    <!-- Key C0 stored fare lines. -->
+    <list name="storedFare" max="999">
+      <struct name="fareLine">
+        <string name="text" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <!-- Key D0 E-TKT form of payment. -->
+    <list name="etktPayments" max="99">
+      <struct name="etktPayment">
+        <string name="paymentType" max="4096" />
+        <string name="passengerName" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <!-- Key D2 history credits; the two empty lists that follow are D4 and D6. -->
+    <list name="historyCredits" max="999">
+      <struct name="historyCredit">
+        <uint32 name="itemType" />
+        <string name="agentSine" max="4096" />
+        <words name="words" count="4" />
+        <string name="date" max="4096" />
+        <string name="time" max="4096" />
+        <string name="changeIdentifier" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+    <uint32 name="unresolvedList5" expected="0" />
+    <uint32 name="unresolvedList6" expected="0" />
+    <!-- Key D8 passenger history items. -->
+    <list name="passengerHistory" max="999">
+      <struct name="historyItem">
+        <uint32 name="actionCode" />
+        <uint32 name="itemType" />
+        <string name="text" max="4096" />
+        <words name="tail" count="4" />
+      </struct>
+    </list>
+  </feed>
+</xdrLayouts>
