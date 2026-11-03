@@ -13,4 +13,9 @@
     <PackageReference Include="pythonnet" Version="3.2.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- PythonHost imports the bridge from python/ next to the application, so a container image needs no source tree. -->
+    <None Update="Protection/Shared/python/presidio_demo.py" Link="python/presidio_demo.py" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

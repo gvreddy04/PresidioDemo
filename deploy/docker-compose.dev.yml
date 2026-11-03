@@ -1,0 +1,27 @@
+# The feed worker in a container against the Dev broker, for DEV environment testing.
+# Setup:  copy deploy/.env.dev.example to deploy/.env.dev (git-ignored) and fill in the real Dev values;
+#         put the broker's CA certificate (PEM) in deploy/certs/ (git-ignored).
+# Start:  docker compose -f deploy/docker-compose.dev.yml up -d --build
+# Logs:   docker compose -f deploy/docker-compose.dev.yml logs -f worker
+# Stop:   docker compose -f deploy/docker-compose.dev.yml down
+# The broker allows one connection per client name, so each developer's container needs its own Solace__ClientName.
+services:
+  worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: presidio-worker:dev
+    container_name: presidio-worker-dev
+    env_file:
+      - path: .env.dev
+        required: true
+    environment:
+      - DOTNET_ENVIRONMENT=Dev
+    volumes:
+      - ./certs:/app/certs:ro
+    # spaCy's en_core_web_lg needs about 1.5 GB once loaded.
+    mem_limit: 3g
+    # The host waits up to 30 seconds for in-flight messages; Docker's default 10 seconds would cut that short.
+    stop_grace_period: 40s
+    # Exit code 1 means invalid settings or an unreachable broker; unacknowledged messages stay on the broker.
+    restart: on-failure:5

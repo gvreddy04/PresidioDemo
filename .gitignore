@@ -9,3 +9,7 @@ __pycache__/
 
 topics/feeds-demo/v9/actual-run/
 deploy/.env
+
+deploy/.env.*
+!deploy/.env.dev.example
+deploy/certs/

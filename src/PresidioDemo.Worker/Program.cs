@@ -41,6 +41,7 @@ try
     });
     builder.Services.AddSingleton(messaging);
     builder.Services.AddSingleton(pipeline);
+    builder.Services.AddSingleton(presidio);
 
     // Messaging:Transport selects the broker adapter; see MessagingTransports.
     builder.Services.AddConfiguredMessaging(configuration, messaging, baseDirectory);

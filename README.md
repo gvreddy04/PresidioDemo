@@ -34,10 +34,14 @@ PresidioDemo.slnx
 │   ├── FeedPipelineChecks/ FeedRoundTripChecks/ JsonFeeds/ ACI/ ETKT/ PNR/   feed and codec checks
 │   └── unit-tests/                     Python tests, driven through the harness
 ├── tools/FeedSampleSender/             sends sample files to a running worker's input queues
-└── deploy/docker-compose.yml           local Solace broker
+├── Dockerfile                          the worker image (Linux, embedded CPython, Presidio, spaCy model)
+└── deploy/
+    ├── docker-compose.yml              local Solace broker; with --profile worker, the worker container too
+    ├── docker-compose.dev.yml          the worker container against the Dev broker
+    └── .env.dev.example                Dev values to copy into the git-ignored deploy/.env.dev
 ```
 
-Project references point inward only: Worker → Core, Messaging and the adapters; adapters → Messaging. Core never references messaging, and Messaging never references a broker. Feed-code namespaces are unchanged (`PresidioDemo.Feeds.*`, `PresidioDemo.Pipeline`, `PresidioDemo.Protection`); new code uses `PresidioDemo.Messaging`, `PresidioDemo.Messaging.Solace` and `PresidioDemo.Worker`. The Python environment stays at `src/.venv`.
+Project references point inward only: Worker → Core, Messaging and the adapters; adapters → Messaging. Core never references messaging, and Messaging never references a broker. Feed-code namespaces are unchanged (`PresidioDemo.Feeds.*`, `PresidioDemo.Pipeline`, `PresidioDemo.Protection`); new code uses `PresidioDemo.Messaging`, `PresidioDemo.Messaging.Solace` and `PresidioDemo.Worker`. The Python environment stays at `src/.venv`; the container image uses `/opt/venv` through `Presidio:PythonEnvironment`.
 
 ![Feed protection workflow](docs/diagrams/presidio-feed-workflow.svg)
 
@@ -82,11 +86,11 @@ Nothing in Core, the feed code, the workers or the routes changes.
 
 All settings are in one file, [src/PresidioDemo.Worker/appsettings.json](src/PresidioDemo.Worker/appsettings.json):
 
-- **Shared settings** at the top: `Messaging` (transport, delivery limits, and one route per feed with `Input`, `Output` and `DeadLetter`), `Presidio` (the three XML files) and `Logging`.
-- **`Environments`**: one section per environment, holding only what differs. Today these are `Local` (local broker) and `Dev`. Adding `QA`, `UAT` or `Prod` means adding one more block.
+- **Shared settings** at the top: `Messaging` (transport and delivery limits), `Presidio` (the three XML files and an optional `PythonEnvironment` folder) and `Logging`.
+- **`Environments`**: one section per environment, holding only what differs, including its `Messaging:Routes` (`Feed`, `Input`, `Output` and `DeadLetter`). An environment routes only the feeds its broker carries; the worker does not consume the others. Today these are `Local` (local broker, all five feeds) and `Dev` (ACI, ETKT and PNR). Adding `QA`, `UAT` or `Prod` means adding one more block.
 - **`CurrentEnvironment`**: the default when nothing else selects one (`Local`, for developer machines).
 
-The `DOTNET_ENVIRONMENT` variable selects the environment; if it isn't set, `CurrentEnvironment` in the file applies. On AWS, each environment's ECS task definition (or EKS pod spec) sets `DOTNET_ENVIRONMENT` (for example `QA`), so the same image runs everywhere. Values are applied in this order, with later ones winning: shared settings, then the selected environment's section, then environment variables with double underscores (for example `Solace__Host`). Each environment uses its own Solace Message VPN, so queue names are the same everywhere.
+The `DOTNET_ENVIRONMENT` variable selects the environment; if it isn't set, `CurrentEnvironment` in the file applies. On AWS, each environment's ECS task definition (or EKS pod spec) sets `DOTNET_ENVIRONMENT` (for example `QA`), so the same image runs everywhere. Values are applied in this order, with later ones winning: shared settings, then the selected environment's section, then environment variables with double underscores (for example `Solace__Host` or `Messaging__Routes__2__Input`). The `Dev` section holds DemoAir stand-in names only; the real broker, VPN, user and queue names are supplied through environment variables at deploy time and are never committed.
 
 Secrets are never in the file. `Solace:PasswordEnvironmentVariable` names the variable holding the password (`SOLACE_PASSWORD`). On AWS, the task definition's `secrets` field injects it from Secrets Manager when the task starts, so the application makes no AWS calls.
 
@@ -95,7 +99,8 @@ Startup stops with one clear message for any of these:
 - unknown sections or keys
 - a password in the file
 - an HTTP host, or `tcps://` without certificate validation
-- a feed without exactly one route, or shared or wildcard destinations
+- a route for an unknown feed, a feed with more than one route, or shared or wildcard destinations
+- a `Presidio:PythonEnvironment` folder without `pyvenv.cfg`
 - invalid XML configuration
 
 `Solace:ProvisionQueues` creates the input and dead-letter queues and is enabled only for `Local`; other environments use queues provisioned by the broker team.
@@ -209,7 +214,7 @@ Python runs inside the .NET worker process. Processing makes no HTTP calls or mo
 
 ## Setup and run
 
-Requires Windows, the .NET 10 SDK and Python 3.12; running against a local broker also needs Docker or Podman. Run these steps in PowerShell from the project root.
+Running from source requires Windows, the .NET 10 SDK and Python 3.12; running against a local broker also needs Docker or Podman. Run these steps in PowerShell from the project root. The [container image](#run-the-worker-in-docker) needs only Docker.
 
 ### 1. Create the Python virtual environment
 
@@ -296,6 +301,39 @@ Protected messages are published to the `airline/<feed>/protected` topics and re
 Verified locally with Docker Desktop and broker 10.26.0.9163: the 20 sample files produced 17 protected messages and 3 dead-lettered negative-test messages, and all input queues drained.
 
 To run a deployed environment, set `DOTNET_ENVIRONMENT` (for example `Dev`) and `SOLACE_PASSWORD`, then start `PresidioDemo.Worker`. It exits with code 1 and one message if the settings are invalid or the broker is unreachable.
+
+### Run the worker in Docker
+
+The [Dockerfile](Dockerfile) builds a Linux image of the worker on the .NET 10 runtime (Ubuntu 24.04) with CPython 3.12, Presidio and the spaCy model in `/opt/venv`. The model is downloaded while the image is built, and the image sets `TLDEXTRACT_PUBLIC_SUFFIX_LIST_URLS` empty so Presidio's email recognizer uses its bundled suffix list; the running worker makes no HTTP calls. The image is about 2 GB, the container needs about 1.5 GB of memory, and startup takes about 30 seconds while the model loads.
+
+**Local broker.** Run the broker and the worker container together; the worker starts once the broker is healthy and connects as `presidio-worker-container`:
+
+```powershell
+docker compose -f deploy/docker-compose.yml --profile worker up -d --build
+docker compose -f deploy/docker-compose.yml logs -f worker   # wait for READY
+```
+
+Then send the samples from the host as above (`dotnet run --project tools/FeedSampleSender`). `docker compose -f deploy/docker-compose.yml --profile worker down` stops both.
+
+Verified with Docker Desktop: the worker container (1.8 GB image) was ready about 4 seconds after connecting, processed the 20 samples into 17 protected and 3 dead-lettered messages, and stopped cleanly with exit code 0 on SIGTERM.
+
+**Dev broker.** Copy [deploy/.env.dev.example](deploy/.env.dev.example) to `deploy/.env.dev` and replace the DemoAir stand-ins with the real Dev host, VPN, user, password, queues and topics. Put the broker's CA certificate (PEM) in `deploy/certs/`. Both are git-ignored; never commit real values. Give `Solace__ClientName` a value of your own, because the broker disconnects an existing connection that uses the same client name.
+
+```powershell
+docker compose -f deploy/docker-compose.dev.yml up -d --build
+docker compose -f deploy/docker-compose.dev.yml logs -f worker
+```
+
+`Dev` routes ACI, ETKT (the `TKT` queue) and PNR; its other queues are not consumed. `ProvisionQueues` is off, so the input and dead-letter queues must already exist and the user must be allowed to publish to the output topics. Before sending samples into Dev queues, confirm with the broker owner that this is allowed. To send them, load the same variables into the terminal, then run the sender, which skips feeds that `Dev` does not route:
+
+```powershell
+Get-Content deploy/.env.dev | Where-Object { $_ -match '^[A-Za-z_]+=' } | ForEach-Object { $name, $value = $_ -split '=', 2; Set-Item "env:$name" $value }
+$env:DOTNET_ENVIRONMENT = "Dev"
+$env:Solace__TrustStoreFolder = "$PWD/deploy/certs"
+dotnet run --project tools/FeedSampleSender
+```
+
+`docker compose -f deploy/docker-compose.dev.yml down` stops the worker after the current messages; unacknowledged messages stay on the broker.
 
 ### Process files without a broker
 

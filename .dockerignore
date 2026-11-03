@@ -1,0 +1,7 @@
+# The image needs only the worker source and the Python requirements.
+*
+!src/
+!requirements.txt
+src/.venv/
+**/bin/
+**/obj/
