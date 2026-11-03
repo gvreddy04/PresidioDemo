@@ -3,7 +3,8 @@ using Python.Runtime;
 namespace PresidioDemo.Protection;
 
 /// <summary>
-/// Starts embedded CPython using the project's src/.venv and calls src/PresidioDemo.Core/Protection/Shared/python/presidio_demo.py.
+/// Starts embedded CPython from a virtual environment (the project's src/.venv by default) and calls python/presidio_demo.py,
+/// which the build copies next to the application.
 /// </summary>
 public static class PythonHost
 {
@@ -50,11 +51,11 @@ public static class PythonHost
     /// <summary>
     /// Initializes embedded CPython and loads the existing local Presidio module and bundled NLP model.
     /// </summary>
+    /// <param name="pythonEnvironment">The virtual environment folder, or null for the project's src/.venv.</param>
     /// <exception cref="FileNotFoundException">A required local runtime or configuration file is missing.</exception>
-    public static void Start()
+    public static void Start(string? pythonEnvironment = null)
     {
-        string projectDir = ProjectDir = FindProjectDir();
-        string venvDir = Path.Combine(projectDir, "src", ".venv");
+        string venvDir = pythonEnvironment ?? Path.Combine(FindProjectDir(), "src", ".venv");
 
         // pyvenv.cfg records the base Python install ("home") and its version.
         var cfg = File.ReadAllLines(Path.Combine(venvDir, "pyvenv.cfg"))
@@ -62,23 +63,41 @@ public static class PythonHost
             .Where(parts => parts.Length == 2)
             .ToDictionary(parts => parts[0].Trim(), parts => parts[1].Trim());
 
-        string pythonHome = cfg["home"];
+        string home = cfg["home"];
         string[] version = (cfg.GetValueOrDefault("version") ?? cfg["version_info"]).Split('.'); // uv writes version_info
+        string pythonVersion = $"{version[0]}.{version[1]}";
+        string moduleDir = Path.Combine(AppContext.BaseDirectory, "python");
 
-        string pythonDll = Path.Combine(pythonHome, $"python{version[0]}{version[1]}.dll");
-        if (!File.Exists(pythonDll))
+        if (OperatingSystem.IsWindows())
         {
-            throw new FileNotFoundException(
-                        $"{pythonDll} not found. Was Python 3.12 uninstalled? Recreate src/.venv (README: Run).");
-        }
+            // A Windows venv's home is the install folder, which holds the DLL and Lib.
+            string pythonDll = Path.Combine(home, $"python{version[0]}{version[1]}.dll");
+            if (!File.Exists(pythonDll))
+            {
+                throw new FileNotFoundException(
+                            $"{pythonDll} not found. Was Python 3.12 uninstalled? Recreate src/.venv (README: Run).");
+            }
 
-        Runtime.PythonDLL = pythonDll;
-        PythonEngine.PythonHome = pythonHome;
-        PythonEngine.PythonPath = string.Join(Path.PathSeparator,
-            Path.Combine(pythonHome, "Lib"),
-            Path.Combine(pythonHome, "DLLs"),
-            Path.Combine(venvDir, "Lib", "site-packages"),
-            Path.Combine(projectDir, "src", "PresidioDemo.Core", "Protection", "Shared", "python"));
+            Runtime.PythonDLL = pythonDll;
+            PythonEngine.PythonHome = home;
+            PythonEngine.PythonPath = string.Join(Path.PathSeparator,
+                Path.Combine(home, "Lib"),
+                Path.Combine(home, "DLLs"),
+                Path.Combine(venvDir, "Lib", "site-packages"),
+                moduleDir);
+        }
+        else
+        {
+            // A Linux venv's home is the bin folder; the shared library is found on the system library path.
+            string prefix = Path.GetDirectoryName(home) ?? home;
+            Runtime.PythonDLL = $"libpython{pythonVersion}.so.1.0";
+            PythonEngine.PythonHome = prefix;
+            PythonEngine.PythonPath = string.Join(Path.PathSeparator,
+                Path.Combine(prefix, "lib", "python" + pythonVersion),
+                Path.Combine(prefix, "lib", "python" + pythonVersion, "lib-dynload"),
+                Path.Combine(venvDir, "lib", "python" + pythonVersion, "site-packages"),
+                moduleDir);
+        }
 
         PythonEngine.Initialize();
         PythonEngine.BeginAllowThreads();
@@ -116,16 +135,6 @@ public static class PythonHost
         throw new DirectoryNotFoundException(
             "No src/.venv folder found in the project folder. Create it first (README: Run).");
     }
-
-    #endregion
-
-    #region Properties, Indexers
-
-    /// <summary>
-    /// The folder that contains src/ and docs/.
-    /// </summary>
-    /// <value>The project directory containing the existing Python environment and feed workspace.</value>
-    public static string ProjectDir { get; private set; } = "";
 
     #endregion
 }

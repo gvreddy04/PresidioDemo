@@ -1,6 +1,8 @@
 # Local Solace broker for the Local environment in src/PresidioDemo.Worker/appsettings.json.
 # Start:  docker compose -f deploy/docker-compose.yml up -d
 #         SOLACE_ADMIN_PASSWORD comes from the environment or from deploy/.env (git-ignored, local only).
+# Worker: docker compose -f deploy/docker-compose.yml --profile worker up -d --build
+#         also runs the feed worker in a container (Local environment) once the broker is healthy.
 # Stop:   docker compose -f deploy/docker-compose.yml down
 # The worker connects over the native protocol on 55555. Port 8080 is the PubSub+ Manager web UI for people;
 # the application never calls it. The image is pinned to the version verified locally; change it to your
@@ -22,3 +24,31 @@ services:
       - username_admin_globalaccesslevel=admin
       - username_admin_password=${SOLACE_ADMIN_PASSWORD:?Set SOLACE_ADMIN_PASSWORD for the broker admin user}
       - system_scaling_maxconnectioncount=100
+    # The broker's own readiness probe, run inside its container; the worker only uses the native port.
+    healthcheck:
+      test: ["CMD", "curl", "--silent", "--fail", "--output", "/dev/null", "http://localhost:5550/health-check/guaranteed-active"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+
+  worker:
+    profiles: [worker]
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: presidio-worker:dev
+    container_name: presidio-worker-local
+    depends_on:
+      solace:
+        condition: service_healthy
+    environment:
+      - DOTNET_ENVIRONMENT=Local
+      - Solace__Host=tcp://solace:55555
+      # Its own client name, so the sample sender and a worker started with dotnet run can connect at the same time.
+      - Solace__ClientName=presidio-worker-container
+      # The default local VPN accepts any password.
+      - SOLACE_PASSWORD=${SOLACE_PASSWORD:-local-only}
+    mem_limit: 3g
+    stop_grace_period: 40s
+    restart: on-failure

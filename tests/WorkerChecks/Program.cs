@@ -27,8 +27,10 @@ Func<string, string?> password = name => name == "SOLACE_PASSWORD" ? "fixture-pa
 var (local, localName) = EnvironmentConfiguration.Build(settingsFile, noVariables);
 Require(localName == "Local" && local["Solace:Host"] == "tcp://localhost:55555", "without DOTNET_ENVIRONMENT the file's CurrentEnvironment (Local) applies");
 var (dev, devName) = EnvironmentConfiguration.Build(settingsFile, name => name == EnvironmentConfiguration.EnvironmentVariable ? "Dev" : null);
-Require(devName == "Dev" && dev["Solace:Host"]!.StartsWith("tcps://") && dev["Solace:Vpn"] == "airline-dev", "DOTNET_ENVIRONMENT=Dev selects the Dev section");
-Require(dev["Messaging:Routes:2:Input"] == "q.pnr.raw" && local["Messaging:Routes:2:Input"] == "q.pnr.raw", "shared routes apply to every environment; each environment uses its own VPN");
+Require(devName == "Dev" && dev["Solace:Host"]!.StartsWith("tcps://") && dev["Solace:Vpn"] == "dev-demoair-vpn", "DOTNET_ENVIRONMENT=Dev selects the Dev section");
+Require(local["Messaging:Routes:2:Input"] == "q.pnr.raw" && dev["Messaging:Routes:2:Input"] == "DEMOAIR.OPS.PIIDEMO.COS.PNR.MI.1"
+    && dev["Messaging:Routes:3:Feed"] is null && dev["Messaging:Transport"] == "Solace",
+    "each environment lists its own routes; shared Messaging settings still apply");
 Reject(() => EnvironmentConfiguration.Build(settingsFile, name => name == EnvironmentConfiguration.EnvironmentVariable ? "QA" : null),
     "an environment without a section stops startup");
 RejectVariant(json => json["Solaceee"] = new JsonObject(), "an unknown top-level section is rejected");
@@ -44,7 +46,9 @@ finally { Environment.SetEnvironmentVariable("Solace__Host", null); }
 
 // Settings validation
 var messaging = MessagingOptions.Load(local);
-Require(messaging.Transport == "Solace" && FeedWorkerService.Routes(messaging).Count == FeedCatalog.All.Count, "the shipped settings route every feed");
+Require(messaging.Transport == "Solace" && FeedWorkerService.Routes(messaging).Count == FeedCatalog.All.Count, "the Local settings route every feed");
+Require(FeedWorkerService.Routes(MessagingOptions.Load(dev)).Keys.ToHashSet().SetEquals([FeedType.ACI, FeedType.ETKT, FeedType.PNR]),
+    "Dev routes only the feeds its broker carries; the other feeds are not consumed");
 Require(SolaceOptions.Load(local, runRoot, password).ProvisionQueues && !SolaceOptions.Load(dev, runRoot, password).ProvisionQueues,
     "Local and Dev Solace sections validate; only Local creates queues");
 Reject(() => SolaceOptions.Load(local, runRoot, noVariables), "a missing password environment variable stops startup");
@@ -57,8 +61,17 @@ RejectMessaging("Messaging:Routes:1:Input", "q.aci.raw", "two feeds sharing a qu
 RejectMessaging("Messaging:Routes:0:Output", "airline/>", "wildcard output topics are rejected");
 RejectMessaging("Messaging:Routes:0:DeadLetter", "q.aci.raw", "a dead-letter queue equal to the input is rejected");
 RejectMessaging("Messaging:Routes:0:Typo", "x", "unknown route keys are rejected");
-var missingFeed = new ConfigurationBuilder().AddConfiguration(local).AddInMemoryCollection([new("Messaging:Routes:4:Feed", "ACI")]).Build();
-Reject(() => FeedWorkerService.Routes(MessagingOptions.Load(missingFeed)), "every feed needs exactly one route");
+var duplicateFeed = new ConfigurationBuilder().AddConfiguration(local).AddInMemoryCollection([new("Messaging:Routes:4:Feed", "ACI")]).Build();
+Reject(() => FeedWorkerService.Routes(MessagingOptions.Load(duplicateFeed)), "a feed with two routes is rejected");
+var unknownFeed = new ConfigurationBuilder().AddConfiguration(local).AddInMemoryCollection([new("Messaging:Routes:4:Feed", "IND")]).Build();
+Reject(() => FeedWorkerService.Routes(MessagingOptions.Load(unknownFeed)), "a route for a feed without a codec is rejected");
+Require(PresidioOptions.Load(local, runRoot).PythonEnvironment is null, "without Presidio:PythonEnvironment the project's src/.venv applies");
+string venv = Directory.CreateDirectory(Path.Combine(runRoot, "venv")).FullName;
+File.WriteAllText(Path.Combine(venv, "pyvenv.cfg"), "home = /usr/bin\nversion = 3.12.3\n");
+var withVenv = new ConfigurationBuilder().AddConfiguration(local).AddInMemoryCollection([new("Presidio:PythonEnvironment", "venv")]).Build();
+Require(PresidioOptions.Load(withVenv, runRoot).PythonEnvironment == venv, "Presidio:PythonEnvironment resolves against the application folder");
+var noVenv = new ConfigurationBuilder().AddConfiguration(local).AddInMemoryCollection([new("Presidio:PythonEnvironment", "missing")]).Build();
+Reject(() => PresidioOptions.Load(noVenv, runRoot), "a Python environment without pyvenv.cfg stops startup");
 
 // FeedWorker delivery rules
 var options = MessagingOptions.Load(local);

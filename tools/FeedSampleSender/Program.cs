@@ -49,7 +49,13 @@ try
     await connection.ConnectAsync(CancellationToken.None);
     foreach (string file in files)
     {
-        var route = routes[FeedFileRouting.FromPath(file)];
+        var feed = FeedFileRouting.FromPath(file);
+        if (!routes.TryGetValue(feed, out var route))
+        {
+            // The selected environment does not route this feed, so no worker would consume the file.
+            Console.WriteLine($"SKIP {FeedCatalog.Get(feed).FolderName,-12} {Path.GetFileName(file)} (no route in {environment})");
+            continue;
+        }
         string format = Path.GetExtension(file).Equals(".txt", StringComparison.OrdinalIgnoreCase) ? FeedWorker.MqExportFormat : FeedWorker.RawFormat;
         await publisher.PublishAsync(new(new(route.Input, DestinationKind.Queue), await File.ReadAllBytesAsync(file), Guid.NewGuid().ToString("N"),
             Path.GetFileName(file), new Dictionary<string, string> { [MessageHeaders.PayloadFormat] = format }), CancellationToken.None);

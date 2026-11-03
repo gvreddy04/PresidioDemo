@@ -15,10 +15,11 @@ namespace PresidioDemo.Worker;
 /// <param name="publisher">The selected broker adapter's publisher.</param>
 /// <param name="messaging">The validated broker-neutral settings.</param>
 /// <param name="pipeline">The validated protection configuration.</param>
+/// <param name="presidio">The protection settings, including the Python virtual environment.</param>
 /// <param name="loggers">Creates one logger per feed worker.</param>
 /// <param name="lifetime">Stops the host when the worker cannot continue.</param>
 public sealed class FeedWorkerService(IMessagingConnection connection, IMessageConsumer consumer, IMessagePublisher publisher,
-    MessagingOptions messaging, FeedPipelineConfiguration pipeline, ILoggerFactory loggers, IHostApplicationLifetime lifetime) : BackgroundService
+    MessagingOptions messaging, FeedPipelineConfiguration pipeline, PresidioOptions presidio, ILoggerFactory loggers, IHostApplicationLifetime lifetime) : BackgroundService
 {
 
     #region Properties, Indexers
@@ -34,11 +35,12 @@ public sealed class FeedWorkerService(IMessagingConnection connection, IMessageC
     #region Methods
 
     /// <summary>
-    /// Maps each configured route to its feed, requiring exactly one route per supported feed.
+    /// Maps each configured route to its feed. An environment routes only the feeds its broker carries;
+    /// feeds without a route are not consumed.
     /// </summary>
     /// <param name="messaging">The validated broker-neutral settings.</param>
-    /// <returns>The route for each feed.</returns>
-    /// <exception cref="InvalidOperationException">A route names an unknown feed or a feed has no route.</exception>
+    /// <returns>The route for each routed feed.</returns>
+    /// <exception cref="InvalidOperationException">A route names an unknown feed or a feed has more than one route.</exception>
     public static IReadOnlyDictionary<FeedType, MessageRoute> Routes(MessagingOptions messaging)
     {
         var routes = new Dictionary<FeedType, MessageRoute>();
@@ -50,11 +52,6 @@ public sealed class FeedWorkerService(IMessagingConnection connection, IMessageC
             {
                 throw new InvalidOperationException($"Feed {route.Feed} has more than one route.");
             }
-        }
-        var missing = FeedCatalog.All.Where(f => !routes.ContainsKey(f.Type)).Select(f => f.FolderName).ToArray();
-        if (missing.Length > 0)
-        {
-            throw new InvalidOperationException("Messaging:Routes has no route for " + string.Join(", ", missing) + ".");
         }
         return routes;
     }
@@ -73,11 +70,17 @@ public sealed class FeedWorkerService(IMessagingConnection connection, IMessageC
         {
             await connection.ConnectAsync(stoppingToken);
             log.LogInformation("Initializing embedded local Presidio and the bundled NLP model...");
-            PythonHost.Start();
+            PythonHost.Start(presidio.PythonEnvironment);
             pythonStarted = true;
             var processor = new FeedMessageProcessor(pipeline.CreateRouter(new PresidioFeedProtector()));
             // One worker per feed: .NET parsing and broker I/O overlap across feeds; shared Python calls are serialized.
-            var workers = Routes(messaging).Select(pair => new FeedWorker(pair.Key, pair.Value, messaging, consumer, publisher, processor,
+            var routes = Routes(messaging);
+            var unrouted = FeedCatalog.All.Where(f => !routes.ContainsKey(f.Type)).Select(f => f.FolderName).ToArray();
+            if (unrouted.Length > 0)
+            {
+                log.LogInformation("No route for {Feeds}; these feeds are not consumed.", string.Join(", ", unrouted));
+            }
+            var workers = routes.Select(pair => new FeedWorker(pair.Key, pair.Value, messaging, consumer, publisher, processor,
                 loggers.CreateLogger("PresidioDemo.Worker." + FeedCatalog.Get(pair.Key).FolderName)).RunAsync(stoppingToken)).ToArray();
             log.LogInformation("READY: {Count} feed workers on {Transport}.", workers.Length, connection.Transport);
             await Task.WhenAll(workers);
