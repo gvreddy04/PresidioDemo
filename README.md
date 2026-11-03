@@ -304,6 +304,8 @@ To run a deployed environment, set `DOTNET_ENVIRONMENT` (for example `Dev`) and 
 
 ### Run the worker in Docker
 
+For a step-by-step walkthrough with expected output and troubleshooting, see the [Docker guide](docs/docker-guide.md).
+
 The [Dockerfile](Dockerfile) builds a Linux image of the worker on the .NET 10 runtime (Ubuntu 24.04) with CPython 3.12, Presidio and the spaCy model in `/opt/venv`. The model is downloaded while the image is built, and the image sets `TLDEXTRACT_PUBLIC_SUFFIX_LIST_URLS` empty so Presidio's email recognizer uses its bundled suffix list; the running worker makes no HTTP calls. The image is about 2 GB, the container needs about 1.5 GB of memory, and startup takes about 30 seconds while the model loads.
 
 **Local broker.** Run the broker and the worker container together; the worker starts once the broker is healthy and connects as `presidio-worker-container`:
@@ -334,6 +336,17 @@ dotnet run --project tools/FeedSampleSender
 ```
 
 `docker compose -f deploy/docker-compose.dev.yml down` stops the worker after the current messages; unacknowledged messages stay on the broker.
+
+### Publish the image
+
+[deploy/publish-image.ps1](deploy/publish-image.ps1) builds the image for `linux/amd64`, tags it with the current commit and pushes it. It refuses uncommitted changes unless you pass `-AllowDirty`, and `-DryRun` prints the commands without running them. For Amazon ECR it signs in through the AWS CLI with your AWS profile; the ECR repository must already exist. For any other registry, run `docker login` first.
+
+```powershell
+./deploy/publish-image.ps1 -Registry <account>.dkr.ecr.<region>.amazonaws.com -ExtraTag dev
+./deploy/publish-image.ps1 -Registry docker.io/<user>   # after docker login
+```
+
+The script prints the pushed digest. Reference the digest or the commit tag in the task definition, because moving tags such as `dev` can change.
 
 ### Process files without a broker
 
