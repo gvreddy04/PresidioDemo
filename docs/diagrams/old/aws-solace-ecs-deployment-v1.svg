@@ -1,0 +1,237 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1350" role="img" aria-labelledby="title desc">
+<title id="title">Processing PII with Presidio: build, deploy and run on AWS</title>
+<desc id="desc">Harness builds the repository Dockerfile into one image with the .NET worker, CPython, Presidio and the spaCy model, pushes it to Amazon ECR and deploys it to an ECS Fargate service. The task reads each feed's Solace input queue over the native client, masks known PII inside the process, publishes to the feed's protected topic, and acknowledges the input only after the broker confirms. Rejected or repeatedly failing input goes to the feed's dead letter queue. The Solace password comes from Secrets Manager at task start.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="#444441"/></marker>
+<marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="#A32D2D"/></marker>
+<marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="#185FA5"/></marker>
+<marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="#888780"/></marker>
+<symbol id="q" viewBox="0 0 20 14"><rect x="0.5" y="0.5" width="19" height="13" rx="2" fill="none" stroke="currentColor"/><path d="M6 3V11M10 3V11M14 3V11" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-git" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="4" cy="3.5" r="2"/><circle cx="4" cy="12.5" r="2"/><circle cx="12" cy="6" r="2"/><path d="M4 5.5V10.5M12 8C12 10 8 10 5.5 11.5"/></g></symbol>
+<symbol id="i-run" viewBox="0 0 16 16"><path d="M4 2.5L13 8L4 13.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+<symbol id="i-box" viewBox="0 0 16 16"><path d="M8 1.5L14.5 4.8V11.2L8 14.5L1.5 11.2V4.8Z M1.5 4.8L8 8L14.5 4.8 M8 8V14.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></symbol>
+<symbol id="i-check" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 8.2L7.2 10.3L11 6" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-cloud" viewBox="0 0 16 16"><path d="M4.5 12.5H12A3 3 0 0 0 12 6.5A4 4 0 0 0 4.3 7.6A2.5 2.5 0 0 0 4.5 12.5Z" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+<symbol id="i-lock" viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 7V5A3 3 0 0 1 11 5V7" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-role" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 14.5A5.5 5.5 0 0 1 13.5 14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-log" viewBox="0 0 16 16"><rect x="2.5" y="1.5" width="11" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 5H11M5 8H11M5 11H9" stroke="currentColor" stroke-width="1.3"/></symbol>
+<symbol id="i-net" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6.5"/><path d="M1.5 8H14.5M8 1.5C5.5 4 5.5 12 8 14.5M8 1.5C10.5 4 10.5 12 8 14.5"/></g></symbol>
+<symbol id="i-shield" viewBox="0 0 16 16"><path d="M8 1.5L13.5 3.5V8C13.5 11 11 13.5 8 14.5C5 13.5 2.5 11 2.5 8V3.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+<symbol id="i-py" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5H5.5A2 2 0 0 0 3.5 3.5V6H8.5"/><path d="M8 14.5H10.5A2 2 0 0 0 12.5 12.5V10H7.5"/><path d="M3.5 6A2 2 0 0 0 1.5 8V9A2 2 0 0 0 3.5 11H5"/><path d="M12.5 10A2 2 0 0 0 14.5 8V7A2 2 0 0 0 12.5 5H11"/></g></symbol>
+<style>
+text{font-family:'Segoe UI',Arial,sans-serif;fill:#2C2C2A}
+.h{font-size:16px;font-weight:600}
+.t{font-size:14px;font-weight:600}
+.s{font-size:13px}
+.m{font-size:13px;fill:#5F5E5A}
+.c{font-family:Consolas,'Courier New',monospace;font-size:12px}
+.k{font-size:12px;font-weight:600}
+.ln{fill:none;stroke:#444441;stroke-width:1.5}
+.dl{fill:none;stroke:#A32D2D;stroke-width:1.5;stroke-dasharray:5 4}
+.dp{fill:none;stroke:#185FA5;stroke-width:1.8}
+.pf{fill:none;stroke:#888780;stroke-width:1.4;stroke-dasharray:4 4}
+.iq rect{fill:#FBEAF0;stroke:#993556}.iq{color:#993556}
+.dq rect{fill:#FCEBEB;stroke:#A32D2D}.dq{color:#A32D2D}
+.cq rect{fill:#E1F5EE;stroke:#0F6E56}.cq{color:#0F6E56}
+.mq rect{fill:#FAEEDA;stroke:#BA7517;stroke-dasharray:5 3}.mq{color:#BA7517}
+.bd rect{fill:#FFFFFF;stroke:#185FA5}.bd{color:#185FA5}
+.st rect{fill:#FAEEDA;stroke:#BA7517}.st{color:#BA7517}
+.fw rect{fill:#FFFFFF;stroke:#854F0B}
+.sv rect{fill:#FFFFFF;stroke:#888780}.sv{color:#5F5E5A}
+.miss{fill:#854F0B;font-size:12px;font-weight:600}
+</style>
+</defs>
+<rect width="1800" height="1350" fill="#FFFFFF"/>
+<text class="h" x="30" y="40" style="font-size:22px">Processing PII with Presidio · build, deploy and run on AWS</text>
+<text class="m" x="30" y="64">Proposed Dev deployment: code becomes one Docker image, Harness deploys it to ECS, and the worker processes Solace messages. Amber items need the team's input.</text>
+
+<!-- Build and deploy lane -->
+<rect x="30" y="86" width="1740" height="190" rx="12" fill="#EEF3FA" stroke="#185FA5" stroke-width="1.5"/>
+<text class="h" x="46" y="110" style="fill:#185FA5">Build and deploy · Harness pipeline</text>
+
+<g class="bd"><rect x="50" y="122" width="250" height="140" rx="8"/>
+<use href="#i-git" x="64" y="133" width="16" height="16"/><text class="t" x="88" y="146">Source</text>
+<text class="s" x="64" y="172">PresidioDemo repository</text>
+<text class="s" x="64" y="192">Dockerfile, requirements.txt</text>
+<text class="s" x="64" y="212">appsettings.json (no secrets)</text>
+<text class="m" x="64" y="236">A commit selects the build</text></g>
+
+<g class="bd"><rect x="340" y="122" width="370" height="140" rx="8"/>
+<use href="#i-run" x="354" y="133" width="16" height="16"/><text class="t" x="378" y="146">Harness CI · docker build</text>
+<text class="s" x="354" y="172">Build stage: .NET 10 SDK publishes the worker</text>
+<text class="s" x="354" y="192">Runtime stage: .NET 10 runtime, CPython 3.12 venv</text>
+<text class="s" x="354" y="212">pip: presidio-analyzer, presidio-anonymizer 2.2.364</text>
+<text class="s" x="354" y="232">spaCy 3.8 with en_core_web_lg baked in</text>
+<text class="m" x="354" y="252">linux/amd64 · tagged with the git commit</text></g>
+
+<g class="bd"><rect x="750" y="122" width="280" height="140" rx="8"/>
+<use href="#i-box" x="764" y="133" width="16" height="16"/><text class="t" x="788" y="146">Amazon ECR</text>
+<text class="s" x="764" y="172">Repository presidio-worker</text>
+<text class="s" x="764" y="192">Tag: commit · about 1.8 GB</text>
+<text class="s" x="764" y="212">Scan on push · immutable tags</text>
+<text class="m" x="764" y="236">One image for every feed</text></g>
+
+<g class="bd"><rect x="1070" y="122" width="330" height="140" rx="8"/>
+<use href="#i-run" x="1084" y="133" width="16" height="16"/><text class="t" x="1108" y="146">Harness CD · ECS rolling deploy</text>
+<text class="s" x="1084" y="172">Registers the task definition</text>
+<text class="s" x="1084" y="192">Points the ECS service at the new image</text>
+<text class="s" x="1084" y="212">AWS connector with an IAM deploy role</text>
+<text class="m" x="1084" y="236">Deploy only; never touches messages</text></g>
+
+<g class="st"><rect x="1440" y="122" width="310" height="140" rx="8"/>
+<use href="#i-check" x="1454" y="133" width="16" height="16"/><text class="t" x="1478" y="146">Status · confirm with pipeline team</text>
+<text class="s" x="1454" y="172">Dockerfile and publish script: in repo</text>
+<text class="s" x="1454" y="192"><tspan class="miss">?</tspan> Harness CI build of the image</text>
+<text class="s" x="1454" y="212"><tspan class="miss">?</tspan> Push to ECR</text>
+<text class="s" x="1454" y="232"><tspan class="miss">?</tspan> ECS service and deploy stage</text></g>
+
+<path class="dp" d="M300 192H338" marker-end="url(#b)"/>
+<path class="dp" d="M710 192H748" marker-end="url(#b)"/>
+<path class="dp" d="M1030 192H1068" marker-end="url(#b)"/>
+
+<!-- Solace broker -->
+<rect x="30" y="322" width="580" height="718" rx="14" fill="#FFFBF0" stroke="#EF9F27" stroke-width="2"/>
+<use href="#q" x="46" y="333" width="20" height="14" style="color:#BA7517"/>
+<text class="h" x="74" y="346">Solace PubSub+ broker · Dev</text>
+<text class="m" x="46" y="368">VPN dev-demoair-vpn · user piidemo-app · TLS on port 55443</text>
+<text class="m" x="46" y="386"><tspan class="miss">?</tspan> Broker location and network path from the AWS VPC</text>
+
+<rect x="50" y="400" width="540" height="240" rx="10" fill="#FDF3F3" stroke="#993556" stroke-width="1.2" stroke-dasharray="8 5"/>
+<text class="t" x="66" y="424" style="fill:#993556">Input queues · raw PII, consumer only</text>
+<g class="iq"><rect x="66" y="436" width="508" height="26" rx="5"/><use href="#q" x="74" y="442" width="20" height="14"/><text class="k" x="102" y="454">ACI</text><text class="c" x="200" y="454">DEMOAIR.OPS.PIIDEMO.COS.ACI.MI.1</text></g>
+<g class="iq"><rect x="66" y="468" width="508" height="26" rx="5"/><use href="#q" x="74" y="474" width="20" height="14"/><text class="k" x="102" y="486">ETKT</text><text class="c" x="200" y="486">DEMOAIR.OPS.PIIDEMO.COS.TKT.MI.1</text></g>
+<g class="iq"><rect x="66" y="500" width="508" height="26" rx="5"/><use href="#q" x="74" y="506" width="20" height="14"/><text class="k" x="102" y="518">PNR</text><text class="c" x="200" y="518">DEMOAIR.OPS.PIIDEMO.COS.PNR.MI.1</text></g>
+<g class="mq"><rect x="66" y="532" width="508" height="26" rx="5"/><use href="#q" x="74" y="538" width="20" height="14"/><text class="k" x="102" y="550">Seats</text><text class="miss" x="200" y="550">? Missing: no Dev queue supplied yet</text></g>
+<g class="mq"><rect x="66" y="564" width="508" height="26" rx="5"/><use href="#q" x="74" y="570" width="20" height="14"/><text class="k" x="102" y="582">PNR-Linking</text><text class="miss" x="200" y="582">? Missing: no Dev queue supplied yet</text></g>
+<text class="m" x="66" y="614">Delivery count must be on; max redelivery above 5,</text>
+<text class="m" x="66" y="631">so the worker moves a failing message to its DLQ first</text>
+
+<rect x="50" y="656" width="540" height="190" rx="10" fill="#EEF6E8" stroke="#3B6D11" stroke-width="1.2"/>
+<text class="t" x="66" y="680" style="fill:#3B6D11">Output · masked messages</text>
+<text class="k" x="574" y="680" text-anchor="end" style="fill:#3B6D11">published after validation</text>
+<text class="m" x="66" y="698">Worker publishes to a topic; a queue subscribed to it keeps messages</text>
+<g class="cq"><rect x="66" y="710" width="508" height="26" rx="5"/><use href="#q" x="74" y="716" width="20" height="14"/><text class="k" x="102" y="728">ACI</text><text class="c" x="150" y="728">demoair/ops/piidemo/aci/protected</text><text class="miss" x="452" y="728">? queue</text></g>
+<g class="cq"><rect x="66" y="742" width="508" height="26" rx="5"/><use href="#q" x="74" y="748" width="20" height="14"/><text class="k" x="102" y="760">ETKT</text><text class="c" x="150" y="760">demoair/ops/piidemo/tkt/protected</text><text class="miss" x="452" y="760">? queue</text></g>
+<g class="cq"><rect x="66" y="774" width="508" height="26" rx="5"/><use href="#q" x="74" y="780" width="20" height="14"/><text class="k" x="102" y="792">PNR</text><text class="c" x="150" y="792">demoair/ops/piidemo/pnr/protected</text><text class="miss" x="452" y="792">? queue</text></g>
+<text class="m" x="66" y="826"><tspan class="miss">?</tspan> Output queue, subscription and consumer for each topic</text>
+
+<rect x="50" y="862" width="540" height="162" rx="10" fill="#FCEBEB" stroke="#A32D2D" stroke-width="1.2" stroke-dasharray="8 5"/>
+<text class="t" x="66" y="886" style="fill:#A32D2D">Dead letter queues · raw PII, restricted</text>
+<text class="k" x="574" y="886" text-anchor="end" style="fill:#A32D2D">rejected, or 5 failed deliveries</text>
+<g class="dq"><rect x="66" y="898" width="508" height="26" rx="5"/><use href="#q" x="74" y="904" width="20" height="14"/><text class="k" x="102" y="916">ACI</text><text class="c" x="200" y="916">DEMOAIR.OPS.PIIDEMO.COS.ACI.DLQ.1</text></g>
+<g class="dq"><rect x="66" y="930" width="508" height="26" rx="5"/><use href="#q" x="74" y="936" width="20" height="14"/><text class="k" x="102" y="948">ETKT</text><text class="c" x="200" y="948">DEMOAIR.OPS.PIIDEMO.COS.TKT.DLQ.1</text></g>
+<g class="dq"><rect x="66" y="962" width="508" height="26" rx="5"/><use href="#q" x="74" y="968" width="20" height="14"/><text class="k" x="102" y="980">PNR</text><text class="c" x="200" y="980">DEMOAIR.OPS.PIIDEMO.COS.PNR.DLQ.1</text></g>
+<text class="m" x="66" y="1010"><tspan class="miss">?</tspan> Proposed names: create them, same access limits as inputs</text>
+
+<!-- Customer AWS account -->
+<rect x="650" y="322" width="1120" height="718" rx="14" fill="#FAFAF7" stroke="#5F5E5A" stroke-width="1.5"/>
+<use href="#i-cloud" x="666" y="332" width="18" height="18" style="color:#5F5E5A"/>
+<text class="h" x="692" y="346">Customer AWS account · Dev</text>
+<text class="m" x="666" y="368"><tspan class="miss">?</tspan> Private subnets in an existing VPC</text>
+
+<rect x="670" y="380" width="790" height="640" rx="12" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text class="t" x="686" y="404">ECS Fargate service · presidio-worker-dev</text>
+<text class="m" x="686" y="424">1 task · 1 vCPU, 4 GB (model uses about 1.5 GB) · no load balancer, no inbound ports</text>
+<text class="m" x="686" y="444">Desired count 1 · deploy min 0 %, max 100 %: tasks must not share a Solace client name</text>
+
+<rect x="690" y="460" width="750" height="545" rx="10" fill="#FFFFFF" stroke="#854F0B" stroke-width="1.2"/>
+<use href="#i-box" x="704" y="477" width="16" height="16" style="color:#854F0B"/>
+<text class="t" x="728" y="490">Worker container · presidio-worker image</text>
+<text class="m" x="704" y="510">One .NET process runs one feed worker per route: ACI, ETKT and PNR in Dev</text>
+
+<g class="fw"><rect x="710" y="526" width="190" height="62" rx="6"/><text class="t" x="724" y="548">Receive</text><text class="c" x="724" y="566">SolaceMessageConsumer</text><text class="m" x="724" y="582">one message at a time</text></g>
+<g class="fw"><rect x="710" y="604" width="190" height="62" rx="6"/><text class="t" x="724" y="626">Parse</text><text class="m" x="724" y="644">feed codecs</text><text class="m" x="724" y="660">ETKT · ACI · PNR</text></g>
+<g class="fw"><rect x="710" y="682" width="190" height="62" rx="6"/><text class="t" x="724" y="704">Protect</text><text class="c" x="724" y="722">FeedProtection</text><text class="m" x="724" y="738">known PII fields</text></g>
+<g class="fw"><rect x="710" y="760" width="190" height="62" rx="6"/><text class="t" x="724" y="782">Validate, serialize</text><text class="m" x="724" y="800">feed serializers</text><text class="m" x="724" y="816">PNR and passengers kept</text></g>
+<g class="fw"><rect x="710" y="838" width="190" height="62" rx="6"/><text class="t" x="724" y="860">Publish</text><text class="c" x="724" y="878">SolaceMessagePublisher</text><text class="m" x="724" y="894">waits for broker confirm</text></g>
+<g class="fw"><rect x="710" y="916" width="190" height="62" rx="6"/><text class="t" x="724" y="938">Acknowledge input</text><text class="m" x="724" y="956">only after the confirm;</text><text class="m" x="724" y="972">a crash means redelivery</text></g>
+<path class="ln" d="M805 588V602" marker-end="url(#a)"/>
+<path class="ln" d="M805 666V680" marker-end="url(#a)"/>
+<path class="ln" d="M805 744V758" marker-end="url(#a)"/>
+<path class="ln" d="M805 822V836" marker-end="url(#a)"/>
+<path class="ln" d="M805 900V914" marker-end="url(#a)"/>
+
+<rect x="930" y="604" width="490" height="218" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
+<use href="#i-py" x="946" y="617" width="16" height="16" style="color:#534AB7"/>
+<text class="t" x="970" y="630">Presidio · inside this process</text>
+<text class="s" x="946" y="656">Python.NET (pythonnet) embeds CPython 3.12 in .NET</text>
+<text class="s" x="946" y="680">presidio-analyzer: recognizers for known fields and</text>
+<text class="s" x="946" y="700">patterns, with the spaCy en_core_web_lg model</text>
+<text class="s" x="946" y="724">presidio-anonymizer: mask, replace or redact</text>
+<text class="s" x="946" y="748">Engines start once and are reused for every message</text>
+<text class="m" x="946" y="776">No HTTP, no remote PII service, no model download.</text>
+<text class="m" x="946" y="796">Only native Solace connections leave the task.</text>
+<path class="ln" d="M902 713H928" marker-start="url(#a)" marker-end="url(#a)"/>
+
+<rect x="930" y="838" width="490" height="152" rx="8" fill="#F7F6F2" stroke="#B4B2A9"/>
+<text class="t" x="946" y="860">Sample ETKT fields · illustrative</text>
+<text class="k" x="1010" y="882" style="fill:#5F5E5A">Input</text><text class="k" x="1236" y="882" style="fill:#5F5E5A">Output</text>
+<text class="k" x="946" y="904">PNR</text><text class="c" x="1010" y="904">K7Q2LM</text><text class="c" x="1236" y="904">K7Q2LM <tspan style="font-family:'Segoe UI',Arial,sans-serif;fill:#3B6D11">unchanged</tspan></text>
+<text class="k" x="946" y="926">Pax 1</text><text class="c" x="1010" y="926">CARTER/EMILY</text><text class="c" x="1236" y="926">************</text>
+<text class="k" x="946" y="948">Email</text><text class="c" x="1010" y="948">emily.carter@example.com</text><text class="c" x="1236" y="948">************************</text>
+<text class="k" x="946" y="970">Pax 2</text><text class="c" x="1010" y="970">BROOKS/MICHAEL</text><text class="c" x="1236" y="970">**************</text>
+
+<!-- AWS services column -->
+<g class="sv"><rect x="1480" y="392" width="270" height="112" rx="8"/><use href="#i-lock" x="1494" y="403" width="16" height="16"/><text class="t" x="1518" y="416">Secrets Manager</text>
+<text class="c" x="1494" y="438">piidemo/dev/solace</text><text class="s" x="1494" y="456">JSON key password</text><text class="s" x="1494" y="474">ECS reads it at task start and</text><text class="s" x="1494" y="492">sets SOLACE_PASSWORD</text></g>
+<g class="sv"><rect x="1480" y="516" width="270" height="112" rx="8"/><use href="#i-role" x="1494" y="527" width="16" height="16"/><text class="t" x="1518" y="540">IAM roles</text>
+<text class="s" x="1494" y="562">Execution role: pull from ECR,</text><text class="s" x="1494" y="580">write logs, read this one secret</text><text class="s" x="1494" y="598">No task role: the worker</text><text class="s" x="1494" y="616">calls no AWS API</text></g>
+<g class="sv"><rect x="1480" y="640" width="270" height="112" rx="8"/><use href="#i-log" x="1494" y="651" width="16" height="16"/><text class="t" x="1518" y="664">CloudWatch</text>
+<text class="c" x="1494" y="686">/ecs/presidio-worker-dev</text><text class="s" x="1494" y="704">Console log through awslogs</text><text class="s" x="1494" y="722">Alarm when the task stops</text><text class="m" x="1494" y="740">DLQ depth: Solace monitoring</text></g>
+<g class="sv"><rect x="1480" y="764" width="270" height="112" rx="8"/><use href="#i-net" x="1494" y="775" width="16" height="16"/><text class="t" x="1518" y="788">VPC endpoints or NAT</text>
+<text class="s" x="1494" y="812">ECR api and dkr, S3, Logs,</text><text class="s" x="1494" y="832">Secrets Manager</text><text class="m" x="1494" y="856">AWS platform traffic, not PII</text></g>
+<g class="sv"><rect x="1480" y="888" width="270" height="112" rx="8"/><use href="#i-shield" x="1494" y="899" width="16" height="16"/><text class="t" x="1518" y="912">Security group</text>
+<text class="s" x="1494" y="936">Inbound: none</text><text class="s" x="1494" y="956">Outbound: 55443 to the broker</text><text class="s" x="1494" y="976">Outbound: 443 to endpoints</text></g>
+<path class="pf" d="M1478 450H1462" marker-end="url(#g)"/>
+
+<!-- Message paths between broker and worker -->
+<path class="ln" d="M592 557H708" marker-end="url(#a)"/>
+<text class="m" x="620" y="549" style="font-size:12px">consume</text>
+<path class="ln" d="M708 862H636V723H592" marker-end="url(#a)"/>
+<path class="dl" d="M708 886H624V943H592" marker-end="url(#r)"/>
+
+<!-- Build and deploy paths into the account, drawn over its boxes -->
+<path class="pf" d="M970 262V378" marker-end="url(#g)"/>
+<text class="m" x="980" y="304">Task pulls the image</text>
+<path class="dp" d="M1235 262V378" marker-end="url(#b)"/>
+<text class="m" x="1245" y="304" style="fill:#185FA5">Deploys new task definition</text>
+
+<!-- Explanation panels -->
+<rect x="30" y="1068" width="566" height="214" rx="10" fill="#F1EFE8" stroke="#888780"/>
+<text class="t" x="48" y="1094">How it works</text>
+<text class="s" x="48" y="1120">Harness builds the Dockerfile into one image holding the .NET worker,</text>
+<text class="s" x="48" y="1140">CPython, Presidio and the spaCy model, pushes it to ECR and points the</text>
+<text class="s" x="48" y="1160">ECS service at it. The task reads each feed's input queue through the</text>
+<text class="s" x="48" y="1180">native Solace client, masks known PII inside the process and publishes</text>
+<text class="s" x="48" y="1200">to the feed's topic. It acks the input only after the broker confirms.</text>
+<text class="s" x="48" y="1220">Rejected or repeatedly failing input goes to the feed's DLQ, never to</text>
+<text class="s" x="48" y="1240">output. Unacknowledged input stays on the broker for redelivery.</text>
+
+<rect x="617" y="1068" width="566" height="214" rx="10" fill="#FAEEDA" stroke="#BA7517"/>
+<text class="t" x="635" y="1094">Solace details still needed</text>
+<text class="s" x="635" y="1120">· Seats and PNR-Linking input queues for Dev</text>
+<text class="s" x="635" y="1140">· Output queue, topic subscription and consumer per feed</text>
+<text class="s" x="635" y="1160">· One DLQ per feed, restricted like its input queue</text>
+<text class="s" x="635" y="1180">· ACL: consume inputs, publish topics, send to DLQs</text>
+<text class="s" x="635" y="1200">· Delivery count on; queue max redelivery above 5</text>
+<text class="s" x="635" y="1220">· Broker CA certificate, unless it is a public CA</text>
+<text class="s" x="635" y="1240">· Network path and firewall rule from the ECS subnets</text>
+<text class="s" x="635" y="1260">· A unique client name for each running task</text>
+
+<rect x="1204" y="1068" width="566" height="214" rx="10" fill="#F1EFE8" stroke="#888780"/>
+<text class="t" x="1222" y="1094">Solace password at runtime</text>
+<text class="s" x="1222" y="1120">The secret piidemo/dev/solace holds the key password. The task</text>
+<text class="s" x="1222" y="1140">definition maps it to SOLACE_PASSWORD, the variable the worker</text>
+<text class="s" x="1222" y="1160">already reads. ECS fetches it when the task starts, so the worker</text>
+<text class="s" x="1222" y="1180">needs no code change and makes no AWS call.</text>
+<text class="s" x="1222" y="1204">Access: execution role gets secretsmanager:GetSecretValue on this</text>
+<text class="s" x="1222" y="1224">secret only, plus kms:Decrypt if a customer KMS key encrypts it.</text>
+<text class="s" x="1222" y="1248">Rotation: update the secret, then restart the task.</text>
+
+<!-- Legend -->
+<path class="ln" d="M30 1316H80" marker-end="url(#a)"/><text class="s" x="90" y="1321">Message flow, native client over TLS</text>
+<path class="dl" d="M360 1316H410" marker-end="url(#r)"/><text class="s" x="420" y="1321">Dead letter path, raw PII</text>
+<path class="dp" d="M630 1316H680" marker-end="url(#b)"/><text class="s" x="690" y="1321">Build and deploy</text>
+<path class="pf" d="M840 1316H890" marker-end="url(#g)"/><text class="s" x="900" y="1321">AWS platform traffic, not PII</text>
+<rect x="1140" y="1306" width="40" height="20" rx="4" fill="#FAEEDA" stroke="#BA7517" stroke-dasharray="5 3"/><text class="miss" x="1154" y="1321">?</text><text class="s" x="1190" y="1321">Missing or to confirm</text>
+</svg>

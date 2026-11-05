@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 850" role="img" aria-labelledby="title desc">
+<title id="title">Processing PII with Presidio: AWS deployment</title>
+<desc id="desc">Harness builds the Docker image, pushes it to ECR and deploys it to ECS Fargate. The worker reads Solace input queues, masks PII with Presidio in the same process, and publishes to output queues or, on failure, to dead letter queues. The Solace password comes from Secrets Manager.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="#444441"/></marker>
+<marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="#A32D2D"/></marker>
+<marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="#185FA5"/></marker>
+<marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="#888780"/></marker>
+<symbol id="q" viewBox="0 0 20 14"><rect x="0.5" y="0.5" width="19" height="13" rx="2" fill="none" stroke="currentColor"/><path d="M6 3V11M10 3V11M14 3V11" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-git" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="4" cy="3.5" r="2"/><circle cx="4" cy="12.5" r="2"/><circle cx="12" cy="6" r="2"/><path d="M4 5.5V10.5M12 8C12 10 8 10 5.5 11.5"/></g></symbol>
+<symbol id="i-run" viewBox="0 0 16 16"><path d="M4 2.5L13 8L4 13.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+<symbol id="i-box" viewBox="0 0 16 16"><path d="M8 1.5L14.5 4.8V11.2L8 14.5L1.5 11.2V4.8Z M1.5 4.8L8 8L14.5 4.8 M8 8V14.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></symbol>
+<symbol id="i-check" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 4.5V8.5M8 10.5V11.5" stroke="currentColor" stroke-width="1.6"/></symbol>
+<symbol id="i-cloud" viewBox="0 0 16 16"><path d="M4.5 12.5H12A3 3 0 0 0 12 6.5A4 4 0 0 0 4.3 7.6A2.5 2.5 0 0 0 4.5 12.5Z" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+<symbol id="i-lock" viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 7V5A3 3 0 0 1 11 5V7" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-log" viewBox="0 0 16 16"><rect x="2.5" y="1.5" width="11" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 5H11M5 8H11M5 11H9" stroke="currentColor" stroke-width="1.3"/></symbol>
+<symbol id="i-shield" viewBox="0 0 16 16"><path d="M8 1.5L13.5 3.5V8C13.5 11 11 13.5 8 14.5C5 13.5 2.5 11 2.5 8V3.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+<symbol id="i-py" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5H5.5A2 2 0 0 0 3.5 3.5V6H8.5"/><path d="M8 14.5H10.5A2 2 0 0 0 12.5 12.5V10H7.5"/><path d="M3.5 6A2 2 0 0 0 1.5 8V9A2 2 0 0 0 3.5 11H5"/><path d="M12.5 10A2 2 0 0 0 14.5 8V7A2 2 0 0 0 12.5 5H11"/></g></symbol>
+<style>
+text{font-family:'Segoe UI',Arial,sans-serif;fill:#2C2C2A}
+.h{font-size:16px;font-weight:600}
+.t{font-size:14px;font-weight:600}
+.s{font-size:13px}
+.m{font-size:12px;fill:#5F5E5A}
+.k{font-size:12px;font-weight:600}
+.ln{fill:none;stroke:#444441;stroke-width:1.5}
+.dl{fill:none;stroke:#A32D2D;stroke-width:1.5;stroke-dasharray:5 4}
+.dp{fill:none;stroke:#185FA5;stroke-width:1.8}
+.pf{fill:none;stroke:#888780;stroke-width:1.4;stroke-dasharray:4 4}
+.bd rect{fill:#FFFFFF;stroke:#185FA5}.bd{color:#185FA5}
+.iq rect{fill:#FBEAF0;stroke:#993556}
+.cq rect{fill:#E1F5EE;stroke:#0F6E56}
+.dq rect{fill:#FCEBEB;stroke:#A32D2D}
+.mq rect{fill:#FAEEDA;stroke:#BA7517;stroke-dasharray:4 3}
+.fw rect{fill:#FFFFFF;stroke:#854F0B}
+.sv rect{fill:#FFFFFF;stroke:#888780}.sv{color:#5F5E5A}
+.miss{fill:#854F0B;font-weight:600}
+</style>
+</defs>
+<rect width="1400" height="850" fill="#FFFFFF"/>
+<text class="h" x="40" y="44" style="font-size:22px">Processing PII with Presidio · AWS deployment</text>
+
+<!-- Build and deploy -->
+<g class="bd"><rect x="40" y="80" width="220" height="64" rx="8"/><use href="#i-git" x="56" y="94" width="16" height="16"/><text class="t" x="80" y="107">Code</text><text class="m" x="56" y="130">PresidioDemo repo</text></g>
+<g class="bd"><rect x="330" y="80" width="220" height="64" rx="8"/><use href="#i-run" x="346" y="94" width="16" height="16"/><text class="t" x="370" y="107">Harness CI</text><text class="m" x="346" y="130">Docker build</text></g>
+<g class="bd"><rect x="620" y="80" width="220" height="64" rx="8"/><use href="#i-box" x="636" y="94" width="16" height="16"/><text class="t" x="660" y="107">Amazon ECR</text><text class="m" x="636" y="130">presidio-worker image</text></g>
+<g class="bd"><rect x="910" y="80" width="220" height="64" rx="8"/><use href="#i-run" x="926" y="94" width="16" height="16"/><text class="t" x="950" y="107">Harness CD</text><text class="m" x="926" y="130">ECS rolling deploy</text></g>
+<g><rect x="1170" y="80" width="190" height="64" rx="8" fill="#FAEEDA" stroke="#BA7517"/><use href="#i-check" x="1186" y="94" width="16" height="16" style="color:#BA7517"/><text class="t" x="1210" y="107">Pipeline status</text><text class="m miss" x="1186" y="130">? to confirm</text></g>
+<path class="dp" d="M260 112H328" marker-end="url(#b)"/>
+<path class="dp" d="M550 112H618" marker-end="url(#b)"/>
+<path class="dp" d="M840 112H908" marker-end="url(#b)"/>
+
+<!-- Solace broker -->
+<rect x="40" y="200" width="480" height="410" rx="12" fill="#FFFBF0" stroke="#EF9F27" stroke-width="1.8"/>
+<use href="#q" x="56" y="213" width="20" height="14" style="color:#BA7517"/>
+<text class="h" x="84" y="226">Solace broker · Dev</text>
+
+<rect x="60" y="244" width="440" height="100" rx="8" fill="#FDF3F3" stroke="#993556" stroke-dasharray="6 4"/>
+<text class="t" x="76" y="268" style="fill:#993556">Input queues</text><text class="m" x="484" y="268" text-anchor="end">raw PII</text>
+<g class="iq"><rect x="76" y="290" width="54" height="30" rx="5"/><text class="k" x="103" y="310" text-anchor="middle">ACI</text></g>
+<g class="iq"><rect x="138" y="290" width="60" height="30" rx="5"/><text class="k" x="168" y="310" text-anchor="middle">ETKT</text></g>
+<g class="iq"><rect x="206" y="290" width="54" height="30" rx="5"/><text class="k" x="233" y="310" text-anchor="middle">PNR</text></g>
+<g class="mq"><rect x="268" y="290" width="76" height="30" rx="5"/><text class="k miss" x="306" y="310" text-anchor="middle">Seats ?</text></g>
+<g class="mq"><rect x="352" y="290" width="132" height="30" rx="5"/><text class="k miss" x="418" y="310" text-anchor="middle">PNR-Linking ?</text></g>
+
+<rect x="60" y="364" width="440" height="100" rx="8" fill="#EEF6E8" stroke="#3B6D11"/>
+<text class="t" x="76" y="388" style="fill:#3B6D11">Output queues</text><text class="m" x="484" y="388" text-anchor="end">masked</text>
+<g class="mq"><rect x="76" y="410" width="70" height="30" rx="5"/><text class="k miss" x="111" y="430" text-anchor="middle">ACI ?</text></g>
+<g class="mq"><rect x="154" y="410" width="76" height="30" rx="5"/><text class="k miss" x="192" y="430" text-anchor="middle">ETKT ?</text></g>
+<g class="mq"><rect x="238" y="410" width="70" height="30" rx="5"/><text class="k miss" x="273" y="430" text-anchor="middle">PNR ?</text></g>
+
+<rect x="60" y="484" width="440" height="106" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-dasharray="6 4"/>
+<text class="t" x="76" y="508" style="fill:#A32D2D">Dead letter queues</text><text class="m" x="484" y="508" text-anchor="end">raw PII, restricted</text>
+<g class="dq"><rect x="76" y="530" width="70" height="30" rx="5"/><text class="k miss" x="111" y="550" text-anchor="middle">ACI ?</text></g>
+<g class="dq"><rect x="154" y="530" width="76" height="30" rx="5"/><text class="k miss" x="192" y="550" text-anchor="middle">ETKT ?</text></g>
+<g class="dq"><rect x="238" y="530" width="70" height="30" rx="5"/><text class="k miss" x="273" y="550" text-anchor="middle">PNR ?</text></g>
+
+<!-- AWS -->
+<rect x="580" y="200" width="780" height="410" rx="12" fill="#FAFAF7" stroke="#5F5E5A" stroke-width="1.5"/>
+<use href="#i-cloud" x="596" y="211" width="18" height="18" style="color:#5F5E5A"/>
+<text class="h" x="622" y="226">AWS · Dev account</text>
+
+<rect x="600" y="244" width="460" height="346" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.4"/>
+<text class="t" x="616" y="268">ECS Fargate · 1 task</text>
+<rect x="616" y="280" width="428" height="296" rx="8" fill="#FFFFFF" stroke="#854F0B"/>
+
+<g class="fw"><rect x="650" y="294" width="220" height="50" rx="6"/><text class="t" x="666" y="316">Receive</text><text class="m" x="666" y="334">one message at a time</text></g>
+<rect x="650" y="372" width="220" height="104" rx="6" fill="#EEEDFE" stroke="#534AB7"/>
+<use href="#i-py" x="666" y="384" width="16" height="16" style="color:#534AB7"/>
+<text class="t" x="690" y="397">Mask PII</text>
+<text class="m" x="666" y="422">Presidio in the same process</text>
+<text class="m" x="666" y="440">via Python.NET</text>
+<text class="m" x="666" y="462">No HTTP · no remote service</text>
+<g class="fw"><rect x="650" y="504" width="220" height="56" rx="6"/><text class="t" x="666" y="526">Publish, then ack</text><text class="m" x="666" y="546">ack after broker confirms</text></g>
+<path class="ln" d="M760 344V370" marker-end="url(#a)"/>
+<path class="ln" d="M760 476V502" marker-end="url(#a)"/>
+
+<use href="#i-box" x="890" y="300" width="16" height="16" style="color:#854F0B"/>
+<text class="t" x="912" y="313">Worker</text>
+<text class="m" x="890" y="334">.NET 10 + CPython 3.12</text>
+<g class="m"><rect x="890" y="372" width="138" height="22" rx="4" fill="#F7F6FE" stroke="#B4B0E8"/><text x="900" y="387">pythonnet</text>
+<rect x="890" y="399" width="138" height="22" rx="4" fill="#F7F6FE" stroke="#B4B0E8"/><text x="900" y="414">presidio-analyzer</text>
+<rect x="890" y="426" width="138" height="22" rx="4" fill="#F7F6FE" stroke="#B4B0E8"/><text x="900" y="441">presidio-anonymizer</text>
+<rect x="890" y="453" width="138" height="22" rx="4" fill="#F7F6FE" stroke="#B4B0E8"/><text x="900" y="468">en_core_web_lg</text></g>
+
+<g class="sv"><rect x="1080" y="244" width="260" height="70" rx="8"/><use href="#i-lock" x="1096" y="257" width="16" height="16"/><text class="t" x="1120" y="270">Secrets Manager</text><text class="m" x="1096" y="296">Solace password</text></g>
+<g class="sv"><rect x="1080" y="332" width="260" height="70" rx="8"/><use href="#i-log" x="1096" y="345" width="16" height="16"/><text class="t" x="1120" y="358">CloudWatch</text><text class="m" x="1096" y="384">Logs · task alarm</text></g>
+<g class="sv"><rect x="1080" y="420" width="260" height="70" rx="8"/><use href="#i-shield" x="1096" y="433" width="16" height="16"/><text class="t" x="1120" y="446">Private subnets</text><text class="m" x="1096" y="472">No inbound ports</text></g>
+<g><rect x="1080" y="508" width="260" height="70" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-dasharray="4 3"/><use href="#i-cloud" x="1096" y="521" width="16" height="16" style="color:#BA7517"/><text class="t" x="1120" y="534">Network to broker</text><text class="m miss" x="1096" y="560">? to confirm</text></g>
+<path class="pf" d="M1078 279H1062" marker-end="url(#g)"/>
+
+<!-- Message paths -->
+<path class="ln" d="M500 319H648" marker-end="url(#a)"/>
+<path class="ln" d="M648 520H556V427H502" marker-end="url(#a)"/>
+<path class="dl" d="M648 545H502" marker-end="url(#r)"/>
+
+<!-- Deploy paths, drawn over the account -->
+<path class="pf" d="M730 144V242" marker-end="url(#g)"/>
+<path class="dp" d="M1020 144V242" marker-end="url(#b)"/>
+
+<!-- Legend -->
+<path class="ln" d="M40 644H84" marker-end="url(#a)"/><text class="s" x="92" y="648">Message flow</text>
+<path class="dl" d="M210 644H254" marker-end="url(#r)"/><text class="s" x="262" y="648">Failed message</text>
+<path class="dp" d="M390 644H434" marker-end="url(#b)"/><text class="s" x="442" y="648">Build and deploy</text>
+<path class="pf" d="M580 644H624" marker-end="url(#g)"/><text class="s" x="632" y="648">Image or secret at start</text>
+<text class="s miss" x="830" y="648">?</text><text class="s" x="844" y="648">Missing or to confirm</text>
+
+<!-- Notes -->
+<line x1="40" y1="676" x2="1360" y2="676" stroke="#D3D1C7"/>
+<text class="t" x="40" y="706">How it works</text>
+<text class="s" x="40" y="732">Harness builds the image, pushes it to ECR and deploys to ECS.</text>
+<text class="s" x="40" y="754">The worker reads a queue, masks PII and publishes.</text>
+<text class="s" x="40" y="776">Input is acked only after the publish is confirmed.</text>
+<text class="s" x="40" y="798">Rejected or 5x failed messages go to the DLQ.</text>
+
+<text class="t" x="485" y="706">Needed from Solace</text>
+<text class="s" x="485" y="732">Seats and PNR-Linking input queues</text>
+<text class="s" x="485" y="754">Output queue and consumer per feed</text>
+<text class="s" x="485" y="776">DLQs created, restricted like inputs</text>
+<text class="s" x="485" y="798">Delivery count on · CA certificate</text>
+
+<text class="t" x="930" y="706">Solace password</text>
+<text class="s" x="930" y="732">Stored in Secrets Manager.</text>
+<text class="s" x="930" y="754">ECS sets it as SOLACE_PASSWORD at start.</text>
+<text class="s" x="930" y="776">No code change; the worker calls no AWS API.</text>
+<text class="s" x="930" y="798">Execution role reads this one secret only.</text>
+</svg>

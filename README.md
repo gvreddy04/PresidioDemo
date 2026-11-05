@@ -105,9 +105,16 @@ Startup stops with one clear message for any of these:
 
 `Solace:ProvisionQueues` creates the input and dead-letter queues and is enabled only for `Local`; other environments use queues provisioned by the broker team.
 
+**One feed per service.** `Messaging:Feed` (for example `Messaging__Feed=PNR` in a task definition) makes the process consume only that feed's route, so each feed can run as its own ECS service and scale on its own. When it is empty, the process runs every routed feed. A value without a route stops startup.
+
+**Parallel consumers.** `Messaging:ConsumersPerTask` (1 by default, at most 32) opens that many consumers on each routed input queue. All of them share the task's one broker connection. Each consumer reads one message at a time, so broker round trips overlap while Python calls stay serialized. On a partitioned queue, the broker assigns partitions to each consumer, which keeps the order for each partition key. On an exclusive queue, such as the queues the Local broker provisions, the extra consumers wait as hot standby and add no throughput. Set it per task definition, for example `Messaging__ConsumersPerTask=8`, once the feed's queue is partitioned.
+
+**Unique client names.** The broker disconnects an existing connection that reuses a client name. `Solace:UniqueClientName` (on in `Dev`) appends the host name and a random part to `Solace:ClientName`, such as `piidemo-worker-dev-ip-10-0-1-23-ec2-internal-3f9a1c2e`. This lets several tasks of one service connect at the same time, and the name stays within the broker's 160-character limit.
+
 ## Architecture diagrams
 
 - [PII infrastructure on AWS](docs/diagrams/aws-pii-infrastructure.svg): proposed dev environment with a Solace broker, one exclusive input queue per feed and acknowledgment after publish.
+- [AWS deployment, one ECS service per feed](docs/diagrams/aws-solace-ecs-deployment.svg): a generic view of the Harness build and deploy, the Solace broker in AWS, input queues and DLQs, per-feed workers with parallel consumers and auto scaling, protected topics with output queues for downstream consumers, and the failed-message and broker backstop paths. Specific values are in [docs/aws-deployment-plan.md](docs/aws-deployment-plan.md). Earlier versions are in `docs/diagrams/old`: [v1](docs/diagrams/old/aws-solace-ecs-deployment-v1.svg) (detailed), [v2](docs/diagrams/old/aws-solace-ecs-deployment-v2.svg) (simple), [v3](docs/diagrams/old/aws-solace-ecs-deployment-v3.svg) (first per-feed version), [v4](docs/diagrams/old/aws-solace-ecs-deployment-v4.svg) (topics and connection details), [v5](docs/diagrams/old/aws-solace-ecs-deployment-v5.svg) (parallel consumers and pre-scaling), [v6](docs/diagrams/old/aws-solace-ecs-deployment-v6.svg) (all open items confirmed, with broker details), [v7](docs/diagrams/old/aws-solace-ecs-deployment-v7.svg) (generic broker header), [v8](docs/diagrams/old/aws-solace-ecs-deployment-v8.svg) (generic wording throughout).
 - [Feed protection workflow](docs/diagrams/presidio-feed-workflow.svg): Solace input queues, the .NET worker (receive, parse, configured identification, local Presidio, rebuild and validate, publish then acknowledge), protected topics and restricted dead-letter queues.
 
 ## C# conventions
