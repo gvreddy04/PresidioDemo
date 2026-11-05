@@ -51,6 +51,22 @@ Require(FeedWorkerService.Routes(MessagingOptions.Load(dev)).Keys.ToHashSet().Se
     "Dev routes only the feeds its broker carries; the other feeds are not consumed");
 Require(SolaceOptions.Load(local, runRoot, password).ProvisionQueues && !SolaceOptions.Load(dev, runRoot, password).ProvisionQueues,
     "Local and Dev Solace sections validate; only Local creates queues");
+var onePnr = MessagingOptions.Load(new ConfigurationBuilder().AddConfiguration(local).AddInMemoryCollection([new("Messaging:Feed", "pnr")]).Build());
+Require(onePnr.Routes.Count == 1 && FeedWorkerService.Routes(onePnr).Keys.Single() == FeedType.PNR,
+    "Messaging:Feed keeps only that feed's route, so one service runs one feed");
+var oneDevAci = MessagingOptions.Load(new ConfigurationBuilder().AddConfiguration(dev).AddInMemoryCollection([new("Messaging:Feed", "ACI")]).Build());
+Require(oneDevAci.Routes.Single().Input == "DEMOAIR.OPS.PIIDEMO.COS.ACI.MI.1", "Messaging:Feed selects one route in Dev too");
+RejectMessaging("Messaging:Feed", "IND", "Messaging:Feed without a route is rejected");
+var localSolace = SolaceOptions.Load(local, runRoot, password);
+Require(localSolace.ClientName == "presidio-worker-local", "without UniqueClientName the client name is used as configured");
+var devFirst = SolaceOptions.Load(dev, runRoot, password);
+var devSecond = SolaceOptions.Load(dev, runRoot, password);
+Require(devFirst.ClientName.StartsWith("piidemo-worker-dev-") && devFirst.ClientName != devSecond.ClientName,
+    "Dev adds a per-process suffix, so scaled-out tasks never share a Solace client name");
+string longName = SolaceOptions.WithInstanceSuffix(new string('w', 200), "ip-10-0-1-23.ec2.internal");
+Require(longName.Length == SolaceOptions.MaxClientNameLength && longName.Contains("-ip-10-0-1-23-ec2-internal-"),
+    "the suffixed client name stays within the broker limit and uses a safe host name");
+RejectSolace("ClientName", new string('w', 161), "a client name longer than 160 characters is rejected");
 Reject(() => SolaceOptions.Load(local, runRoot, noVariables), "a missing password environment variable stops startup");
 RejectSolace("Host", "https://broker.example.com", "HTTP hosts are rejected; only native tcp:// or tcps://");
 RejectSolace("ValidateCertificate", "false", "tcps:// without certificate validation is rejected", "Dev");

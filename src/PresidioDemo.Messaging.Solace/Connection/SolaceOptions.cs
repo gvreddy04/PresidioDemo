@@ -9,6 +9,15 @@ namespace PresidioDemo.Messaging.Solace;
 public sealed class SolaceOptions
 {
 
+    #region Fields and Constants
+
+    /// <summary>
+    /// The longest client name the broker accepts.
+    /// </summary>
+    public const int MaxClientNameLength = 160;
+
+    #endregion
+
     #region Properties, Indexers
 
     /// <summary>
@@ -66,6 +75,13 @@ public sealed class SolaceOptions
     public string? TrustStoreFolder { get; set; }
 
     /// <summary>
+    /// Gets or sets whether a per-process suffix (the host name and a random part) is added to the client name.
+    /// The broker disconnects an existing connection that reuses a client name, so scaled-out tasks need distinct names.
+    /// </summary>
+    /// <value>Whether the loaded client name is made unique for this process.</value>
+    public bool UniqueClientName { get; set; }
+
+    /// <summary>
     /// Gets or sets the client username.
     /// </summary>
     /// <value>The username.</value>
@@ -94,6 +110,22 @@ public sealed class SolaceOptions
     #region Methods
 
     /// <summary>
+    /// Adds a per-process suffix to a client name: the host name (an ECS task's private address on Fargate) and a random part.
+    /// </summary>
+    /// <param name="clientName">The configured client name.</param>
+    /// <param name="host">The host name, such as Environment.MachineName.</param>
+    /// <returns>A client name of at most MaxClientNameLength characters; the suffix uses only letters, digits and hyphens.</returns>
+    public static string WithInstanceSuffix(string clientName, string host)
+    {
+        string safeHost = new string(host.ToLowerInvariant().Select(c => char.IsAsciiLetterOrDigit(c) ? c : '-').ToArray()).Trim('-');
+        string suffix = (safeHost.Length > 0 ? safeHost[..Math.Min(safeHost.Length, 60)] + "-" : "") + Guid.NewGuid().ToString("N")[..8];
+        string name = clientName.Length + 1 + suffix.Length > MaxClientNameLength
+            ? clientName[..(MaxClientNameLength - 1 - suffix.Length)]
+            : clientName;
+        return name + "-" + suffix;
+    }
+
+    /// <summary>
     /// Binds the Solace section strictly and validates it.
     /// </summary>
     /// <param name="configuration">The environment-resolved configuration.</param>
@@ -106,6 +138,10 @@ public sealed class SolaceOptions
         var options = configuration.GetSection("Solace").Get<SolaceOptions>(binder => binder.ErrorOnUnknownConfiguration = true)
             ?? throw new InvalidOperationException("Missing Solace settings for the selected environment.");
         options.Validate(environment ?? Environment.GetEnvironmentVariable);
+        if (options.UniqueClientName)
+        {
+            options.ClientName = WithInstanceSuffix(options.ClientName, Environment.MachineName);
+        }
         if (options.TrustStoreFolder is { } store)
         {
             options.TrustStoreFolder = Path.GetFullPath(store, baseDirectory);
@@ -135,6 +171,10 @@ public sealed class SolaceOptions
         if (UsesTls && !ValidateCertificate)
         {
             throw new InvalidOperationException("A tcps:// Solace host requires ValidateCertificate to be true.");
+        }
+        if (ClientName.Length > MaxClientNameLength)
+        {
+            throw new InvalidOperationException($"Solace:ClientName must be at most {MaxClientNameLength} characters.");
         }
         if (ConnectRetries < 0 || ReconnectRetries < -1 || ReconnectRetryWaitMs < 1 || KeepAliveMs < 1)
         {

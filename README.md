@@ -105,9 +105,14 @@ Startup stops with one clear message for any of these:
 
 `Solace:ProvisionQueues` creates the input and dead-letter queues and is enabled only for `Local`; other environments use queues provisioned by the broker team.
 
+**One feed per service.** `Messaging:Feed` (for example `Messaging__Feed=PNR` in a task definition) makes the process consume only that feed's route, so each feed can run as its own ECS service and scale on its own. When it is empty, the process runs every routed feed. A value without a route stops startup.
+
+**Unique client names.** The broker disconnects an existing connection that reuses a client name. `Solace:UniqueClientName` (on in `Dev`) appends the host name and a random part to `Solace:ClientName`, such as `piidemo-worker-dev-ip-10-0-1-23-ec2-internal-3f9a1c2e`. This lets several tasks of one service connect at the same time, and the name stays within the broker's 160-character limit.
+
 ## Architecture diagrams
 
 - [PII infrastructure on AWS](docs/diagrams/aws-pii-infrastructure.svg): proposed dev environment with a Solace broker, one exclusive input queue per feed and acknowledgment after publish.
+- [AWS deployment, one ECS service per feed](docs/diagrams/aws-solace-ecs-deployment-v3.svg): Harness build and deploy, partitioned Solace input queues, per-feed workers scaling on CPU, output queues, and worker and broker dead-letter paths. Earlier versions: [v1](docs/diagrams/aws-solace-ecs-deployment-v1.svg) (detailed), [v2](docs/diagrams/aws-solace-ecs-deployment-v2.svg) (simple).
 - [Feed protection workflow](docs/diagrams/presidio-feed-workflow.svg): Solace input queues, the .NET worker (receive, parse, configured identification, local Presidio, rebuild and validate, publish then acknowledge), protected topics and restricted dead-letter queues.
 
 ## C# conventions

@@ -17,6 +17,12 @@ public sealed class MessagingOptions
     public List<string> CopyHeaders { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the one feed this process consumes, so each feed can run as its own scalable service.
+    /// </summary>
+    /// <value>A feed name from Messaging:Routes, such as PNR; empty consumes every routed feed.</value>
+    public string Feed { get; set; } = "";
+
+    /// <summary>
     /// Gets or sets how many deliveries a message may have before it is dead-lettered without processing.
     /// </summary>
     /// <value>The maximum delivery count, at least 1.</value>
@@ -51,7 +57,7 @@ public sealed class MessagingOptions
     #region Methods
 
     /// <summary>
-    /// Binds the Messaging section strictly and validates it.
+    /// Binds the Messaging section strictly and validates it. When Messaging:Feed is set, only that feed's route is kept.
     /// </summary>
     /// <param name="configuration">The environment-resolved configuration.</param>
     /// <returns>The validated options.</returns>
@@ -61,6 +67,11 @@ public sealed class MessagingOptions
         var options = configuration.GetSection("Messaging").Get<MessagingOptions>(binder => binder.ErrorOnUnknownConfiguration = true)
             ?? throw new InvalidOperationException("Missing Messaging settings.");
         options.Validate();
+        if (!string.IsNullOrWhiteSpace(options.Feed))
+        {
+            // One service per feed: the process consumes, and on a local broker provisions, only its own feed's queues.
+            options.Routes = [options.Routes.Single(r => r.Feed.Equals(options.Feed, StringComparison.OrdinalIgnoreCase))];
+        }
         return options;
     }
 
@@ -97,6 +108,8 @@ public sealed class MessagingOptions
             var list = values.ToList();
             Require(list.Distinct(StringComparer.OrdinalIgnoreCase).Count() == list.Count, "Each feed requires its own input, output and dead-letter destinations.");
         }
+        Require(string.IsNullOrWhiteSpace(Feed) || Routes.Any(r => r.Feed.Equals(Feed, StringComparison.OrdinalIgnoreCase)),
+            $"Messaging:Feed '{Feed}' has no route in Messaging:Routes.");
     }
 
     #endregion
