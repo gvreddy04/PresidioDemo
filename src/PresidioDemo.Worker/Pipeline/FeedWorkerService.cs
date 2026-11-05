@@ -73,16 +73,22 @@ public sealed class FeedWorkerService(IMessagingConnection connection, IMessageC
             PythonHost.Start(presidio.PythonEnvironment);
             pythonStarted = true;
             var processor = new FeedMessageProcessor(pipeline.CreateRouter(new PresidioFeedProtector()));
-            // One worker per feed: .NET parsing and broker I/O overlap across feeds; shared Python calls are serialized.
+            // ConsumersPerTask workers per feed, each on its own broker flow: .NET parsing and broker round trips overlap
+            // across consumers and feeds; shared Python calls are serialized.
             var routes = Routes(messaging);
             var unrouted = FeedCatalog.All.Where(f => !routes.ContainsKey(f.Type)).Select(f => f.FolderName).ToArray();
             if (unrouted.Length > 0)
             {
                 log.LogInformation("No route for {Feeds}; these feeds are not consumed.", string.Join(", ", unrouted));
             }
-            var workers = routes.Select(pair => new FeedWorker(pair.Key, pair.Value, messaging, consumer, publisher, processor,
-                loggers.CreateLogger("PresidioDemo.Worker." + FeedCatalog.Get(pair.Key).FolderName)).RunAsync(stoppingToken)).ToArray();
-            log.LogInformation("READY: {Count} feed workers on {Transport}.", workers.Length, connection.Transport);
+            var workers = routes.SelectMany(pair => Enumerable.Range(0, messaging.ConsumersPerTask).Select(_ =>
+                new FeedWorker(pair.Key, pair.Value, messaging, consumer, publisher, processor,
+                    loggers.CreateLogger("PresidioDemo.Worker." + FeedCatalog.Get(pair.Key).FolderName)).RunAsync(stoppingToken))).ToArray();
+            if (messaging.ConsumersPerTask > 1)
+            {
+                log.LogInformation("{Consumers} consumers per feed.", messaging.ConsumersPerTask);
+            }
+            log.LogInformation("READY: {Count} feed workers on {Transport}.", routes.Count, connection.Transport);
             await Task.WhenAll(workers);
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }

@@ -8,7 +8,24 @@ namespace PresidioDemo.Messaging;
 public sealed class MessagingOptions
 {
 
+    #region Fields and Constants
+
+    /// <summary>
+    /// The most consumers one process may open on each input queue.
+    /// </summary>
+    public const int MaxConsumersPerTask = 32;
+
+    #endregion
+
     #region Properties, Indexers
+
+    /// <summary>
+    /// Gets or sets how many consumers this process opens on each routed input queue. Each consumer reads one message
+    /// at a time, so broker round trips overlap; on a partitioned queue the broker assigns partitions to each consumer,
+    /// which keeps the order for each partition key. On an exclusive queue the extra consumers wait as standby.
+    /// </summary>
+    /// <value>From 1 (the default) to MaxConsumersPerTask.</value>
+    public int ConsumersPerTask { get; set; } = 1;
 
     /// <summary>
     /// Gets or sets the input headers copied to protected output; all other headers are dropped.
@@ -91,6 +108,7 @@ public sealed class MessagingOptions
 
         Require(!string.IsNullOrWhiteSpace(Transport), "Messaging:Transport is required, for example Solace.");
         Require(MaxDeliveries >= 1, "Messaging:MaxDeliveries must be at least 1.");
+        Require(ConsumersPerTask is >= 1 and <= MaxConsumersPerTask, $"Messaging:ConsumersPerTask must be from 1 to {MaxConsumersPerTask}.");
         Require(PublishAckTimeoutMs >= 1 && PublishRetryDelayMs >= 1, "Messaging publish timeout and retry delay must be positive.");
         Require(CopyHeaders.All(h => !string.IsNullOrWhiteSpace(h)) && CopyHeaders.Distinct(StringComparer.Ordinal).Count() == CopyHeaders.Count,
             "Messaging:CopyHeaders must not contain empty or duplicate names.");

@@ -57,6 +57,9 @@ Require(onePnr.Routes.Count == 1 && FeedWorkerService.Routes(onePnr).Keys.Single
 var oneDevAci = MessagingOptions.Load(new ConfigurationBuilder().AddConfiguration(dev).AddInMemoryCollection([new("Messaging:Feed", "ACI")]).Build());
 Require(oneDevAci.Routes.Single().Input == "DEMOAIR.OPS.PIIDEMO.COS.ACI.MI.1", "Messaging:Feed selects one route in Dev too");
 RejectMessaging("Messaging:Feed", "IND", "Messaging:Feed without a route is rejected");
+Require(MessagingOptions.Load(local).ConsumersPerTask == 1, "one consumer per feed is the default");
+RejectMessaging("Messaging:ConsumersPerTask", "0", "zero consumers per task is rejected");
+RejectMessaging("Messaging:ConsumersPerTask", "33", "more than 32 consumers per task is rejected");
 var localSolace = SolaceOptions.Load(local, runRoot, password);
 Require(localSolace.ClientName == "presidio-worker-local", "without UniqueClientName the client name is used as configured");
 var devFirst = SolaceOptions.Load(dev, runRoot, password);
@@ -150,6 +153,26 @@ var headers = new Dictionary<string, string> { ["sourceSystem"] = "res-host", ["
     Require(dead[1].Headers[MessageHeaders.RejectReason].Contains("Unsupported"), "an unknown payload format is dead-lettered");
     Require(broker.PublishedTo(seats.Output).Count == 0, "rejected input is never published to the output topic");
 }
+{
+    // Two consumers on one queue, as Messaging:ConsumersPerTask=2 runs them: while one is still processing,
+    // the other takes and completes the next message.
+    var (broker, workflows) = Setup();
+    var processor = new FeedMessageProcessor(new FeedWorkflowRouter(FeedCatalog.All.Select(f => workflows.For(f.Type))));
+    using var stop = new CancellationTokenSource();
+    var running = Enumerable.Range(0, 2)
+        .Select(_ => new FeedWorker(FeedType.Seats, seats, options, broker, broker, processor, NullLogger.Instance).RunAsync(stop.Token)).ToArray();
+    workflows.BlockNext = true;
+    broker.Send(seats.Input, payload);
+    await WaitFor(() => workflows.Blocked, "the first consumer to start processing");
+    broker.Send(seats.Input, payload);
+    await WaitFor(() => broker.PublishedTo(seats.Output).Count == 1, "the second consumer to publish");
+    Require(workflows.Blocked && broker.Pending(seats.Input) == 1, "with two consumers, one message completes while the other is still processing");
+    workflows.Release();
+    await WaitFor(() => broker.Pending(seats.Input) == 0, "the first consumer to finish");
+    stop.Cancel();
+    await Task.WhenAll(running);
+    Require(broker.PublishedTo(seats.Output).Count == 2, "both messages are published once the first consumer finishes");
+}
 Directory.Delete(runRoot, recursive: true);
 Console.WriteLine("All worker checks passed.");
 
@@ -182,6 +205,20 @@ async Task RunUntil(InMemoryMessageBroker broker, FixtureWorkflows workflows, Fu
     workflows.Release();
     stop.Cancel();
     await running;
+}
+
+// Polls until the condition holds, failing after 20 seconds.
+static async Task WaitFor(Func<bool> condition, string label)
+{
+    var limit = DateTime.UtcNow.AddSeconds(20);
+    while (!condition())
+    {
+        if (DateTime.UtcNow > limit)
+        {
+            throw new Exception("Timed out waiting for " + label + ".");
+        }
+        await Task.Delay(20);
+    }
 }
 
 void RejectVariant(Action<JsonNode> change, string label)
