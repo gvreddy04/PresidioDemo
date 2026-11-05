@@ -1,6 +1,6 @@
 # AWS Deployment Plan (Dev, proposed)
 
-Diagram: [aws-solace-ecs-deployment-v5.svg](diagrams/aws-solace-ecs-deployment-v5.svg) (earlier: [v1](diagrams/aws-solace-ecs-deployment-v1.svg), [v2](diagrams/aws-solace-ecs-deployment-v2.svg), [v3](diagrams/aws-solace-ecs-deployment-v3.svg), [v4](diagrams/aws-solace-ecs-deployment-v4.svg)). Review this page with the pipeline and infrastructure team before requesting resources. Names use the DemoAir stand-ins; real values are supplied at deploy time only.
+Diagram: [aws-solace-ecs-deployment.svg](diagrams/aws-solace-ecs-deployment.svg) (earlier versions in [diagrams/old](diagrams/old): [v1](diagrams/old/aws-solace-ecs-deployment-v1.svg), [v2](diagrams/old/aws-solace-ecs-deployment-v2.svg), [v3](diagrams/old/aws-solace-ecs-deployment-v3.svg), [v4](diagrams/old/aws-solace-ecs-deployment-v4.svg), [v5](diagrams/old/aws-solace-ecs-deployment-v5.svg), [v6](diagrams/old/aws-solace-ecs-deployment-v6.svg), [v7](diagrams/old/aws-solace-ecs-deployment-v7.svg), [v8](diagrams/old/aws-solace-ecs-deployment-v8.svg)). The diagram keeps its wording generic. Specific values are on this page: connection settings, producers, consumers, queue mapping, sizing numbers, delivery counts and worker setting names. Review this page with the pipeline and infrastructure team before requesting resources. Names use the DemoAir stand-ins; real values are supplied at deploy time only.
 
 ## How it works
 
@@ -27,7 +27,7 @@ The Existing? column records what we assume; confirm each row with the platform 
 | 10 | VPC and private subnets | Subnets that can route to the Solace broker | Reuse |
 | 11 | Security group | No inbound rules; outbound TCP 55443 to the broker and 443 to the VPC endpoints | New |
 | 12 | VPC endpoints, or NAT | `ecr.api`, `ecr.dkr`, S3 gateway, `logs`, `secretsmanager` (platform traffic only) | Reuse if present |
-| 13 | Network path to the broker | Peering, Transit Gateway, PrivateLink or VPN, plus the broker-side firewall rule for the ECS subnet CIDRs | To confirm |
+| 13 | Network path to the broker | The broker is in AWS in the same region: VPC peering or Transit Gateway to its account, plus the broker-side firewall rule for the ECS subnet CIDRs | Reuse if a path exists |
 | 14 | Harness | CI pipeline (build and push), CD service and environment with an ECS rolling deploy, an AWS connector, and a delegate that can reach AWS | Confirm what exists |
 | 15 | Harness deploy role | `ecs:RegisterTaskDefinition`, `UpdateService`, `DescribeServices`; `iam:PassRole` on the execution role; ECR push for CI | New, or extend an existing role |
 
@@ -38,6 +38,7 @@ The Existing? column records what we assume; confirm each row with the platform 
 **Decided:**
 
 - **Parallel consumers per task.** Each task opens several broker flows, so 15–30 tasks cover 2,000 per second and far fewer new tasks ever start. Built: set `Messaging__ConsumersPerTask` in each task definition, such as `8`, once that feed's queue is partitioned. All consumers share the task's one broker connection.
+- **Numbers:** 8 consumers per task and 32 partitions per feed, so at most 4 tasks per feed and 20 in total. That covers 2,000 per second only if no single feed carries more than about 400–800 per second. If one feed carries most of the load, raise that feed's partitions; no code change is needed.
 - **Start tasks before they're needed.** Each service's minimum is sized for the normal peak (50,000–100,000 messages an hour, about 28 a second in total, so one task per feed). Scheduled scaling raises the minimums before holidays, so slow task start-up rarely matters. CPU target tracking at 60 % handles the rest, up to the partition count.
 
 **What one message costs:** in local harness runs (20 sample messages, in-memory broker), parsing, masking and rebuilding took about 1–20 ms per message. Current policies mask known fields and run no NLP analysis. In production, the round trip to the broker adds to this: a task reading one message at a time waits about two round trips per message.
@@ -64,12 +65,19 @@ Not measured yet: CPU per message on Fargate, real message sizes, and task start
 
 Configured in `appsettings.json` (`Environments:Dev`): host `tcps://…:55443`, VPN, username, client name and the password variable name. Routes are configured for ACI, ETKT (the TKT queue) and PNR. Real values are applied as environment variables at deploy time.
 
+Confirmed:
+
+- The broker is in AWS in the same region as the ECS tasks.
+- ACI, ETKT and PNR come from the reservation host through IBM MQ and Solace micro-integrations. The TKT queue carries the ETKT feed.
+- Seats and PNR-Linking come from the operations apps into the same broker.
+- The masked output goes to the partner core system.
+
 Still needed from the broker owner:
 
-- Partitioned input queues, with the partition count per feed. The upstream publisher must set PNR as the partition key; confirm the key for each feed.
-- Input queues for Seats and PNR-Linking in Dev. Both are routed locally, but neither has a Dev queue.
-- For each protected topic: an output queue, its topic subscription, and the consuming system.
-- One dead letter queue per feed, created with the same access limits as its input queue, because it holds raw PII. The current names are proposals.
+- Partitioned input queues, 32 partitions per feed, keyed by PNR for every feed. The publishers must set the key. The Seats and PNR-Linking JSON already carries a record-locator field. For ACI, ETKT and PNR, the micro-integration must read the PNR from the binary host record, or receive it in an MQ header; confirm it can.
+- Input queues for Seats and PNR-Linking in Dev, on the same broker as the others.
+- For each protected topic: an output queue and its topic subscription, consumed by the partner core system. The partner should confirm it can take 2,000 messages per second, and whether it needs the order kept for each PNR. The order is kept for now as the safe default.
+- One dead letter queue per feed, created by the broker team with the proposed `…DLQ.1` names and the same access limits as its input queue, because it holds raw PII.
 - Each input queue's dead message queue set to the feed's DLQ, with max redelivery 10, as the broker backstop.
 - An ACL profile for `piidemo-app` that can consume the input queues, publish to the protected topics, and send to the DLQs.
 - Delivery count enabled on the input queues. Without it, the worker cannot count failed deliveries and move a failing message to its DLQ.

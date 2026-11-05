@@ -1,0 +1,204 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1660 1030" role="img" aria-labelledby="title desc">
+<title id="title">Processing PII with Presidio: AWS deployment</title>
+<desc id="desc">Harness builds one Docker image, pushes it to ECR and deploys five ECS services, one per feed, each selected with Messaging__Feed and running 8 consumers per task. Upstream systems publish into partitioned Solace input queues on a broker in AWS, reached over a native TLS connection. Each task masks PII with Presidio in the same process and publishes to the feed's protected topic, which a subscribed output queue keeps for the partner core system. The worker sends rejected messages, or messages delivered more than 5 times, to the feed's restricted dead letter queue; the broker moves messages after 10 deliveries as a backstop. Each service keeps 1 task for the normal peak, scales on CPU up to 4 tasks (32 partitions divided by 8 consumers), and is pre-scaled before holidays.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="#444441"/></marker>
+<marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="#A32D2D"/></marker>
+<marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="#185FA5"/></marker>
+<marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="#888780"/></marker>
+<symbol id="q" viewBox="0 0 20 14"><rect x="0.5" y="0.5" width="19" height="13" rx="2" fill="none" stroke="currentColor"/><path d="M6 3V11M10 3V11M14 3V11" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="topic" viewBox="0 0 20 14"><circle cx="4" cy="7" r="2.5" fill="currentColor"/><path d="M8 3.5A5 5 0 0 1 8 10.5M11.5 1.5A8 8 0 0 1 11.5 12.5" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+<symbol id="tasks" viewBox="0 0 22 18"><rect x="6.5" y="0.5" width="15" height="11" rx="2" fill="#FFFFFF" stroke="currentColor"/><rect x="3.5" y="3.5" width="15" height="11" rx="2" fill="#FFFFFF" stroke="currentColor"/><rect x="0.5" y="6.5" width="15" height="11" rx="2" fill="#FFFFFF" stroke="currentColor"/></symbol>
+<symbol id="i-git" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="4" cy="3.5" r="2"/><circle cx="4" cy="12.5" r="2"/><circle cx="12" cy="6" r="2"/><path d="M4 5.5V10.5M12 8C12 10 8 10 5.5 11.5"/></g></symbol>
+<symbol id="i-run" viewBox="0 0 16 16"><path d="M4 2.5L13 8L4 13.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+<symbol id="i-box" viewBox="0 0 16 16"><path d="M8 1.5L14.5 4.8V11.2L8 14.5L1.5 11.2V4.8Z M1.5 4.8L8 8L14.5 4.8 M8 8V14.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></symbol>
+<symbol id="i-check" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 4.5V8.5M8 10.5V11.5" stroke="currentColor" stroke-width="1.6"/></symbol>
+<symbol id="i-cloud" viewBox="0 0 16 16"><path d="M4.5 12.5H12A3 3 0 0 0 12 6.5A4 4 0 0 0 4.3 7.6A2.5 2.5 0 0 0 4.5 12.5Z" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+<symbol id="i-lock" viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 7V5A3 3 0 0 1 11 5V7" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-log" viewBox="0 0 16 16"><rect x="2.5" y="1.5" width="11" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 5H11M5 8H11M5 11H9" stroke="currentColor" stroke-width="1.3"/></symbol>
+<symbol id="i-shield" viewBox="0 0 16 16"><path d="M8 1.5L13.5 3.5V8C13.5 11 11 13.5 8 14.5C5 13.5 2.5 11 2.5 8V3.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+<symbol id="i-user" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 14.5A5.5 5.5 0 0 1 13.5 14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+<style>
+text{font-family:'Segoe UI',Arial,sans-serif;fill:#2C2C2A}
+.h{font-size:16px;font-weight:600}
+.t{font-size:14px;font-weight:600}
+.s{font-size:13px}
+.m{font-size:12px;fill:#5F5E5A}
+.k{font-size:12px;font-weight:600}
+.c{font-family:Consolas,'Courier New',monospace;font-size:11px;fill:#5F5E5A}
+.ln{fill:none;stroke:#444441;stroke-width:1.5}
+.dl{fill:none;stroke:#A32D2D;stroke-width:1.5;stroke-dasharray:5 4}
+.bk{fill:none;stroke:#A32D2D;stroke-width:1.3;stroke-dasharray:2 3}
+.dp{fill:none;stroke:#185FA5;stroke-width:1.8}
+.pf{fill:none;stroke:#888780;stroke-width:1.4;stroke-dasharray:4 4}
+.bd rect{fill:#FFFFFF;stroke:#185FA5}.bd{color:#185FA5}
+.iq rect{fill:#FBEAF0;stroke:#993556}.iq{color:#993556}
+.dq rect{fill:#FCEBEB;stroke:#A32D2D}.dq{color:#A32D2D}
+.cq rect{fill:#E1F5EE;stroke:#0F6E56}.cq{color:#0F6E56}
+.mq rect{fill:#FAEEDA;stroke:#BA7517;stroke-dasharray:4 3}.mq{color:#BA7517}
+.ws rect{fill:#FFFFFF;stroke:#854F0B}.ws{color:#854F0B}
+.st rect{fill:#FFFFFF;stroke:#854F0B}
+.sv rect{fill:#FFFFFF;stroke:#888780}.sv{color:#5F5E5A}
+.miss{fill:#854F0B;font-weight:600}
+</style>
+</defs>
+<rect width="1660" height="1030" fill="#FFFFFF"/>
+<text class="h" x="40" y="44" style="font-size:22px">Processing PII with Presidio · AWS deployment</text>
+
+<!-- Build and deploy -->
+<g class="bd"><rect x="40" y="70" width="220" height="60" rx="8"/><use href="#i-git" x="56" y="82" width="16" height="16"/><text class="t" x="80" y="95">Code</text><text class="m" x="56" y="117">PresidioDemo repo</text></g>
+<g class="bd"><rect x="330" y="70" width="220" height="60" rx="8"/><use href="#i-run" x="346" y="82" width="16" height="16"/><text class="t" x="370" y="95">Harness CI</text><text class="m" x="346" y="117">Docker build</text></g>
+<g class="bd"><rect x="620" y="70" width="220" height="60" rx="8"/><use href="#i-box" x="636" y="82" width="16" height="16"/><text class="t" x="660" y="95">Amazon ECR</text><text class="m" x="636" y="117">one image for all feeds</text></g>
+<g class="bd"><rect x="910" y="70" width="220" height="60" rx="8"/><use href="#i-run" x="926" y="82" width="16" height="16"/><text class="t" x="950" y="95">Harness CD</text><text class="m" x="926" y="117">ECS rolling deploy</text></g>
+<g><rect x="1200" y="70" width="260" height="60" rx="8" fill="#FAEEDA" stroke="#BA7517"/><use href="#i-check" x="1216" y="82" width="16" height="16" style="color:#BA7517"/><text class="t" x="1240" y="95">Pipeline status</text><text class="m" x="1216" y="117">Confirm with team: CI · ECR · ECS</text></g>
+<path class="dp" d="M260 100H328" marker-end="url(#b)"/>
+<path class="dp" d="M550 100H618" marker-end="url(#b)"/>
+<path class="dp" d="M840 100H908" marker-end="url(#b)"/>
+
+<!-- Solace broker: raw PII zone -->
+<rect x="40" y="190" width="440" height="636" rx="12" fill="#FFFBF0" stroke="#EF9F27" stroke-width="1.8"/>
+<use href="#q" x="56" y="203" width="20" height="14" style="color:#BA7517"/>
+<text class="h" x="84" y="216">Solace broker · Dev · AWS</text>
+<text class="m" x="56" y="238">Native client · TLS</text>
+<text class="m" x="56" y="258">Raw PII · restricted access</text>
+
+<!-- AWS -->
+<rect x="520" y="190" width="600" height="636" rx="12" fill="#FAFAF7" stroke="#5F5E5A" stroke-width="1.5"/>
+<use href="#i-cloud" x="536" y="201" width="18" height="18" style="color:#5F5E5A"/>
+<text class="h" x="562" y="216">AWS · ECS Fargate · one service per feed</text>
+<g class="st"><rect x="540" y="232" width="110" height="44" rx="6"/><text class="k" x="595" y="250" text-anchor="middle">Receive</text><text class="m" x="595" y="267" text-anchor="middle">1 per consumer</text></g>
+<rect x="676" y="232" width="140" height="44" rx="6" fill="#EEEDFE" stroke="#534AB7"/><text class="k" x="746" y="250" text-anchor="middle">Mask PII</text><text class="m" x="746" y="267" text-anchor="middle">Presidio in-process</text>
+<g class="st"><rect x="842" y="232" width="110" height="44" rx="6"/><text class="k" x="897" y="250" text-anchor="middle">Publish</text><text class="m" x="897" y="267" text-anchor="middle">topic or DLQ</text></g>
+<g class="st"><rect x="978" y="232" width="122" height="44" rx="6"/><text class="k" x="1039" y="250" text-anchor="middle">Ack</text><text class="m" x="1039" y="267" text-anchor="middle">after confirm</text></g>
+<path class="ln" d="M650 254H674" marker-end="url(#a)"/>
+<path class="ln" d="M816 254H840" marker-end="url(#a)"/>
+<path class="ln" d="M952 254H976" marker-end="url(#a)"/>
+<text class="m" x="540" y="298">Each task · .NET 10 · pythonnet · presidio-analyzer · presidio-anonymizer</text>
+<text class="m" x="540" y="316">en_core_web_lg bundled · no HTTP, no remote service</text>
+
+<!-- Solace broker: masked output -->
+<rect x="1160" y="190" width="340" height="636" rx="12" fill="#FFFBF0" stroke="#EF9F27" stroke-width="1.8"/>
+<use href="#q" x="1176" y="203" width="20" height="14" style="color:#BA7517"/>
+<text class="h" x="1204" y="216">Solace broker · Dev · AWS</text>
+<text class="m" x="1176" y="238">Masked output · same broker</text>
+<text class="m" x="1176" y="258">Protected topic → subscribed queue</text>
+
+<!-- Consumers -->
+<rect x="1530" y="340" width="100" height="418" rx="10" fill="#EEF6E8" stroke="#3B6D11"/>
+<use href="#i-user" x="1572" y="520" width="16" height="16" style="color:#3B6D11"/>
+<text class="t" x="1580" y="556" text-anchor="middle">Partner</text>
+<text class="t" x="1580" y="574" text-anchor="middle">core system</text>
+
+<!-- Feed rows: ry = 340 + i*86 -->
+<!-- ACI -->
+<g class="iq"><rect x="80" y="344" width="370" height="26" rx="5"/><use href="#q" x="90" y="350" width="20" height="14"/><text class="k" x="118" y="362">ACI</text><text class="m" x="440" y="362" text-anchor="end">input</text></g>
+<g class="dq"><rect x="80" y="388" width="370" height="26" rx="5"/><use href="#q" x="90" y="394" width="20" height="14"/><text class="k" x="118" y="406">ACI DLQ</text><text class="m" x="440" y="406" text-anchor="end">restricted like input</text></g>
+<path class="bk" d="M80 357H64V401H78" marker-end="url(#r)"/>
+<g class="ws"><rect x="560" y="344" width="520" height="70" rx="8"/><use href="#tasks" x="576" y="358" width="22" height="18"/><text class="t" x="610" y="372">ACI worker</text><text class="c" x="1066" y="372" text-anchor="end">Messaging__Feed=ACI</text><text class="m" x="610" y="394">8 consumers · CPU 60 % · min 1 · max 4 tasks</text><text class="c" x="1066" y="394" text-anchor="end">ConsumersPerTask=8</text></g>
+<g class="cq"><rect x="1180" y="364" width="150" height="28" rx="5"/><use href="#topic" x="1190" y="371" width="20" height="14"/><text class="k" x="1216" y="383">ACI topic</text></g>
+<g class="cq"><rect x="1350" y="364" width="130" height="28" rx="5"/><use href="#q" x="1360" y="371" width="20" height="14"/><text class="k" x="1388" y="383">output queue</text></g>
+<path class="ln" d="M452 357H558" marker-end="url(#a)"/>
+<path class="dl" d="M558 401H452" marker-end="url(#r)"/>
+<path class="ln" d="M1080 378H1178" marker-end="url(#a)"/>
+<path class="ln" d="M1330 378H1348" marker-end="url(#a)"/>
+<path class="ln" d="M1480 378H1528" marker-end="url(#a)"/>
+
+<!-- ETKT -->
+<g class="iq"><rect x="80" y="430" width="370" height="26" rx="5"/><use href="#q" x="90" y="436" width="20" height="14"/><text class="k" x="118" y="448">ETKT</text><text class="m" x="440" y="448" text-anchor="end">input · TKT queue</text></g>
+<g class="dq"><rect x="80" y="474" width="370" height="26" rx="5"/><use href="#q" x="90" y="480" width="20" height="14"/><text class="k" x="118" y="492">ETKT DLQ</text><text class="m" x="440" y="492" text-anchor="end">restricted like input</text></g>
+<path class="bk" d="M80 443H64V487H78" marker-end="url(#r)"/>
+<g class="ws"><rect x="560" y="430" width="520" height="70" rx="8"/><use href="#tasks" x="576" y="444" width="22" height="18"/><text class="t" x="610" y="458">ETKT worker</text><text class="c" x="1066" y="458" text-anchor="end">Messaging__Feed=ETKT</text><text class="m" x="610" y="480">8 consumers · CPU 60 % · min 1 · max 4 tasks</text><text class="c" x="1066" y="480" text-anchor="end">ConsumersPerTask=8</text></g>
+<g class="cq"><rect x="1180" y="450" width="150" height="28" rx="5"/><use href="#topic" x="1190" y="457" width="20" height="14"/><text class="k" x="1216" y="469">ETKT topic</text></g>
+<g class="cq"><rect x="1350" y="450" width="130" height="28" rx="5"/><use href="#q" x="1360" y="457" width="20" height="14"/><text class="k" x="1388" y="469">output queue</text></g>
+<path class="ln" d="M452 443H558" marker-end="url(#a)"/>
+<path class="dl" d="M558 487H452" marker-end="url(#r)"/>
+<path class="ln" d="M1080 464H1178" marker-end="url(#a)"/>
+<path class="ln" d="M1330 464H1348" marker-end="url(#a)"/>
+<path class="ln" d="M1480 464H1528" marker-end="url(#a)"/>
+
+<!-- PNR -->
+<g class="iq"><rect x="80" y="516" width="370" height="26" rx="5"/><use href="#q" x="90" y="522" width="20" height="14"/><text class="k" x="118" y="534">PNR</text><text class="m" x="440" y="534" text-anchor="end">input</text></g>
+<g class="dq"><rect x="80" y="560" width="370" height="26" rx="5"/><use href="#q" x="90" y="566" width="20" height="14"/><text class="k" x="118" y="578">PNR DLQ</text><text class="m" x="440" y="578" text-anchor="end">restricted like input</text></g>
+<path class="bk" d="M80 529H64V573H78" marker-end="url(#r)"/>
+<g class="ws"><rect x="560" y="516" width="520" height="70" rx="8"/><use href="#tasks" x="576" y="530" width="22" height="18"/><text class="t" x="610" y="544">PNR worker</text><text class="c" x="1066" y="544" text-anchor="end">Messaging__Feed=PNR</text><text class="m" x="610" y="566">8 consumers · CPU 60 % · min 1 · max 4 tasks</text><text class="c" x="1066" y="566" text-anchor="end">ConsumersPerTask=8</text></g>
+<g class="cq"><rect x="1180" y="536" width="150" height="28" rx="5"/><use href="#topic" x="1190" y="543" width="20" height="14"/><text class="k" x="1216" y="555">PNR topic</text></g>
+<g class="cq"><rect x="1350" y="536" width="130" height="28" rx="5"/><use href="#q" x="1360" y="543" width="20" height="14"/><text class="k" x="1388" y="555">output queue</text></g>
+<path class="ln" d="M452 529H558" marker-end="url(#a)"/>
+<path class="dl" d="M558 573H452" marker-end="url(#r)"/>
+<path class="ln" d="M1080 550H1178" marker-end="url(#a)"/>
+<path class="ln" d="M1330 550H1348" marker-end="url(#a)"/>
+<path class="ln" d="M1480 550H1528" marker-end="url(#a)"/>
+
+<!-- Seats -->
+<g class="iq"><rect x="80" y="602" width="370" height="26" rx="5"/><use href="#q" x="90" y="608" width="20" height="14"/><text class="k" x="118" y="620">Seats</text><text class="m" x="440" y="620" text-anchor="end">input</text></g>
+<g class="dq"><rect x="80" y="646" width="370" height="26" rx="5"/><use href="#q" x="90" y="652" width="20" height="14"/><text class="k" x="118" y="664">Seats DLQ</text><text class="m" x="440" y="664" text-anchor="end">restricted like input</text></g>
+<path class="bk" d="M80 615H64V659H78" marker-end="url(#r)"/>
+<g class="ws"><rect x="560" y="602" width="520" height="70" rx="8"/><use href="#tasks" x="576" y="616" width="22" height="18"/><text class="t" x="610" y="630">Seats worker</text><text class="c" x="1066" y="630" text-anchor="end">Messaging__Feed=Seats</text><text class="m" x="610" y="652">8 consumers · CPU 60 % · min 1 · max 4 tasks</text><text class="c" x="1066" y="652" text-anchor="end">ConsumersPerTask=8</text></g>
+<g class="cq"><rect x="1180" y="622" width="150" height="28" rx="5"/><use href="#topic" x="1190" y="629" width="20" height="14"/><text class="k" x="1216" y="641">Seats topic</text></g>
+<g class="cq"><rect x="1350" y="622" width="130" height="28" rx="5"/><use href="#q" x="1360" y="629" width="20" height="14"/><text class="k" x="1388" y="641">output queue</text></g>
+<path class="ln" d="M452 615H558" marker-end="url(#a)"/>
+<path class="dl" d="M558 659H452" marker-end="url(#r)"/>
+<path class="ln" d="M1080 636H1178" marker-end="url(#a)"/>
+<path class="ln" d="M1330 636H1348" marker-end="url(#a)"/>
+<path class="ln" d="M1480 636H1528" marker-end="url(#a)"/>
+
+<!-- PNR-Linking -->
+<g class="iq"><rect x="80" y="688" width="370" height="26" rx="5"/><use href="#q" x="90" y="694" width="20" height="14"/><text class="k" x="118" y="706">PNR-Linking</text><text class="m" x="440" y="706" text-anchor="end">input</text></g>
+<g class="dq"><rect x="80" y="732" width="370" height="26" rx="5"/><use href="#q" x="90" y="738" width="20" height="14"/><text class="k" x="118" y="750">PNR-Linking DLQ</text><text class="m" x="440" y="750" text-anchor="end">restricted like input</text></g>
+<path class="bk" d="M80 701H64V745H78" marker-end="url(#r)"/>
+<g class="ws"><rect x="560" y="688" width="520" height="70" rx="8"/><use href="#tasks" x="576" y="702" width="22" height="18"/><text class="t" x="610" y="716">PNR-Linking worker</text><text class="c" x="1066" y="716" text-anchor="end">Messaging__Feed=PNR-Linking</text><text class="m" x="610" y="738">8 consumers · CPU 60 % · min 1 · max 4 tasks</text><text class="c" x="1066" y="738" text-anchor="end">ConsumersPerTask=8</text></g>
+<g class="cq"><rect x="1180" y="708" width="150" height="28" rx="5"/><use href="#topic" x="1190" y="715" width="20" height="14"/><text class="k" x="1216" y="727">PNR-Linking topic</text></g>
+<g class="cq"><rect x="1350" y="708" width="130" height="28" rx="5"/><use href="#q" x="1360" y="715" width="20" height="14"/><text class="k" x="1388" y="727">output queue</text></g>
+<path class="ln" d="M452 701H558" marker-end="url(#a)"/>
+<path class="dl" d="M558 745H452" marker-end="url(#r)"/>
+<path class="ln" d="M1080 722H1178" marker-end="url(#a)"/>
+<path class="ln" d="M1330 722H1348" marker-end="url(#a)"/>
+<path class="ln" d="M1480 722H1528" marker-end="url(#a)"/>
+
+<!-- AWS shared services -->
+<g class="sv"><rect x="540" y="774" width="136" height="40" rx="6"/><use href="#i-lock" x="548" y="786" width="16" height="16"/><text class="k" x="570" y="790">Secrets Manager</text><text class="m" x="570" y="806">Solace password</text></g>
+<g class="sv"><rect x="684" y="774" width="136" height="40" rx="6"/><use href="#i-log" x="692" y="786" width="16" height="16"/><text class="k" x="714" y="790">CloudWatch</text><text class="m" x="714" y="806">logs · CPU alarms</text></g>
+<g class="sv"><rect x="828" y="774" width="136" height="40" rx="6"/><use href="#i-shield" x="836" y="786" width="16" height="16"/><text class="k" x="858" y="790">Private subnets</text><text class="m" x="858" y="806">no inbound ports</text></g>
+<g class="sv"><rect x="972" y="774" width="136" height="40" rx="6"/><text class="k" x="982" y="790">Broker network</text><text class="m" x="982" y="806">VPC peering / TGW</text></g>
+
+<!-- Deploy paths, drawn over the account -->
+<path class="pf" d="M730 130V188" marker-end="url(#g)"/>
+<text class="m" x="738" y="166">image</text>
+<path class="dp" d="M1020 130V188" marker-end="url(#b)"/>
+<text class="m" x="1028" y="166" style="fill:#185FA5">deploys 5 services</text>
+
+<!-- Legend -->
+<path class="ln" d="M40 858H84" marker-end="url(#a)"/><text class="s" x="92" y="862">Message flow, TLS</text>
+<path class="dl" d="M230 858H274" marker-end="url(#r)"/><text class="s" x="282" y="862">Worker to DLQ: rejected or after 5</text>
+<path class="bk" d="M520 858H564" marker-end="url(#r)"/><text class="s" x="572" y="862">Broker to DLQ: after 10 (backstop)</text>
+<path class="dp" d="M820 858H864" marker-end="url(#b)"/><text class="s" x="872" y="862">Build and deploy</text>
+<use href="#topic" x="1010" y="851" width="20" height="14" style="color:#0F6E56"/><text class="s" x="1036" y="862">Topic</text>
+<use href="#q" x="1090" y="851" width="20" height="14" style="color:#5F5E5A"/><text class="s" x="1116" y="862">Queue</text>
+
+
+<!-- Notes -->
+<line x1="40" y1="884" x2="1620" y2="884" stroke="#D3D1C7"/>
+<text class="t" x="40" y="912">How it scales</text>
+<text class="s" x="40" y="936">2,000 msg/s total · up to 20 tasks (4 per feed).</text>
+<text class="s" x="40" y="958">8 consumers per task · 32 partitions per feed.</text>
+<text class="s" x="40" y="980">Min 1 per feed covers the normal peak.</text>
+<text class="s" x="40" y="1002">Scheduled scaling before holidays · CPU 60 %.</text>
+
+<text class="t" x="440" y="912">Dead letters</text>
+<text class="s" x="440" y="936">Worker: rejected, or after 5 deliveries.</text>
+<text class="s" x="440" y="958">Broker backstop: after 10 deliveries.</text>
+<text class="s" x="440" y="980">Both land in the feed's restricted DLQ.</text>
+<text class="s" x="440" y="1002">Raw PII never goes to output.</text>
+
+<text class="t" x="840" y="912">Needed from Solace</text>
+<text class="s" x="840" y="936">Publishers set PNR as the partition key</text>
+<text class="s" x="840" y="958">Create input, output and dead letter queues</text>
+<text class="s" x="840" y="980">ACL · delivery count on · CA certificate</text>
+<text class="s" x="840" y="1002">Partner confirms 2,000 msg/s and PNR order</text>
+
+<text class="t" x="1240" y="912">Worker settings · password</text>
+<text class="s" x="1240" y="936">Messaging__Feed picks the service's feed.</text>
+<text class="s" x="1240" y="958">ConsumersPerTask=8: parallel flows per task.</text>
+<text class="s" x="1240" y="980">Unique client name per task (on in Dev).</text>
+<text class="s" x="1240" y="1002">Secrets Manager sets SOLACE_PASSWORD.</text>
+</svg>
