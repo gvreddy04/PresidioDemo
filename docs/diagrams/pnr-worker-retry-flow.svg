@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+<title id="title">PNR masking with retry and dead letter queue</title>
+<desc id="desc">The PNR worker in the DemoAir PII service AWS account reads one message from the PNR input queue, masks it with Presidio in the same process, publishes the masked message and acknowledges the input only after the broker confirms. Bad data goes to the PNR dead letter queue at once. A broker outage is retried every 5 seconds without acknowledging. A crash before the ack makes the broker redeliver. After 5 deliveries the worker moves the message to the DLQ, and the broker does so after 10 as a backstop.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="#444441"/></marker>
+<marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="#A32D2D"/></marker>
+<marker id="y" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="#BA7517"/></marker>
+<symbol id="q" viewBox="0 0 20 14"><rect x="0.5" y="0.5" width="19" height="13" rx="2" fill="none" stroke="currentColor"/><path d="M6 3V11M10 3V11M14 3V11" stroke="currentColor" stroke-width="1.5"/></symbol>
+<style>
+text{font-family:'Segoe UI',Arial,sans-serif;fill:#2C2C2A}
+.h{font-size:16px;font-weight:600}
+.t{font-size:14px;font-weight:600}
+.s{font-size:13px}
+.m{font-size:12.5px;fill:#5F5E5A}
+.d{font-size:12.5px;font-family:Consolas,'Courier New',monospace;fill:#2C2C2A}
+.ln{fill:none;stroke:#444441;stroke-width:1.5}
+.dl{fill:none;stroke:#A32D2D;stroke-width:1.5;stroke-dasharray:5 4}
+.rl{fill:none;stroke:#BA7517;stroke-width:1.5;stroke-dasharray:5 4}
+.iq rect{fill:#FBEAF0;stroke:#993556}.iq{color:#993556}
+.dq rect{fill:#FCEBEB;stroke:#A32D2D}.dq{color:#A32D2D}
+.cq rect{fill:#E1F5EE;stroke:#0F6E56}.cq{color:#0F6E56}
+.st rect{fill:#FFFFFF;stroke:#854F0B}
+.fx rect{fill:#FCEBEB;stroke:#A32D2D;stroke-dasharray:5 4}
+.rt rect{fill:#FAEEDA;stroke:#BA7517;stroke-dasharray:5 4}
+.cd rect{fill:#F7F6F2;stroke:#B4B2A9}
+</style>
+</defs>
+<rect width="1600" height="900" fill="#FFFFFF"/>
+<text class="h" x="30" y="40" style="font-size:20px">PNR masking with retry and dead letter queue</text>
+<text class="m" x="30" y="62">Ack only after the masked message is published. Bad data goes to the DLQ at once; only failures that can recover are retried.</text>
+
+<!-- Message broker -->
+<rect x="30" y="80" width="300" height="640" rx="12" fill="#F1EFE8" stroke="#888780" stroke-width="1.5"/>
+<text class="h" x="46" y="106">Message broker</text>
+<text class="m" x="46" y="126">Native client, TLS</text>
+
+<g class="iq"><rect x="50" y="145" width="260" height="130" rx="8"/>
+<use href="#q" x="64" y="160" width="20" height="14"/>
+<text class="t" x="92" y="172">PNR (PCI clean)</text>
+<text class="m" x="64" y="194">Input queue · raw PII</text>
+<text class="d" x="64" y="218">PNR K7QX2M</text>
+<text class="d" x="64" y="238">Emily Carter</text>
+<text class="d" x="64" y="258">emily.carter@example.com</text></g>
+
+<g class="dq"><rect x="50" y="570" width="260" height="130" rx="8"/>
+<use href="#q" x="64" y="585" width="20" height="14"/>
+<text class="t" x="92" y="597">PNR dead letter queue</text>
+<text class="m" x="64" y="620">Raw PII, same access as input</text>
+<text class="m" x="64" y="642">Reject reason on each message</text>
+<text class="m" x="64" y="664">Alert on depth</text>
+<text class="m" x="64" y="686">Replay to input after a fix</text></g>
+
+<path class="dl" d="M100 277V566" marker-end="url(#r)"/>
+<text class="m" x="112" y="396" style="fill:#A32D2D">Broker backstop:</text>
+<text class="m" x="112" y="416" style="fill:#A32D2D">moves it after</text>
+<text class="m" x="112" y="436" style="fill:#A32D2D">10 deliveries</text>
+
+<!-- AWS account and ECS -->
+<rect x="370" y="80" width="880" height="400" rx="12" fill="#FFF8EC" stroke="#EF9F27" stroke-width="1.5"/>
+<text class="h" x="390" y="106">DemoAir PII service AWS account</text>
+<rect x="395" y="120" width="830" height="340" rx="10" fill="#FFFDF8" stroke="#BA7517"/>
+<text class="t" x="412" y="142">ECS Fargate · PNR service</text>
+<rect x="420" y="158" width="780" height="290" rx="8" fill="#FFFFFF" stroke="#854F0B" stroke-width="1.5"/>
+<text class="t" x="436" y="184">PNR worker task (.NET) · no HTTP calls</text>
+<text class="m" x="436" y="206">PresidioDemo.Worker · PresidioDemo.Core · Presidio via Python.NET</text>
+
+<g class="st"><rect x="430" y="230" width="175" height="80" rx="6"/>
+<text class="t" x="517" y="264" text-anchor="middle">Receive</text>
+<text class="m" x="517" y="286" text-anchor="middle">one message at a time</text></g>
+<g class="st"><rect x="625" y="230" width="175" height="80" rx="6"/>
+<text class="t" x="712" y="264" text-anchor="middle">Mask PII</text>
+<text class="m" x="712" y="286" text-anchor="middle">Presidio in-process</text></g>
+<g class="st"><rect x="820" y="230" width="175" height="80" rx="6"/>
+<text class="t" x="907" y="264" text-anchor="middle">Publish masked</text>
+<text class="m" x="907" y="286" text-anchor="middle">wait for broker confirm</text></g>
+<g class="st"><rect x="1015" y="230" width="175" height="80" rx="6"/>
+<text class="t" x="1102" y="264" text-anchor="middle">Ack input</text>
+<text class="m" x="1102" y="286" text-anchor="middle">only after confirm</text></g>
+<path class="ln" d="M605 270H623" marker-end="url(#a)"/>
+<path class="ln" d="M800 270H818" marker-end="url(#a)"/>
+<path class="ln" d="M995 270H1013" marker-end="url(#a)"/>
+
+<g class="fx"><rect x="430" y="350" width="175" height="80" rx="6"/>
+<text class="t" x="517" y="380" text-anchor="middle" style="fill:#A32D2D">Over 5 deliveries</text>
+<text class="m" x="517" y="402" text-anchor="middle">to DLQ, stop retrying</text></g>
+<g class="fx"><rect x="625" y="350" width="175" height="80" rx="6"/>
+<text class="t" x="712" y="380" text-anchor="middle" style="fill:#A32D2D">Bad or unsupported data</text>
+<text class="m" x="712" y="402" text-anchor="middle">to DLQ now, no retry</text></g>
+<g class="rt"><rect x="820" y="350" width="175" height="80" rx="6"/>
+<text class="t" x="907" y="374" text-anchor="middle" style="fill:#854F0B">Broker unavailable</text>
+<text class="m" x="907" y="396" text-anchor="middle">wait 5 s, publish again</text>
+<text class="m" x="907" y="416" text-anchor="middle">input stays unacked</text></g>
+<g class="rt"><rect x="1015" y="350" width="175" height="80" rx="6"/>
+<text class="t" x="1102" y="374" text-anchor="middle" style="fill:#854F0B">Crash before ack</text>
+<text class="m" x="1102" y="396" text-anchor="middle">broker redelivers,</text>
+<text class="m" x="1102" y="416" text-anchor="middle">delivery count +1</text></g>
+<path class="dl" d="M517 312V348" marker-end="url(#r)"/>
+<path class="dl" d="M712 312V348" marker-end="url(#r)"/>
+<path class="rl" d="M880 312V348" marker-end="url(#y)"/>
+<path class="rl" d="M934 348V312" marker-end="url(#y)"/>
+<path class="rl" d="M1102 312V348" marker-end="url(#y)"/>
+
+
+<!-- Read and publish -->
+<path class="ln" d="M312 200H400V270H428" marker-end="url(#a)"/>
+<text class="m" x="320" y="192">Read</text>
+<path class="ln" d="M907 228V200H1288" marker-end="url(#a)"/>
+<text class="m" x="1060" y="192">Masked message</text>
+
+<!-- Dead letter route -->
+<path class="dl" d="M517 432V625"/>
+<path class="dl" d="M712 432V625H312" marker-end="url(#r)"/>
+<text class="m" x="336" y="615" style="fill:#A32D2D">Moved with reject reason</text>
+
+<!-- Redelivery loop -->
+<path class="rl" d="M1102 432V745H15V200H48" marker-end="url(#y)"/>
+<text class="m" x="560" y="737" style="fill:#854F0B">Not acked: broker redelivers to the input queue with delivery count +1</text>
+
+<!-- Output side -->
+<g class="cq"><rect x="1290" y="145" width="280" height="130" rx="8"/>
+<use href="#q" x="1304" y="160" width="20" height="14"/>
+<text class="t" x="1332" y="172">PNR (PII &amp; PCI clean)</text>
+<text class="m" x="1304" y="194">Output queue</text>
+<text class="d" x="1304" y="218">PNR K7QX2M unchanged</text>
+<text class="d" x="1304" y="238">Name and email masked</text></g>
+<g class="st"><rect x="1290" y="320" width="280" height="70" rx="8" style="stroke:#534AB7"/>
+<text class="t" x="1430" y="350" text-anchor="middle">Partner core system</text>
+<text class="m" x="1430" y="372" text-anchor="middle">Consumes the masked PNR</text></g>
+<path class="ln" d="M1430 277V318" marker-end="url(#a)"/>
+
+<!-- Legend -->
+<text class="t" x="1290" y="430">Paths</text>
+<path class="ln" d="M1290 456H1340" marker-end="url(#a)"/><text class="s" x="1352" y="460">Normal flow</text>
+<path class="rl" d="M1290 486H1340" marker-end="url(#y)"/><text class="s" x="1352" y="490">Retry, message not acked</text>
+<path class="dl" d="M1290 516H1340" marker-end="url(#r)"/><text class="s" x="1352" y="520">Dead letter, never published</text>
+
+<!-- Rules -->
+<g class="cd"><rect x="30" y="775" width="370" height="100" rx="8"/>
+<text class="t" x="46" y="802">Retry only what can recover</text>
+<text class="m" x="46" y="826">Broker outage or worker restart: retry.</text>
+<text class="m" x="46" y="848">Bad data: DLQ at once, never retried.</text></g>
+<g class="cd"><rect x="420" y="775" width="370" height="100" rx="8"/>
+<text class="t" x="436" y="802">No ack until published</text>
+<text class="m" x="436" y="826">A crash at any step means redelivery,</text>
+<text class="m" x="436" y="848">never a lost message.</text></g>
+<g class="cd"><rect x="810" y="775" width="370" height="100" rx="8"/>
+<text class="t" x="826" y="802">Capped attempts</text>
+<text class="m" x="826" y="826">Worker stops at 5 deliveries.</text>
+<text class="m" x="826" y="848">Broker backstop moves it at 10.</text></g>
+<g class="cd"><rect x="1200" y="775" width="370" height="100" rx="8"/>
+<text class="t" x="1216" y="802">Duplicates are detectable</text>
+<text class="m" x="1216" y="826">A republish keeps the same message ID,</text>
+<text class="m" x="1216" y="848">so the consumer can drop repeats.</text></g>
+</svg>
