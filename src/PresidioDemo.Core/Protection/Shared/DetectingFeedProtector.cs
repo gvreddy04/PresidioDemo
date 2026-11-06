@@ -146,7 +146,7 @@ public sealed class DetectingFeedProtector(IReadOnlyDictionary<FeedType, FeedRec
                 {
                     events[slot] = Event(slot, logged, field.Value, "anchor", "PNR", 1, DetectionDecision.Anchor);
                 }
-                else if (!binary && FormatByKey(set, key) is { } byKey)
+                else if (!binary && FormatByPath(set, field.Name) is { } byKey)
                 {
                     values[field.Id] = Protect(field.Value, byKey.Action, byKey.MaskCharacter, byKey.Replacement);
                     events[slot] = Event(slot, logged, field.Value, byKey.Name, byKey.Entity, 1, Decision(byKey.Action));
@@ -336,6 +336,13 @@ public sealed class DetectingFeedProtector(IReadOnlyDictionary<FeedType, FeedRec
             throw new InvalidDataException("A personal-data property holds a number or boolean that cannot be protected in its JSON type; input retained and no output was published.");
         }
     }
+
+    /// <summary>
+    /// Returns the key format of a JSON value from its deepest path segment that has one, so a value nested under a
+    /// personal-data key (such as <c>DOB.Date</c>) is protected by that key.
+    /// </summary>
+    private static DetectionFormat? FormatByPath(FeedRecognizerSet set, string name) =>
+        Segments(name).Reverse().Select(segment => FormatByKey(set, segment)).FirstOrDefault(format => format is not null);
 
     /// <summary>
     /// Returns the format whose key list holds this JSON property name, ignoring case.

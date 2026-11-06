@@ -114,7 +114,16 @@ internal static class DetectingProtectorChecks
         var referenceField = aciFields.Last(f => f.Value.Length == 15 && f.Value[..9].All(char.IsAsciiDigit));
         Check(aciOutcome.Values[referenceField.Id][9..] == referenceField.Value[9..] && aciOutcome.Values[referenceField.Id][..9].All(c => c == '*'),
             "ACI record reference: prefix masked, embedded PNR unchanged");
-        Console.WriteLine("PASS malformed optional and embedded PNRs dead-letter; the embedded ACI PNR is kept while its prefix is masked");
+        // R-011: an all-digit 15-digit number in the reference position is not a record reference; it is masked in full.
+        var digits = ParseEdited(aci, FeedType.ACI, (fields, payload) =>
+        {
+            var reference = fields.Last(f => f.Value.Length == 15 && f.Value[..9].All(char.IsAsciiDigit));
+            System.Text.Encoding.ASCII.GetBytes("378282246310005").CopyTo(payload, Locate(payload, reference.Value));
+        });
+        var digitsOutcome = await protector.ProtectAsync(FeedType.ACI, digits, CancellationToken.None);
+        var digitsField = digits.Fields.Single(f => f.Value == "378282246310005");
+        Check(digitsOutcome.Values[digitsField.Id].All(c => c is '*' or '#'), "a 15-digit number in the reference position is masked in full");
+        Console.WriteLine("PASS malformed optional and embedded PNRs dead-letter; the embedded ACI PNR is kept while its prefix is masked; an all-digit reference is masked in full");
 
         // R-004, R-006, R-009: JSON keys match regardless of case, reason text is scanned, a number nested under a
         // personal-data key dead-letters, and a key the recognizer file does not declare is logged as ?.
@@ -124,6 +133,11 @@ internal static class DetectingProtectorChecks
         var jsonOutcome = await protector.ProtectAsync(FeedType.PnrLinking, json, CancellationToken.None);
         string Value(string suffix) => jsonOutcome.Values[json.Fields.Single(f => f.Id.EndsWith(suffix, StringComparison.Ordinal)).Id];
         Check(Value("/dob") == "[DATE_OF_BIRTH]", "a lower-case dob key is replaced, not kept as a timestamp");
+        var nested = linkingCodec.Parse(new FeedMessage(new FeedDelivery(FeedType.PnrLinking, Guid.NewGuid(), "fixture.bin", ""),
+            Encoding.UTF8.GetBytes("[{\"PNROwner\":\"K7QX2M\",\"DOB\":{\"Date\":\"1985-03-12\"}}]")));
+        var nestedOutcome = await protector.ProtectAsync(FeedType.PnrLinking, nested, CancellationToken.None);
+        Check(nestedOutcome.Values[nested.Fields.Single(f => f.Id.EndsWith("/DOB/Date", StringComparison.Ordinal)).Id] == "[DATE_OF_BIRTH]",
+            "a string nested under a personal-data key is protected by that key (R-012)");
         Check(!Value("/ReasonForLeaving").Contains("MILLER", StringComparison.Ordinal) && Value("/ReasonForLeaving").StartsWith("REBOOKED, ", StringComparison.Ordinal),
             "a name inside reason text is masked while the reason is kept");
         Check(Value("/PNROwner") == "K7QX2M", "the PNR stays unchanged");

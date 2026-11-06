@@ -8,7 +8,8 @@
 <recognizers feed="ACI" threshold="0.5" defaultMaskCharacter="*">
   <!-- The PNR is the PNR-shaped candidate just before the first passenger name (WR-017). -->
   <pnrAnchor before="passengerName" offset="1" />
-  <!-- The unresolved record reference embeds a PNR after its nine-digit prefix; it must stay unchanged. -->
+  <!-- The unresolved record reference embeds a PNR after its nine-digit prefix; it must stay unchanged. The PNR part
+       must hold a letter, so an all-digit number (such as a 15-digit card number) is not a record reference. -->
   <pnrAnchor within="unresolvedRecordReference" optional="true"><pattern>\d{9}(?&lt;pnr>\S{6})</pattern></pnrAnchor>
 
   <format name="passengerName" entity="PERSON" score="0.9" maskCharacter="*">
@@ -22,7 +23,7 @@
     <pattern>^\d{9}(?=\S{6}$)</pattern>
   </format>
 
-  <keep name="unresolvedRecordReference" scan="true"><pattern>\d{9}\S{6}</pattern></keep>
+  <keep name="unresolvedRecordReference" scan="true"><pattern>\d{9}(?=\S{0,5}[A-Z])\S{6}</pattern></keep>
   <keep name="date"><pattern>\d{8}</pattern></keep>
   <keep name="timestamp"><pattern>\d{8} \d{2}\.\d{2}\.\d{2}\.\d{3}</pattern></keep>
   <keep name="time"><pattern>\d{2}\.\d{2}\.\d{2}\.\d{3}</pattern></keep>

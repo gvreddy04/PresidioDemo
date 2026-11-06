@@ -99,6 +99,8 @@ Reject(() => XdrTextScanner.Scan(new byte[] { 0, 0, 0, 5, 0xE2, 0xD4, 0xC9, 0xE3
 // Integers almost always hold NUL bytes, so a length-like word followed by an integer stays raw words.
 Check(XdrTextScanner.Scan(new byte[] { 0, 0, 0, 4, 0xFF, 0xFF, 0xFF, 0x00 }).Count == 0, "an integer with a NUL byte stays raw words");
 Check(XdrTextScanner.Scan(new byte[] { 0, 0, 0, 4, 0, 0, 0, 0 }).Count == 0, "NUL bytes stay raw words");
+// A count followed by integer bytes without NUL (R-013) is not text in another encoding.
+Check(XdrTextScanner.Scan(new byte[] { 0, 0, 0, 4, 0x8A, 0x1B, 0x2C, 0x3D }).Count == 0, "a count followed by integer bytes stays raw words");
 
 Console.WriteLine($"PASS Generic XDR codec checks complete | {samples.Length} samples | {compared} candidates");
 

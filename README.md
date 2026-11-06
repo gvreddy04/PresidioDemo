@@ -131,7 +131,7 @@ The root [.editorconfig](.editorconfig) shares C# formatting preferences with Vi
 
 Every feed is decoded generically; there is no per-feed schema or field list, so a template change does not stop protection.
 
-- **Binary feeds (ACI, ETKT, PNR).** `GenericXdrFeedCodec` reads the IBM MQ export or raw payload and `XdrTextScanner` scans the big-endian XDR words for counted strings of four or more printable ASCII characters. Shorter spans stay raw words and are never changed, because words such as `00000001 31000000` cannot be told apart from a one-character string (WR-015). A counted string whose text is not printable ASCII (Latin-1, EBCDIC or control characters) cannot be checked, so the message is dead-lettered. Integers, framing and padding are never decoded or changed. Protected values are written back at the same width, and validation rejects any change outside the scanned strings.
+- **Binary feeds (ACI, ETKT, PNR).** `GenericXdrFeedCodec` reads the IBM MQ export or raw payload and `XdrTextScanner` scans the big-endian XDR words for counted strings of four or more printable ASCII characters. Shorter spans stay raw words and are never changed, because words such as `00000001 31000000` cannot be told apart from a one-character string (WR-015). A counted string whose text is not printable ASCII but is mostly letters, digits or spaces (Latin-1, EBCDIC, or text with a control character) cannot be checked, so the message is dead-lettered. Integers, framing and padding are never decoded or changed. Protected values are written back at the same width, and validation rejects any change outside the scanned strings.
 - **JSON feeds (PNR-Linking, Seats).** Every string value is a candidate, with its property name as context. Numbers, booleans and nulls never change; a number or boolean under a personal-data key dead-letters the message, because it cannot be protected in its type.
 
 Each feed has one recognizer file in [src/PresidioDemo.Core/Configuration/recognizers](src/PresidioDemo.Core/Configuration/recognizers). For every decoded string, in this order:
@@ -186,6 +186,10 @@ Compared byte for byte with the output of the former field policies, 8 of the 17
 - Binary strings of one to three characters are published unchanged (WR-015), for example seat numbers and three-digit phone area codes.
 - In binary feeds, a value that matches a keep is published even if it is personal data with the same shape; for example, an ACI eight-digit date of birth matches the `date` keep. Binary strings carry no labels, so a keep cannot tell the two apart.
 - A value that detection misses is published (WR-016); the detection log shows `masked-by-default`, `missed-below-threshold` and the formats used, so a format can be added.
+- JSON property names are structure and are never changed, even if a producer uses a value as a key; the detection log shows such undeclared keys as `?`.
+- Binary text that contains NUL bytes, such as UTF-16, is not recognised as text and is published unchanged. Producers send ASCII; the supplied exports use CCSID 437 and 500.
+- In ETKT, a six-character value of letters and digits at a divide-event PNR position is kept as a PNR.
+- A Presidio regex timeout is detected through Presidio's "timed out" warning. Recheck `test_presidio_rules` when Presidio is upgraded.
 
 ## Technology stack
 

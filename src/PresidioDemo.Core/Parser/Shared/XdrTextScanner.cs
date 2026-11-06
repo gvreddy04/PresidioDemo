@@ -110,8 +110,9 @@ public static class XdrTextScanner
     /// <param name="length">The declared text length.</param>
     /// <param name="next">The offset after the padding.</param>
     /// <returns><see cref="SpanKind.Text"/> for printable ASCII with zero padding; <see cref="SpanKind.UnsupportedText"/>
-    /// for a zero-padded span without NUL bytes that holds a byte outside printable ASCII (text in another encoding);
-    /// otherwise <see cref="SpanKind.RawWords"/>, because integers almost always contain NUL bytes.</returns>
+    /// for a zero-padded span without NUL bytes that holds a byte outside printable ASCII and is mostly letters, digits or
+    /// spaces (text in another encoding); otherwise <see cref="SpanKind.RawWords"/>, because integers almost always contain
+    /// NUL bytes or few letter-like bytes.</returns>
     private static SpanKind Classify(ReadOnlySpan<byte> payload, int offset, int length, out int next)
     {
         next = offset + 4 + Padded(length);
@@ -130,6 +131,7 @@ public static class XdrTextScanner
 
         var text = payload.Slice(offset + 4, length);
         bool printable = true;
+        int textLike = 0;
         foreach (byte value in text)
         {
             if (value == 0)
@@ -137,8 +139,15 @@ public static class XdrTextScanner
                 return SpanKind.RawWords;
             }
             printable &= value is >= 0x20 and <= 0x7E;
+            // ASCII letters, digits and space, or 0xC0-0xFF (Latin-1 letters, EBCDIC letters and digits).
+            textLike += value is >= (byte)'A' and <= (byte)'Z' or >= (byte)'a' and <= (byte)'z' or >= (byte)'0' and <= (byte)'9' or (byte)' ' or >= 0xC0 ? 1 : 0;
         }
-        return printable ? SpanKind.Text : SpanKind.UnsupportedText;
+        if (printable)
+        {
+            return SpanKind.Text;
+        }
+        // Text in another encoding is mostly letters; integer or timestamp bytes are not, so they stay raw words.
+        return textLike * 2 >= length ? SpanKind.UnsupportedText : SpanKind.RawWords;
     }
 
     #endregion

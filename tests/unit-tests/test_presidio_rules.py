@@ -62,6 +62,15 @@ class DetectionBridgeTests(unittest.TestCase):
             presidio_demo.analyze_strings("Slow", json.dumps(["A" * 40 + "!"]))
         self.assertEqual(len(spans("ACI", "MILLER/JORDAN")[0]), 1, "the next call works normally")
 
+    def test_offsets_are_utf16_so_dotnet_masks_the_right_characters(self):
+        text = "\U0001F600 CONTACT MILLER/JORDAN"
+        found = json.loads(presidio_demo.analyze_strings("PNR-Linking", json.dumps([text])))[0]
+        name = [span for span in found if span[4] == "passengerName"][0]
+        utf16 = text.encode("utf-16-le")
+        # The JSON name pattern allows spaces, so the match starts at CONTACT, right after the emoji (two UTF-16 units) and a space.
+        self.assertEqual(name[0], 3)
+        self.assertEqual(utf16[name[0] * 2:name[1] * 2].decode("utf-16-le"), "CONTACT MILLER/JORDAN")
+
     def test_batch_keeps_one_result_per_string_and_rejects_bad_input(self):
         self.assertEqual(len(spans("ACI", "20261005", "MILLER/JORDAN", "")), 3)
         with self.assertRaises(ValueError):

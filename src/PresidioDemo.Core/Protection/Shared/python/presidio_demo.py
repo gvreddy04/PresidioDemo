@@ -69,7 +69,8 @@ def analyze_strings(feed, texts_json):
     """Detect personal-data spans in each decoded string of one message, in one batch.
 
     texts_json is a JSON list of strings. Returns a JSON list with one list per string of
-    [start, end, entity, score, recognizer name]. The recognizer name is the XML format name or the built-in's name.
+    [start, end, entity, score, recognizer name], with UTF-16 offsets. The recognizer name is the XML format name or
+    the built-in's name.
     Raises when a pattern timed out, so the caller dead-letters the message rather than publish unchecked text.
     """
     if feed not in _feeds:
@@ -87,6 +88,11 @@ def analyze_strings(feed, texts_json):
                                            batch_size=max(1, min(len(texts), 64))))
     if _timeouts.timed_out:
         raise TimeoutError("A recognizer pattern timed out")
-    return json.dumps([[[r.start, r.end, r.entity_type, round(float(r.score), 4),
+    return json.dumps([[[_utf16(text, r.start), _utf16(text, r.end), r.entity_type, round(float(r.score), 4),
                          (r.recognition_metadata or {}).get(RecognizerResult.RECOGNIZER_NAME_KEY, "")]
-                        for r in spans if r.end > r.start] for spans in results])
+                        for r in spans if r.end > r.start] for text, spans in zip(texts, results)])
+
+
+def _utf16(text, index):
+    """Convert a code-point offset to the UTF-16 offset .NET strings use (they differ after characters such as emoji)."""
+    return len(text[:index].encode("utf-16-le")) // 2
