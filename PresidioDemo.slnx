@@ -7,9 +7,8 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/PresidioDemo.Messaging.Testing/PresidioDemo.Messaging.Testing.csproj" />
-    <Project Path="tests/ACI/AciChecks.csproj" />
-    <Project Path="tests/ETKT/EtktChecks.csproj" />
-    <Project Path="tests/PNR/PnrChecks.csproj" />
+    <Project Path="tests/DetectionSpike/DetectionSpike.csproj" />
+    <Project Path="tests/GenericCodecChecks/GenericCodecChecks.csproj" />
     <Project Path="tests/JsonFeeds/JsonFeedChecks.csproj" />
     <Project Path="tests/FeedRoundTripChecks/FeedRoundTripChecks.csproj" />
     <Project Path="tests/FeedPipelineChecks/FeedPipelineChecks.csproj" />

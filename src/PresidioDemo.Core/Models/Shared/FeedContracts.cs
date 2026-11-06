@@ -96,13 +96,16 @@ public sealed record FeedDelivery(FeedType Feed, Guid MessageId, string Original
 public sealed record FeedMessage(FeedDelivery Delivery, ReadOnlyMemory<byte> Content);
 
 /// <summary>
-/// Contains validated output and the original and protected fields used for diagnostics.
+/// Contains validated output, the original and protected fields used for local diagnostics, and the value-free
+/// detection events.
 /// </summary>
 /// <param name="Content">The complete original or protected message bytes.</param>
 /// <param name="OriginalFields">The original parsed fields included in local diagnostic reports.</param>
 /// <param name="ProtectedFields">The protected parsed fields included in local diagnostic reports.</param>
+/// <param name="Events">One value-free detection event per decoded string, for the detection log (WR-018).</param>
 public sealed record FeedWorkflowResult(ReadOnlyMemory<byte> Content,
-    IReadOnlyList<FeedField>? OriginalFields = null, IReadOnlyList<FeedField>? ProtectedFields = null);
+    IReadOnlyList<FeedField>? OriginalFields = null, IReadOnlyList<FeedField>? ProtectedFields = null,
+    IReadOnlyList<PresidioDemo.Protection.DetectionEvent>? Events = null);
 
 #endregion
 

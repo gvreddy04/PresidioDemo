@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text.Json;
-using PresidioDemo.Feeds.ACI;
 using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
 using PresidioDemo.Protection;
@@ -33,14 +32,9 @@ public static class NoAnonymizationRoundTripChecks
     {
         Directory.CreateDirectory(outputDirectory);
         string reportPath = Path.Combine(outputDirectory, "verification.json");
-        var schemas = XdrLayoutConfiguration.Load(Path.Combine(root, "src/PresidioDemo.Core/Configuration/xdr-layouts.xml"));
-        var references = ReferenceLayoutConfiguration.Load(Path.Combine(root, "src/PresidioDemo.Core/Configuration/reference-layouts.xml"), schemas);
-        var configured = FeedPolicyConfiguration.Load(Path.Combine(root, "src/PresidioDemo.Core/Configuration/feed-policies.xml"));
-        // All-Keep exists only in this test assembly; source configuration files are never edited.
-        var keepPolicies = configured.ToDictionary(pair => pair.Key, pair => new FeedPolicy(pair.Key,
-            pair.Value.Fields.Values.Select(rule => new FieldPolicy(rule.Name, FieldIdentification.None, FieldAction.Keep))));
-        IFeedCodec Codec(FeedType feed) => FeedCodecRegistry.Create(feed, schemas, references);
-        var router = FeedWorkflowRouter.Create(new PresidioFeedProtector(), keepPolicies, Codec);
+        // A keep-everything protector exists only in this test assembly; it isolates the codecs and workflows from detection.
+        IFeedCodec Codec(FeedType feed) => FeedCodecRegistry.Create(feed);
+        var router = FeedWorkflowRouter.Create(new KeepAllProtector(), Codec);
         var sourceFiles = Directory.GetFiles(Path.Combine(root, "docs/sample-docs"), "*.txt", SearchOption.AllDirectories)
             .ToDictionary(file => file, File.ReadAllBytes);
         var examples = RoundTripExamples.Create(root, Codec);
@@ -55,9 +49,9 @@ public static class NoAnonymizationRoundTripChecks
                 foreach (var example in examples)
                 {
                     var codec = Codec(example.Feed);
-                    if (example.Feed == FeedType.ACI && codec is not AciFeedCodec)
+                    if ((example.Feed is FeedType.ACI or FeedType.ETKT or FeedType.PNR) && codec is not GenericXdrFeedCodec)
                     {
-                        throw new Exception("Default ACI round trips must exercise the dedicated ACI codec.");
+                        throw new Exception("Binary round trips must exercise the generic XDR codec.");
                     }
                     if ((example.Feed is FeedType.PnrLinking or FeedType.Seats) && codec is not JsonFeedCodec)
                     {
@@ -91,11 +85,6 @@ public static class NoAnonymizationRoundTripChecks
                             throw new Exception("Workflow field evidence is missing: " + example.Name);
                         }
                         EqualFields(result.OriginalFields, result.ProtectedFields, example.Name + ": anonymization disabled");
-                        if (example.Feed == FeedType.ACI)
-                        {
-                            // Full independent-of-envelope rebuild, so MQ Original-byte retention cannot hide an encoder error.
-                            Equal(expectedPayload, new AciEncoder().Encode(new AciDecoder().Decode(expectedPayload)), example.Name + ": ACI full rebuild");
-                        }
                         Equal(expected, example.Bytes, example.Name + ": input buffer unchanged");
                         Equal(expected, message.Content.Span, example.Name + ": parsed input buffer unchanged");
                         current = result.Content.ToArray();
@@ -170,7 +159,7 @@ public static class NoAnonymizationRoundTripChecks
         var report = new
         {
             AllPassed = true,
-            Mode = "No anonymization: in-memory All-Keep policies through production codecs and workflows",
+            Mode = "No anonymization: a keep-everything protector through production codecs and workflows",
             GuaranteeScope = "Supported, valid examples tested; malformed and unsupported inputs are rejected, not passed through",
             PositiveCases = results.Count,
             CyclesPerCase = CycleCount,
@@ -231,6 +220,27 @@ public static class NoAnonymizationRoundTripChecks
     /// <param name="bytes">The complete payload or fixture bytes to read, encode or compare.</param>
     /// <returns>The SHA-256 digest of the complete input bytes.</returns>
     private static string Hash(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+
+    #endregion
+}
+
+/// <summary>
+/// Returns every value unchanged, so round trips test only the codecs and workflows.
+/// </summary>
+internal sealed class KeepAllProtector : IFeedProtector
+{
+
+    #region Methods
+
+    /// <summary>
+    /// Returns the parsed values unchanged with no detection events.
+    /// </summary>
+    /// <param name="feed">The feed route.</param>
+    /// <param name="parsed">The parse.</param>
+    /// <param name="cancellationToken">Unused.</param>
+    /// <returns>The unchanged values.</returns>
+    public ValueTask<DetectionOutcome> ProtectAsync(FeedType feed, ParsedFeed parsed, CancellationToken cancellationToken) =>
+        ValueTask.FromResult(new DetectionOutcome(parsed.Fields.ToDictionary(field => field.Id, field => field.Value), []));
 
     #endregion
 }

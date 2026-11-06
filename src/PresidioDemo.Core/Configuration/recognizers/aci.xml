@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ACI recognizers. Every counted string of 4+ characters is a candidate (WR-015). A candidate that matches a keep
+  is published unchanged; a candidate that a format matches completely is protected by that format; any other candidate
+  is masked across its full width (WR-014). Patterns use syntax shared by .NET and the Python regex module and match
+  case-insensitively.
+-->
+<recognizers feed="ACI" threshold="0.5" defaultMaskCharacter="*">
+  <!-- The PNR is the PNR-shaped candidate just before the first passenger name (WR-017). -->
+  <pnrAnchor before="passengerName" offset="1" />
+  <!-- The unresolved record reference embeds a PNR after its nine-digit prefix; it must stay unchanged. -->
+  <pnrAnchor within="unresolvedRecordReference" optional="true"><pattern>\d{9}(?&lt;pnr>\S{6})</pattern></pnrAnchor>
+
+  <format name="passengerName" entity="PERSON" score="0.9" maskCharacter="*">
+    <pattern>(?&lt;![A-Z])[A-Z]{2,}(?:[ '-][A-Z]+)*/[A-Z]*(?:[ '-][A-Z]+)*</pattern>
+  </format>
+  <format name="loyaltyNumber" entity="LOYALTY_NUMBER" score="0.85" maskCharacter="*">
+    <pattern>(?&lt;![A-Z0-9])[A-Z]{2}\d{6,12}(?!\d)</pattern>
+  </format>
+  <!-- Nine-digit prefix of the unresolved record reference; the PNR after it stays unchanged. -->
+  <format name="recordReferencePrefix" entity="UNCLASSIFIED_IDENTIFIER" score="0.85" maskCharacter="*">
+    <pattern>^\d{9}(?=\S{6}$)</pattern>
+  </format>
+
+  <keep name="unresolvedRecordReference" scan="true"><pattern>\d{9}\S{6}</pattern></keep>
+  <keep name="date"><pattern>\d{8}</pattern></keep>
+  <keep name="timestamp"><pattern>\d{8} \d{2}\.\d{2}\.\d{2}\.\d{3}</pattern></keep>
+  <keep name="time"><pattern>\d{2}\.\d{2}\.\d{2}\.\d{3}</pattern></keep>
+  <keep name="aircraftNumber"><pattern>\d{4}</pattern></keep>
+  <keep name="gate"><pattern> ?[A-Z]\d{1,3}</pattern></keep>
+  <keep name="processName"><pattern>UNKNOWN?</pattern></keep>
+  <keep name="placeholder"><pattern>\*+</pattern></keep>
+
+  <builtIn entity="EMAIL_ADDRESS" />
+  <builtIn entity="IP_ADDRESS" />
+  <builtIn entity="CREDIT_CARD" />
+  <builtIn entity="PERSON" />
+</recognizers>

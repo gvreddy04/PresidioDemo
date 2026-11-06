@@ -72,7 +72,9 @@ public sealed class FeedWorkerService(IMessagingConnection connection, IMessageC
             log.LogInformation("Initializing embedded local Presidio and the bundled NLP model...");
             PythonHost.Start(presidio.PythonEnvironment);
             pythonStarted = true;
-            var processor = new FeedMessageProcessor(pipeline.CreateRouter(new PresidioFeedProtector()));
+            var protector = pipeline.CreateProtector();
+            protector.Configure();
+            var processor = new FeedMessageProcessor(pipeline.CreateRouter(protector));
             // ConsumersPerTask workers per feed, each on its own broker flow: .NET parsing and broker round trips overlap
             // across consumers and feeds; shared Python calls are serialized.
             var routes = Routes(messaging);
@@ -83,7 +85,11 @@ public sealed class FeedWorkerService(IMessagingConnection connection, IMessageC
             }
             var workers = routes.SelectMany(pair => Enumerable.Range(0, messaging.ConsumersPerTask).Select(_ =>
                 new FeedWorker(pair.Key, pair.Value, messaging, consumer, publisher, processor,
-                    loggers.CreateLogger("PresidioDemo.Worker." + FeedCatalog.Get(pair.Key).FolderName)).RunAsync(stoppingToken))).ToArray();
+                    loggers.CreateLogger("PresidioDemo.Worker." + FeedCatalog.Get(pair.Key).FolderName), detectionLog: presidio.DetectionLog).RunAsync(stoppingToken))).ToArray();
+            if (presidio.DetectionLog)
+            {
+                log.LogInformation("Detection log on: one value-free line per decoded string (WR-018).");
+            }
             if (messaging.ConsumersPerTask > 1)
             {
                 log.LogInformation("{Consumers} consumers per feed.", messaging.ConsumersPerTask);

@@ -16,7 +16,7 @@ while (!File.Exists(Path.Combine(project, "PresidioDemo.slnx")))
 }
 string[] outputs = args.Length == 2 ? args.Select(Path.GetFullPath).ToArray() :
     [Path.Combine(project, ".test-runs/json-feeds/pnr-linking"), Path.Combine(project, ".test-runs/json-feeds/seats")];
-var policies = FeedPolicyConfiguration.Load(Path.Combine(project, "src/PresidioDemo.Core/Configuration/feed-policies.xml"));
+var recognizers = RecognizerConfiguration.Load(Path.Combine(project, "src/PresidioDemo.Core/Configuration/recognizers"));
 var options = new JsonSerializerOptions { WriteIndented = true };
 int checks = 0;
 foreach (FeedType feed in new[] { FeedType.PnrLinking, FeedType.Seats })
@@ -28,8 +28,6 @@ foreach (FeedType feed in new[] { FeedType.PnrLinking, FeedType.Seats })
     Check(codec is JsonFeedCodec, "standard registry selects the shared System.Text.Json codec");
     Check(linking ? codec is PnrLinkingFeedCodec : codec is SeatsFeedCodec,
         "each feed keeps its own codec and JSON root contract");
-    Check(FeedCodecRegistry.Create(feed, new Dictionary<FeedType, XdrFeedSchema>()).GetType() == codec.GetType(),
-        "schema registry overload selects the shared JSON codec");
     var results = new List<object>();
     string name = linking ? "PNR_LINKING.txt" : "SEATS.txt";
     foreach (var sample in new[]
@@ -46,6 +44,11 @@ foreach (FeedType feed in new[] { FeedType.PnrLinking, FeedType.Seats })
         var independent = Independent(envelope.Payload);
         Check(parsed.Fields.SequenceEqual(independent), "independent JSON reader agrees on every scalar, path and value");
         Check(sample.Expected == 0 || parsed.Fields.Count == sample.Expected, "supplied scalar count retained");
+        using (var strings = JsonDocument.Parse(envelope.Payload))
+        {
+            Check(JsonFeedCodec.StringFields(parsed).Count == CountStrings(strings.RootElement),
+                "every JSON string scalar is a detection candidate");
+        }
         var unchanged = parsed.Fields.ToDictionary(field => field.Id, field => field.Value);
         Check(codec.Serialize(parsed, unchanged).SequenceEqual(original), "exact MQ export round trip");
         byte[] raw = envelope.Payload;
@@ -73,19 +76,25 @@ foreach (FeedType feed in new[] { FeedType.PnrLinking, FeedType.Seats })
                 Check(customers.GetArrayLength() >= 1 && customers[0].GetProperty("ServiceItems").GetArrayLength() >= 1,
                     "notification, customer and service-item locations remain associated");
             }
-            var plan = ConfiguredPiiIdentifier.CreatePlan(parsed.Fields, policies[feed]);
-            var replacements = plan.ToDictionary(item => item.Field.Id, item =>
-                item.Rule.Action == FieldAction.Keep || item.Field.Value.Length == 0 ? item.Field.Value : item.Rule.Replacement);
+            // Key formats from the recognizer XML give today's replacement tokens; detection itself is checked with
+            // Presidio in FeedPipelineChecks. Anchored PNR keys and every other value stay unchanged here.
+            var set = recognizers[feed];
+            var stringIds = JsonFeedCodec.StringFields(parsed).Select(field => field.Id).ToHashSet();
+            string Key(FeedField field) => field.Name.Split('/').Last(segment => segment.Length > 0 && segment != "*");
+            var replacements = parsed.Fields.ToDictionary(field => field.Id, field =>
+                !stringIds.Contains(field.Id) || field.Value.Length == 0 ? field.Value :
+                set.Formats.FirstOrDefault(format => format.Keys.Contains(Key(field)))?.Replacement is { Length: > 0 } token ? token : field.Value);
+            var anchorKeys = set.Anchors.SelectMany(anchor => anchor.Keys).ToHashSet();
             byte[] protectedBytes = codec.Serialize(parsed, replacements);
             codec.Validate(parsed, protectedBytes);
             var afterEnvelope = FeedPayloadReader.Read(message with { Content = protectedBytes });
             var independentAfter = Independent(afterEnvelope.Payload);
             Check(independentAfter.Count == independent.Count && independentAfter.All(field => field.Value == replacements[field.Id]),
-                "independent reader confirms all configured replacements and kept values");
-            Check(independent.Where(field => FieldPolicy.IsPnr(field.Name)).All(before =>
-                independentAfter.Single(after => after.Id == before.Id).Value == before.Value), "all PNRs remain unchanged");
-            Check(sample.Expected == 0 || plan.Select(item => item.Field.Name).Distinct().Count() == (linking ? 49 : 39),
-                "supplied feed retains its existing XML policy coverage");
+                "independent reader confirms all key-format replacements and kept values");
+            Check(independent.Where(field => anchorKeys.Contains(Key(field))).All(before =>
+                independentAfter.Single(after => after.Id == before.Id).Value == before.Value), "all PNR anchor values remain unchanged");
+            Check(sample.Expected == 0 || replacements.Count(pair => pair.Value != parsed.Fields.Single(f => f.Id == pair.Key).Value) > 0,
+                "the recognizer key formats replace personal data in the supplied feed");
             var reparsed = codec.Parse(message with { Content = protectedBytes });
             Check(codec.Serialize(reparsed, reparsed.Fields.ToDictionary(field => field.Id, field => field.Value)).SequenceEqual(protectedBytes),
                 "protected export parses and re-encodes exactly");
@@ -97,7 +106,7 @@ foreach (FeedType feed in new[] { FeedType.PnrLinking, FeedType.Seats })
                 Sample = sample.Name,
                 SourceSha256 = Convert.ToHexString(SHA256.HashData(original)),
                 ScalarCount = parsed.Fields.Count,
-                PolicyPaths = plan.Select(item => item.Field.Name).Distinct().Count(),
+                Replaced = replacements.Count(pair => pair.Value != parsed.Fields.Single(f => f.Id == pair.Key).Value),
                 PayloadBytes = raw.Length,
                 ExactRawRoundTrip = true,
                 ExactMqRoundTrip = true,
@@ -111,7 +120,6 @@ foreach (FeedType feed in new[] { FeedType.PnrLinking, FeedType.Seats })
     var lexical = Parse(" {\"PNROwner\":\"K7QX2M\", \"Customers\":[{\"PaxId\":\"PAX-1001\",\"FirstName\":\"Em\\u0069ly\"},{\"PaxId\":\"PAX-1002\",\"FirstName\":\"Michael\"}],\"x/y~z\":\"Carter\",\"Count\":1e+02,\"Active\":true,\"Optional\":null,\"Empty\":[],\"Object\":{}} \n");
     var values = lexical.Fields.ToDictionary(field => field.Id, field => field.Value);
     string first = linking ? "/0/Customers/0/FirstName" : "/Customers/0/FirstName";
-    string pnr = linking ? "/0/PNROwner" : "/PNROwner";
     string count = linking ? "/0/Count" : "/Count";
     string escaped = linking ? "/0/x~1y~0z" : "/x~1y~0z";
     Check(values[escaped] == "Carter", "JSON pointer escapes retain exact policy and instance paths");
@@ -124,11 +132,6 @@ foreach (FeedType feed in new[] { FeedType.PnrLinking, FeedType.Seats })
         "external numeric spelling mutation");
     Reject(() => codec.Validate(lexical, Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(changed).Replace("\"Empty\":[]", "\"Empty\":[{}]"))),
         "external empty-container grouping mutation");
-    Reject(() => codec.Validate(lexical, Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(changed).Replace("K7QX2M", "NEWPNR"))),
-        "external PNR mutation");
-    values[pnr] = "NEWPNR";
-    Reject(() => codec.Serialize(lexical, values), "PNR replacement");
-    values[pnr] = "K7QX2M";
     values[count] = "100";
     Reject(() => codec.Serialize(lexical, values), "non-string replacement");
     values[count] = "1e+02";
@@ -147,8 +150,6 @@ foreach (FeedType feed in new[] { FeedType.PnrLinking, FeedType.Seats })
     Reject(() => codec.Parse(Message(feed, Encoding.UTF8.GetBytes(Wrap("{\"x\":\"y\"}") + " {}"))), "trailing JSON");
     Reject(() => codec.Parse(Message(linking ? FeedType.Seats : FeedType.PnrLinking,
         Encoding.UTF8.GetBytes(Wrap("{\"x\":\"y\"}")))), "wrong delivery route");
-    Reject(() => ConfiguredPiiIdentifier.CreatePlan(Parse("{\"UnreviewedEmail\":\"emily.carter@example.com\"}").Fields, policies[feed]),
-        "unreviewed populated path rejects complete message before protection");
     string export = "A VER 2\r\nA ENC 546\r\nA CCS 1208\r\nA MSI DEMO\r\nX " + Convert.ToHexString(Encoding.UTF8.GetBytes(Wrap("{\"FirstName\":\"Emily\"}")));
     var exported = codec.Parse(Message(feed, Encoding.UTF8.GetBytes(export), "fixture.txt"));
     var exportValues = exported.Fields.ToDictionary(field => field.Id, field => "[PASSENGER_NAME]");
@@ -170,7 +171,39 @@ foreach (FeedType feed in new[] { FeedType.PnrLinking, FeedType.Seats })
         NewIdentityOrTokenization = false
     }, options) + "\n");
 }
+int jsonSamples = 0;
+foreach (string sample in Directory.EnumerateFiles(Path.Combine(project, "docs/sample-docs"), "*.txt", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
+{
+    var route = FeedFileRouting.FromPath(sample);
+    if (route is not (FeedType.PnrLinking or FeedType.Seats))
+    {
+        continue;
+    }
+    var sampleMessage = Message(route, File.ReadAllBytes(sample), Path.GetFileName(sample));
+    if (Path.GetFileName(sample) == "SEATS_02_Negative_Testing.txt")
+    {
+        Reject(() => FeedCodecRegistry.Create(route).Parse(sampleMessage), "SEATS_02 CCSID is not 1208");
+        jsonSamples++;
+        continue;
+    }
+    var sampleParsed = FeedCodecRegistry.Create(route).Parse(sampleMessage);
+    using (var sampleDocument = JsonDocument.Parse(FeedPayloadReader.Read(sampleMessage).Payload))
+    {
+        Check(JsonFeedCodec.StringFields(sampleParsed).Count == CountStrings(sampleDocument.RootElement),
+            Path.GetFileName(sample) + ": every JSON string scalar is a detection candidate");
+    }
+    jsonSamples++;
+}
+Check(jsonSamples == 6, "all six JSON samples checked for detection candidates");
 Console.WriteLine($"PASS {checks} shared System.Text.Json checks");
+
+static int CountStrings(JsonElement element) => element.ValueKind switch
+{
+    JsonValueKind.Object => element.EnumerateObject().Sum(property => CountStrings(property.Value)),
+    JsonValueKind.Array => element.EnumerateArray().Sum(CountStrings),
+    JsonValueKind.String => 1,
+    _ => 0
+};
 
 void Check(bool condition, string label)
 {

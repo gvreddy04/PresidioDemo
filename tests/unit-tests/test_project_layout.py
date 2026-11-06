@@ -31,6 +31,18 @@ class ProjectLayoutTests(unittest.TestCase):
             self.assertFalse(any(broker in package for broker in BROKER_PACKAGES), package)
         self.assertNotIn("PresidioDemo.Messaging.Solace", messaging)
 
+    def test_per_feed_parsers_and_policy_xml_are_removed(self):
+        core = PROJECT / "src/PresidioDemo.Core"
+        for feed in ("ACI", "ETKT", "PNR"):
+            for area in ("Parser", "Serializer", "FeedCodecs", "Models", "Reporting"):
+                self.assertFalse((core / area / feed).exists(), f"{area}/{feed}")
+        for name in ("feed-policies.xml", "xdr-layouts.xml", "reference-layouts.xml"):
+            self.assertFalse((core / "Configuration" / name).exists(), name)
+        for name in ("XdrFeedCodec.cs", "ReferenceLayoutFeedCodec.cs"):
+            self.assertFalse((core / "Parser/Shared" / name).exists(), name)
+        recognizers = {p.name for p in (core / "Configuration/recognizers").glob("*.xml")}
+        self.assertEqual(recognizers, {"aci.xml", "etkt.xml", "pnr.xml", "pnr-linking.xml", "seats.xml"})
+
     def test_samples_are_finalized_txt_files_in_one_folder_per_feed_with_unchanged_bytes(self):
         expected = {
             "ACI/ACI.txt": "f038c05e590ade818748f6547c2a624d8d662a52c54d3596ad93649eafce022d",

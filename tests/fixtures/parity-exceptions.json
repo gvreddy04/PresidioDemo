@@ -1,0 +1,128 @@
+[
+  {
+    "sample": "ACI_06.txt",
+    "location": "676",
+    "reason": "binary string shorter than 4 characters (raw words, WR-015)",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "ACI_06.txt",
+    "location": "692",
+    "reason": "binary string shorter than 4 characters (raw words, WR-015)",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "ETKT.txt",
+    "location": "48",
+    "reason": "binary string shorter than 4 characters (raw words, WR-015)",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "ETKT.txt",
+    "location": "76",
+    "reason": "keep-format match: timeOrFlightNumber",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "ETKT_02.txt",
+    "location": "48",
+    "reason": "binary string shorter than 4 characters (raw words, WR-015)",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "ETKT_02.txt",
+    "location": "76",
+    "reason": "keep-format match: timeOrFlightNumber",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "ETKT_03.txt",
+    "location": "48",
+    "reason": "binary string shorter than 4 characters (raw words, WR-015)",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "ETKT_03.txt",
+    "location": "76",
+    "reason": "keep-format match: timeOrFlightNumber",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "ETKT_04.txt",
+    "location": "48",
+    "reason": "binary string shorter than 4 characters (raw words, WR-015)",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "ETKT_04.txt",
+    "location": "76",
+    "reason": "keep-format match: timeOrFlightNumber",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "ETKT_05.txt",
+    "location": "48",
+    "reason": "binary string shorter than 4 characters (raw words, WR-015)",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "ETKT_05.txt",
+    "location": "76",
+    "reason": "keep-format match: timeOrFlightNumber",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "ETKT_06.txt",
+    "location": "48",
+    "reason": "binary string shorter than 4 characters (raw words, WR-015)",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "ETKT_06.txt",
+    "location": "76",
+    "reason": "keep-format match: timeOrFlightNumber",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "PNR.txt",
+    "location": "2056",
+    "reason": "binary string shorter than 4 characters (raw words, WR-015)",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "PNR.txt",
+    "location": "2108",
+    "reason": "binary string shorter than 4 characters (raw words, WR-015)",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "PNR.txt",
+    "location": "2184",
+    "reason": "binary string shorter than 4 characters (raw words, WR-015)",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "PNR.txt",
+    "location": "2280",
+    "reason": "binary string shorter than 4 characters (raw words, WR-015)",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "PNR.txt",
+    "location": "2348",
+    "reason": "binary string shorter than 4 characters (raw words, WR-015)",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "PNR_02.txt",
+    "location": "896",
+    "reason": "binary string shorter than 4 characters (raw words, WR-015)",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  },
+  {
+    "sample": "PNR_02.txt",
+    "location": "956",
+    "reason": "binary string shorter than 4 characters (raw words, WR-015)",
+    "approvedBy": "developer, W-021 (2026-11-06)"
+  }
+]

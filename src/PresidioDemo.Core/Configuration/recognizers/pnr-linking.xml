@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PNR-Linking recognizers. Every JSON string is a candidate; numbers, booleans and nulls never change. A <key> is the
+  property name (the last non-array path segment). A value whose key or pattern matches a keep is published unchanged;
+  a value a format matches is replaced with today's token; any other string is masked across its full width (WR-014).
+-->
+<recognizers feed="PNR-Linking" threshold="0.5" defaultMaskCharacter="*">
+  <pnrAnchor><key>UaRecordLocator</key><key>PNROwner</key><key>pnr</key><key>linkedPnr</key><key>oldPnr</key><key>newPnr</key></pnrAnchor>
+
+  <format name="passengerName" entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]">
+    <key>FirstName</key><key>LastName</key><key>MiddleName</key><key>BookedAs</key>
+    <pattern>(?&lt;![A-Z])[A-Z]{2,}(?:[ '-][A-Z]+)*/[A-Z]+(?:[ '-][A-Z]+)*</pattern>
+  </format>
+  <format name="dateOfBirth" entity="DATE_OF_BIRTH" action="Replace" replacement="[DATE_OF_BIRTH]">
+    <key>DOB</key><key>DateOfBirth</key>
+  </format>
+  <format name="passengerId" entity="PASSENGER_ID" action="Replace" replacement="[PASSENGER_ID]">
+    <key>PaxId</key>
+  </format>
+  <format name="passengerLinkId" entity="PASSENGER_LINK_ID" action="Replace" replacement="[PASSENGER_LINK_ID]">
+    <key>PaxLinkId</key><key>PaxFlightLegLinkId</key><key>ReferenceLinkId</key>
+  </format>
+  <format name="orderId" entity="ORDER_ID" action="Replace" replacement="[ORDER_ID]">
+    <key>OrderId</key>
+  </format>
+  <format name="userId" entity="USER_ID" action="Replace" replacement="[USER_ID]">
+    <key>UserId</key>
+  </format>
+  <format name="loyaltyNumber" entity="LOYALTY_NUMBER" action="Replace" replacement="[LOYALTY_NUMBER]">
+    <key>UaLoyaltyAcctNbr</key><key>PartnerLoyaltyAcctNbr</key>
+  </format>
+  <format name="segmentAttributes" entity="SENSITIVE_ATTRIBUTE" action="Replace" replacement="[PROTECTED_ATTRIBUTE]">
+    <key>transitionLinkSegments</key>
+  </format>
+
+  <keep name="operational">
+    <key>AAA</key><key>AgentSine</key><key>BoardPoint</key><key>ChangeOfOwnershipTimestamp</key>
+    <key>ChangeType</key><key>ChannelId</key><key>CreateDateTime</key><key>DateAdded</key><key>FlightLegId</key>
+    <key>FlightLegOffPoint</key><key>FlightSegId</key><key>IsIRROP</key><key>LEID</key><key>LastUpdateDateTime</key>
+    <key>LinkType</key><key>LinkVersion</key><key>LocalDepartureDate</key><key>OffPoint</key>
+    <key>OperatingAirlineCode</key><key>OperatingFlightNumber</key><key>OrderPurgeDate</key><key>PaxStatus</key>
+    <key>SeqInPNR</key><key>UaRecordLocatorCreateDate</key>
+  </keep>
+  <!-- Reason values can carry free text, so they are kept but still scanned for personal data. -->
+  <keep name="reasonText" scan="true"><key>ChangeReason</key><key>LinkReasonAtCreation</key><key>ReasonForLeaving</key></keep>
+  <keep name="timestamp"><pattern>\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{1,7})?Z?)?(?: [A-Z]{2})?</pattern></keep>
+
+  <builtIn entity="EMAIL_ADDRESS" action="Replace" replacement="[EMAIL_ADDRESS]" />
+  <builtIn entity="IP_ADDRESS" action="Replace" replacement="[IP_ADDRESS]" />
+  <builtIn entity="CREDIT_CARD" action="Replace" replacement="[PAYMENT_REFERENCE]" />
+  <builtIn entity="PERSON" action="Replace" replacement="[PASSENGER_NAME]" />
+</recognizers>

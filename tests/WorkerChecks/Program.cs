@@ -91,6 +91,23 @@ var withVenv = new ConfigurationBuilder().AddConfiguration(local).AddInMemoryCol
 Require(PresidioOptions.Load(withVenv, runRoot).PythonEnvironment == venv, "Presidio:PythonEnvironment resolves against the application folder");
 var noVenv = new ConfigurationBuilder().AddConfiguration(local).AddInMemoryCollection([new("Presidio:PythonEnvironment", "missing")]).Build();
 Reject(() => PresidioOptions.Load(noVenv, runRoot), "a Python environment without pyvenv.cfg stops startup");
+Require(!PresidioOptions.Load(local, runRoot).DetectionLog, "the detection log is off by default (WR-018)");
+var detectionLogOn = new ConfigurationBuilder().AddConfiguration(local).AddInMemoryCollection([new("Presidio:DetectionLog", "true")]).Build();
+Require(PresidioOptions.Load(detectionLogOn, runRoot).DetectionLog, "Presidio:DetectionLog=true turns the detection log on");
+var detectionLogTypo = new ConfigurationBuilder().AddConfiguration(local).AddInMemoryCollection([new("Presidio:DetectionLogs", "true")]).Build();
+Reject(() => PresidioOptions.Load(detectionLogTypo, runRoot), "a misspelled detection-log key stops startup");
+foreach (string removed in new[] { "PolicyFile", "XdrLayoutFile", "ReferenceLayoutFile" })
+{
+    var oldKey = new ConfigurationBuilder().AddConfiguration(local).AddInMemoryCollection([new("Presidio:" + removed, "Configuration/x.xml")]).Build();
+    Reject(() => PresidioOptions.Load(oldKey, runRoot), $"the removed Presidio:{removed} key stops startup");
+}
+foreach (string outside in new[] { Path.GetFullPath(Path.Combine(runRoot, "..", "mounted-recognizers")), "../recognizers", Path.GetPathRoot(runRoot)! })
+{
+    var mounted = new ConfigurationBuilder().AddConfiguration(local).AddInMemoryCollection([new("Presidio:RecognizerDirectory", outside)]).Build();
+    Reject(() => PresidioOptions.Load(mounted, runRoot), "a recognizer folder outside the application folder stops startup (PR-005)");
+}
+Require(PresidioOptions.Load(local, runRoot).RecognizerDirectory == Path.GetFullPath("Configuration/recognizers", runRoot),
+    "Presidio:RecognizerDirectory resolves against the application folder");
 
 // FeedWorker delivery rules
 var options = MessagingOptions.Load(local);

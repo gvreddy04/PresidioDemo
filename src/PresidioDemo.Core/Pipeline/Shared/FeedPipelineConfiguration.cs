@@ -4,54 +4,36 @@ using PresidioDemo.Protection;
 namespace PresidioDemo.Pipeline;
 
 /// <summary>
-/// The three validated XML configurations that drive every feed workflow.
+/// The validated per-feed recognizer sets that drive every feed workflow (WR-014, WR-017).
 /// </summary>
-/// <param name="Policies">The field policies for each feed.</param>
-/// <param name="XdrSchemas">The structural XDR schemas for the binary feeds.</param>
-/// <param name="ReferenceLayouts">The reference mappings for the binary feeds.</param>
-public sealed record FeedPipelineConfiguration(IReadOnlyDictionary<FeedType, FeedPolicy> Policies,
-    IReadOnlyDictionary<FeedType, XdrFeedSchema> XdrSchemas, IReadOnlyDictionary<FeedType, ReferenceFeedLayout> ReferenceLayouts)
+/// <param name="Recognizers">The recognizer set of each feed.</param>
+public sealed record FeedPipelineConfiguration(IReadOnlyDictionary<FeedType, FeedRecognizerSet> Recognizers)
 {
 
     #region Methods
 
     /// <summary>
-    /// Loads and cross-validates the policy, XDR layout and reference layout files before any input is read.
+    /// Loads and validates one recognizer XML file per feed before any input is read (WR-011 carried over).
     /// </summary>
-    /// <param name="policyFile">The feed-policies XML file.</param>
-    /// <param name="xdrLayoutFile">The XDR layouts XML file.</param>
-    /// <param name="referenceLayoutFile">The reference layouts XML file.</param>
+    /// <param name="recognizerDirectory">The directory holding <c>aci.xml</c>, <c>etkt.xml</c>, <c>pnr.xml</c>,
+    /// <c>pnr-linking.xml</c> and <c>seats.xml</c>.</param>
     /// <returns>The validated configuration.</returns>
-    /// <exception cref="InvalidDataException">A file is invalid or the files disagree.</exception>
-    public static FeedPipelineConfiguration Load(string policyFile, string xdrLayoutFile, string referenceLayoutFile)
-    {
-        // Schema-driven mappings need no sample files.
-        var policies = FeedPolicyConfiguration.Load(policyFile);
-        var xdrSchemas = XdrLayoutConfiguration.Load(xdrLayoutFile);
-        var referenceLayouts = ReferenceLayoutConfiguration.Load(referenceLayoutFile, xdrSchemas);
-        foreach (var (feed, reference) in referenceLayouts)
-        {
-            foreach (var field in reference.Fields)
-            {
-                var rule = policies[feed].Get(field.Name);
-                if (reference.Schema is not null && rule.Action != FieldAction.Keep &&
-                    (rule.Identification != FieldIdentification.Known || rule.Action != FieldAction.Mask ||
-                     rule.MaskCharacter[0] is < ' ' or > '~'))
-                {
-                    throw new InvalidDataException("Schema-driven binary fields require Keep or Known ASCII masks.");
-                }
-            }
-        }
-        return new(policies, xdrSchemas, referenceLayouts);
-    }
+    /// <exception cref="InvalidDataException">A file is missing or invalid.</exception>
+    public static FeedPipelineConfiguration Load(string recognizerDirectory) => new(RecognizerConfiguration.Load(recognizerDirectory));
 
     /// <summary>
-    /// Creates the workflow registry using this configuration and the given protector.
+    /// Creates the detecting protector for these recognizer sets. Call <see cref="DetectingFeedProtector.Configure"/>
+    /// after <see cref="PythonHost.Start"/>.
     /// </summary>
-    /// <param name="protector">The local configured field-protection service.</param>
+    /// <returns>The protector.</returns>
+    public DetectingFeedProtector CreateProtector() => new(Recognizers);
+
+    /// <summary>
+    /// Creates the workflow registry using the given protector.
+    /// </summary>
+    /// <param name="protector">The local detection and protection service.</param>
     /// <returns>One workflow per supported feed.</returns>
-    public FeedWorkflowRouter CreateRouter(IFeedProtector protector) =>
-        FeedWorkflowRouter.Create(protector, Policies, feed => FeedCodecRegistry.Create(feed, XdrSchemas, ReferenceLayouts));
+    public FeedWorkflowRouter CreateRouter(IFeedProtector protector) => FeedWorkflowRouter.Create(protector, FeedCodecRegistry.Create);
 
     #endregion
 }

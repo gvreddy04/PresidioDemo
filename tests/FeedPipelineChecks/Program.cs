@@ -45,62 +45,6 @@ static async Task Wait(Func<bool> predicate)
     }
 }
 
-static void ExpectInvalid(Action action, string label)
-{
-    try { action(); } catch (InvalidDataException) { Console.WriteLine("PASS " + label); return; }
-    throw new Exception("Expected rejected policy: " + label);
-}
-static void CheckPolicies(string root, string workspace)
-{
-    var policies = FeedPolicyConfiguration.Load(Path.Combine(root, "src", "PresidioDemo.Core", "Configuration", "feed-policies.xml"));
-    Check(policies.Count == 5 && policies[FeedType.Seats].Get("/OrderChangeNotif/Old/Customers/*/FirstName").Identification == FieldIdentification.Known, "Feed policies are not distinct.");
-    Check(policies[FeedType.PnrLinking].Get("/*/Customers/*/UaRecordLocator").Action == FieldAction.Keep, "Linked PNR must be kept.");
-    ExpectInvalid(() => policies[FeedType.Seats].Get("unconfiguredField"), "unknown fields fail closed");
-    ExpectInvalid(() => new FeedPolicy(FeedType.ACI, [new("pnr", FieldIdentification.Known, FieldAction.Redact, "PNR")]), "PNR protection override rejected");
-    ExpectInvalid(() => new FeedPolicy(FeedType.ACI, [new("name", FieldIdentification.Known, FieldAction.Keep, "PERSON")]), "incompatible identification and action rejected");
-    ExpectInvalid(() => new FeedPolicy(FeedType.ACI, [new("notes", FieldIdentification.Analyze, FieldAction.Redact, Entities: "PERSON", Threshold: 1.1)]), "invalid detection threshold rejected");
-    ExpectInvalid(() => new FeedPolicy(FeedType.ACI, [new("phone", FieldIdentification.Known, FieldAction.Mask, "PHONE_NUMBER", MaskCharacters: 0)]), "zero masking count rejected");
-    ExpectInvalid(() => new FeedPolicy(FeedType.ACI, [new("name", FieldIdentification.Known, FieldAction.Redact, "PERSON"), new("NAME", FieldIdentification.None, FieldAction.Keep)]), "duplicate field policies rejected");
-    Directory.CreateDirectory(workspace);
-    string invalid = Path.Combine(workspace, "invalid-policies.xml");
-    File.WriteAllText(invalid, "<feedPolicies><feed type=\"ACI\"><field name=\"name\" identification=\"Known\" action=\"Tokenize\" entity=\"PERSON\" /></feed></feedPolicies>");
-    ExpectInvalid(() => FeedPolicyConfiguration.Load(invalid), "tokenization action rejected");
-    File.WriteAllText(invalid, "<feedPolicies><feed type=\"ACI\"><field name=\"name\" identification=\"Known\" action=\"Redact\" entity=\"PERSON\" typo=\"yes\" /></feed></feedPolicies>");
-    ExpectInvalid(() => FeedPolicyConfiguration.Load(invalid), "unknown XML setting rejected");
-    File.WriteAllText(invalid, "<feedPolicies><feed type=\"ACI\"><field name=\"name\" identification=\"Known\" action=\"Redact\" entity=\"PERSON\" threshold=\"0.5\" /></feed></feedPolicies>");
-    ExpectInvalid(() => FeedPolicyConfiguration.Load(invalid), "unused detection setting rejected");
-    File.WriteAllText(invalid, "<feedPolicies><feed type=\"ACI\"><field name=\"name\" identification=\"1\" action=\"Redact\" entity=\"PERSON\" /></feed></feedPolicies>");
-    ExpectInvalid(() => FeedPolicyConfiguration.Load(invalid), "numeric identification alias rejected");
-    File.WriteAllText(invalid, "<!DOCTYPE feedPolicies [<!ENTITY ext SYSTEM 'file:///unknown'>]><feedPolicies>&ext;</feedPolicies>");
-    try { FeedPolicyConfiguration.Load(invalid); throw new Exception("DTD was accepted"); }
-    catch (System.Xml.XmlException) { Console.WriteLine("PASS configuration rejects DTD and external entities"); }
-}
-static async Task CheckProtection(PresidioFeedProtector protector)
-{
-    var policy = new FeedPolicy(FeedType.ACI, [
-        new("pnr", FieldIdentification.None, FieldAction.Keep),
-        new("name", FieldIdentification.Known, FieldAction.Replace, "PERSON", "[DUMMY_NAME]"),
-        new("phone", FieldIdentification.Known, FieldAction.Mask, "PHONE_NUMBER", MaskCharacters: 6),
-        new("passport", FieldIdentification.Known, FieldAction.Redact, "PASSPORT_NUMBER"),
-        new("notes", FieldIdentification.Analyze, FieldAction.Replace, Replacement: "[CONTACT]", Entities: "EMAIL_ADDRESS", Threshold: 0.5)
-    ]);
-    FeedField[] fields = [new("0", "pnr", "K7QX2M"), new("1", "name", "Qzx"), new("2", "phone", "1234567890"),
-        new("3", "passport", "X1234567"), new("4", "notes", "Send to emily.carter@example.com today")];
-    var result = await protector.ProtectAsync(fields, policy, CancellationToken.None);
-    Check(result["0"] == "K7QX2M" && result["1"] == "[DUMMY_NAME]", "Configured Keep or known-field replacement failed.");
-    Check(result["2"] == "1234******" && result["3"] == "", "Mask or Redact failed.");
-    Check(result["4"] == "Send to [CONTACT] today", "Selected-entity detection or replacement failed.");
-    Console.WriteLine("PASS real Presidio applies configured Keep, Replace, Mask, Redact and targeted Analyze policies");
-    try { await protector.ProtectAsync([new("0", "missing", "value")], policy, CancellationToken.None); throw new Exception("Unknown field accepted"); }
-    catch (InvalidDataException) { Console.WriteLine("PASS missing policy retains input before any protection"); }
-}
-static FeedPolicy TestFixturePolicy(FeedType feed) => new(feed, [
-    new("pnr", FieldIdentification.None, FieldAction.Keep),
-    new("name", FieldIdentification.Known, FieldAction.Replace, "PERSON", "[PASSENGER_NAME]"),
-    new("email", FieldIdentification.Known, FieldAction.Replace, "EMAIL_ADDRESS", "[EMAIL_ADDRESS]"),
-    new("sourcePassengerId", FieldIdentification.Known, FieldAction.Replace, "PASSENGER_ID", "[PASSENGER_ID]")
-]);
-
 static MessagingOptions TestMessaging() => new()
 {
     Transport = "InMemory",
@@ -112,16 +56,13 @@ static MessagingOptions TestMessaging() => new()
 static FeedWorker TestWorker(FeedType feed, MessagingOptions options, InMemoryMessageBroker broker, FeedWorkflowRouter router) =>
     new(feed, options.Routes.Single(r => r.Feed == FeedCatalog.Get(feed).FolderName), options, broker, broker, new FeedMessageProcessor(router), NullLogger.Instance);
 
-static async Task CheckScheduling(PresidioFeedProtector protector, byte[] input, IReadOnlyDictionary<FeedType, FeedPolicy> policies)
+static async Task CheckScheduling(IFeedProtector protector, byte[] input)
 {
     using (var started = new ManualResetEventSlim())
     {
         using (var release = new ManualResetEventSlim())
         {
-            var routes = policies.ToDictionary(p => p.Key, p => p.Value);
-            routes[FeedType.ACI] = TestFixturePolicy(FeedType.ACI);
-            routes[FeedType.Seats] = TestFixturePolicy(FeedType.Seats);
-            var router = FeedWorkflowRouter.Create(protector, routes, feed => feed == FeedType.ACI ? new BlockingTestCodec(started, release) : new TestOnlyCodec());
+            var router = FeedWorkflowRouter.Create(protector, feed => feed == FeedType.ACI ? new BlockingTestCodec(started, release) : new TestOnlyCodec());
             var broker = new InMemoryMessageBroker();
             var options = TestMessaging();
             using (var cancellation = new CancellationTokenSource())
@@ -156,19 +97,13 @@ bool started = false;
 try
 {
     FeedTransactionLogChecks.Run();
-    CheckPolicies(projectRoot, docsRoot);
-    UnconfiguredPolicyChecks.Run(projectRoot, docsRoot);
     JsonCodecChecks.Run(projectRoot);
-    ReferenceLayoutChecks.Run(projectRoot, docsRoot);
-    PnrReferenceChecks.Run(projectRoot, docsRoot);
-    XdrCodecChecks.Run(projectRoot, docsRoot);
     await NoAnonymizationRoundTripChecks.RunAsync(projectRoot, Path.Combine(docsRoot, "round-trip-checks"));
     PythonHost.Start();
     started = true;
-    var protector = new PresidioFeedProtector();
-    await CheckProtection(protector);
-    await ReferenceLayoutChecks.CheckProtection(projectRoot, docsRoot, protector);
-    await XdrCodecChecks.CheckProtection(protector);
+    await DetectingProtectorChecks.RunAsync(projectRoot);
+    // Worker delivery checks use a fixture protector, so they test scheduling, acknowledgment and dead-lettering only.
+    var protector = new FixtureProtector();
     var codec = new TestOnlyCodec();
     byte[] input = codec.CreateFixture();
     var metadata = new FeedDelivery(FeedType.ACI, Guid.NewGuid(), "fixture.bin", "test-only");
@@ -177,11 +112,8 @@ try
     Check(input.AsSpan().SequenceEqual(unchanged), "Unchanged fixture failed its exact-byte round trip.");
     Console.WriteLine("PASS test-only binary fixture round trips without edits");
 
-    var policies = FeedPolicyConfiguration.Load(Path.Combine(projectRoot, "src", "PresidioDemo.Core", "Configuration", "feed-policies.xml"));
-    await CheckScheduling(protector, input, policies);
-    var fixturePolicies = policies.ToDictionary(pair => pair.Key, pair => pair.Value);
-    fixturePolicies[FeedType.ACI] = TestFixturePolicy(FeedType.ACI);
-    var router = FeedWorkflowRouter.Create(protector, fixturePolicies, _ => new TestOnlyCodec());
+    await CheckScheduling(protector, input);
+    var router = FeedWorkflowRouter.Create(protector, _ => new TestOnlyCodec());
     var broker = new InMemoryMessageBroker();
     var options = TestMessaging();
     using (var cancellation = new CancellationTokenSource())
@@ -200,7 +132,7 @@ try
             Check(values[3] == "[PASSENGER_ID]" && values[6] == "[PASSENGER_ID]", "Passenger IDs were not anonymized.");
             Check(!Encoding.UTF8.GetString(output).Contains("PAX-TOKEN-"), "Unexpected tokenization.");
             Check(!Directory.Exists(Path.Combine(docsRoot, ".demo-token-vault")), "Unexpected token vault.");
-            Console.WriteLine("PASS actual embedded Presidio anonymizes two passengers before binary rebuilding and delivery");
+            Console.WriteLine("PASS the workflow protects two passengers before binary rebuilding and delivery");
             Console.WriteLine("PASS the input is acknowledged only after the protected output is confirmed");
 
             byte[] unknown = (byte[])input.Clone();
@@ -210,7 +142,7 @@ try
             var rejected = broker.PublishedTo("dlq.ACI").Single();
             Check(rejected.Payload.Span.SequenceEqual(unknown) && rejected.Headers.ContainsKey(MessageHeaders.RejectReason), "Rejected input was not preserved in the dead-letter queue.");
             Check(broker.PublishedTo("out/ACI").Count == 1, "Unknown-field input was published.");
-            Console.WriteLine("PASS unconfigured field rejects the entire message to the dead-letter queue without output");
+            Console.WriteLine("PASS a protection failure rejects the entire message to the dead-letter queue without output");
 
             byte[] extra = [.. input, 0x00];
             broker.Send("in.ACI", extra);
@@ -238,6 +170,32 @@ finally
 #endregion
 
 #region Classes
+
+/// <summary>
+/// A test-only protector for the fixture codec: replaces names, e-mails and passenger IDs, keeps the PNR, and fails
+/// closed on any other field, so worker delivery checks do not depend on detection.
+/// </summary>
+sealed class FixtureProtector : IFeedProtector
+{
+    /// <summary>
+    /// Protects the fixture fields by name.
+    /// </summary>
+    /// <param name="feed">The feed route.</param>
+    /// <param name="parsed">The fixture parse.</param>
+    /// <param name="cancellationToken">The token that interrupts processing.</param>
+    /// <returns>The protected values and no events.</returns>
+    /// <exception cref="InvalidDataException">A field other than the fixture's four is present.</exception>
+    public ValueTask<DetectionOutcome> ProtectAsync(FeedType feed, ParsedFeed parsed, CancellationToken cancellationToken) =>
+        ValueTask.FromResult(new DetectionOutcome(parsed.Fields.ToDictionary(field => field.Id, field => field.Name switch
+        {
+            "pnr" => field.Value,
+            "name" => "[PASSENGER_NAME]",
+            "email" => "[EMAIL_ADDRESS]",
+            "sourcePassengerId" => "[PASSENGER_ID]",
+            _ => throw new InvalidDataException("The fixture protector has no rule for this field.")
+        }), []));
+}
+
 
 /// <summary>
 /// Provides an isolated regression-test format rather than an airline producer schema.

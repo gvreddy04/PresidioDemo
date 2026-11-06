@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ETKT recognizers. Same rules as aci.xml: keep, else a complete format match, else full-width mask (WR-014, WR-015).
+-->
+<recognizers feed="ETKT" threshold="0.5" defaultMaskCharacter="*">
+  <!-- Divide-event PNRs (new, old) follow the ticket status record when they are present (WR-017). -->
+  <pnrAnchor after="ticketStatusRecord" offset="1" optional="true" />
+  <pnrAnchor after="ticketStatusRecord" offset="2" optional="true" />
+
+  <format name="ticketNumber" entity="TICKET_REFERENCE" score="0.85" maskCharacter="*">
+    <pattern>^\d{13,15}$</pattern>
+  </format>
+  <!-- The eight-character reference prefix that opens the ticket status record. -->
+  <format name="statusPrefix" entity="UNCLASSIFIED_IDENTIFIER" score="0.85" maskCharacter="*">
+    <pattern>^\d{2}[A-Z0-9]\d{5}(?=,|$)</pattern>
+  </format>
+  <format name="passengerName" entity="PERSON" score="0.9" maskCharacter="*">
+    <pattern>(?&lt;![A-Z])[A-Z]{2,}(?:[ '-][A-Z]+)*/[A-Z]*(?:[ '-][A-Z]+)*</pattern>
+  </format>
+
+  <keep name="ticketStatusRecord" scan="true"><pattern>\d{2}[A-Z0-9]\d{5}(?:,.*)?</pattern></keep>
+  <keep name="entryDate"><pattern>\d{2}[A-Z]{3}\d{2}</pattern></keep>
+  <keep name="timeOrFlightNumber"><pattern>\d{4}</pattern></keep>
+  <keep name="flightTime"><pattern> ?\d{3,4}[APNM]</pattern></keep>
+  <keep name="terminalAddress"><pattern>[A-Z]\d[A-Z0-9]{4}</pattern></keep>
+
+  <builtIn entity="EMAIL_ADDRESS" />
+  <builtIn entity="IP_ADDRESS" />
+  <builtIn entity="CREDIT_CARD" />
+  <builtIn entity="PERSON" />
+</recognizers>

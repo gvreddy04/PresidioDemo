@@ -1,7 +1,6 @@
 using System.Text;
 using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Pipeline;
-using PresidioDemo.Protection;
 
 /// <summary>
 /// Verifies JSON formatting, field coverage, transport framing and malformed-input rejection.
@@ -28,19 +27,12 @@ static class JsonCodecChecks
         byte[] output = codec.Serialize(parsed, values);
         codec.Validate(parsed, output);
         Require(Encoding.UTF8.GetString(output) == json.Replace("Emily", "[PERSON]").Replace("Michael", "[PERSON]"), "serialization changes only selected string spans and preserves passenger grouping");
-        values["/UARecloc"] = "CHANGED";
-        Reject(() => codec.Validate(parsed, codec.Serialize(parsed, values)), "PNR mutation is rejected during validation");
-        values["/UARecloc"] = "K7QX2M";
         values["/Customers/0/Count"] = "100";
         Reject(() => codec.Serialize(parsed, values), "non-string type mutation is rejected");
         Reject(() => codec.Parse(Message("{\"x\":\"a\",\"x\":\"b\"}")), "duplicate JSON keys reject the complete message");
         Reject(() => codec.Parse(Message("{\"x\":\"a\"} {}")), "trailing JSON content rejects the complete message");
         Reject(() => codec.Parse(Message("{\"x\":\"unfinished")), "truncated JSON rejects the complete message");
         Reject(() => codec.Parse(Message("[]")), "incorrect feed root is rejected");
-        var policies = FeedPolicyConfiguration.Load(Path.Combine(root, "src", "PresidioDemo.Core", "Configuration", "feed-policies.xml"));
-        Reject(() => ConfiguredPiiIdentifier.CreatePlan(codec.Parse(Message("{\"UnknownPersonalField\":\"Emily\"}")).Fields, policies[FeedType.Seats]), "unknown schema paths fail before anonymization");
-        Reject(() => policies[FeedType.Seats].Get("/OrderChangeNotif/Old/Customers/*/firstname"), "JSON policy paths are case sensitive");
-        Reject(() => new FieldPolicy("/Old/Customers/*/UARecloc", FieldIdentification.Known, FieldAction.Redact, "PNR").Validate(), "PNR aliases cannot be overridden in path policies");
         string export = "A VER 2\r\nA ENC 546\r\nA CCS 1208\r\nA MSI DEMO\r\nX " + Convert.ToHexString(Encoding.UTF8.GetBytes("{\"FirstName\":\"Emily\"}"));
         var exported = codec.Parse(Message(export, "sample.txt"));
         var exportValues = exported.Fields.ToDictionary(f => f.Id, f => f.Value);
@@ -60,8 +52,8 @@ static class JsonCodecChecks
         }
         var linking = FeedCodecRegistry.Create(FeedType.PnrLinking);
         var link = linking.Parse(Message("[{\"PNROwner\":\"K7QX2M\",\"Customers\":[{\"PaxId\":\"PAX-1001\",\"FirstName\":\"Emily\",\"UaRecordLocator\":\"K7QX2M\",\"DOB\":null}]}]", feed: FeedType.PnrLinking));
-        var plan = ConfiguredPiiIdentifier.CreatePlan(link.Fields, policies[FeedType.PnrLinking]);
-        Require(plan.Count == 5 && link.Fields.Single(f => f.Id.EndsWith("/DOB")).Value == "", "complete illustrative PNR Linking resolves exact configured paths and retains null values");
+        Require(link.Fields.Count == 5 && JsonFeedCodec.StringFields(link).Count == 4 && link.Fields.Single(f => f.Id.EndsWith("/DOB")).Value == "",
+            "illustrative PNR Linking exposes four string candidates and keeps the null value out of detection");
     }
 
     /// <summary>

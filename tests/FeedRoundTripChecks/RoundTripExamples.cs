@@ -82,14 +82,16 @@ internal static class RoundTripExamples
 
             if (feed is FeedType.ACI or FeedType.ETKT or FeedType.PNR)
             {
-                string fieldName = feed switch
+                // The generic codec has no field names, so the varied string is chosen by its shape: the first passenger
+                // name (ACI), the 13-digit history sequence number (ETKT), the first letters-only string (PNR surname).
+                Func<string, bool> target = feed switch
                 {
-                    FeedType.ACI => "/passengerName",
-                    FeedType.ETKT => "/historySequenceNumber",
-                    _ => "/surname"
+                    FeedType.ACI => value => value.Contains('/') && value.All(c => char.IsAsciiLetterUpper(c) || c == '/'),
+                    FeedType.ETKT => value => value.Length == 13 && value.All(char.IsAsciiDigit),
+                    _ => value => value.Length >= 4 && value.All(char.IsAsciiLetterUpper)
                 };
                 var parsed = codecFactory(feed).Parse(Message(feed, "example.bin", baseline.Envelope.Payload));
-                string current = parsed.Fields.Single(field => field.Name == fieldName).Value;
+                string current = parsed.Fields.First(field => target(field.Value)).Value;
                 string[] replacements = feed switch
                 {
                     FeedType.ACI => ["", "REED/AVA", "COLE/JACK", "FOX/OLIVIA", "CARTER/EMMA", "BROOKS/MICHAEL"],

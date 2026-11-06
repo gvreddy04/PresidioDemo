@@ -19,31 +19,30 @@ using PresidioDemo.Worker;
 //   <output>/logs/<feed>/<file>.log.txt       full before/after transaction log (contains original data; tests only)
 //   <output>/report.json                      one item per input file
 // Exit codes: 0 every file published, 2 at least one rejected, 1 configuration or usage error.
-const string usage = "Usage: FeedPipelineHarness --input <folder> --output <folder> [--policy-file <xml>] [--xdr-layout-file <xml>] [--reference-layout-file <xml>] [--fail-publishes <n>]";
+const string usage = "Usage: FeedPipelineHarness --input <folder> --output <folder> [--recognizer-directory <folder>] [--detection-log on|off] [--fail-publishes <n>]";
 string project = AppContext.BaseDirectory;
 while (!File.Exists(Path.Combine(project, "PresidioDemo.slnx")))
 {
     project = Directory.GetParent(project)?.FullName ?? throw new Exception("Project root not found.");
 }
-string configuration = Path.Combine(project, "src", "PresidioDemo.Core", "Configuration");
 var settings = new Dictionary<string, string>
 {
-    ["--policy-file"] = Path.Combine(configuration, "feed-policies.xml"),
-    ["--xdr-layout-file"] = Path.Combine(configuration, "xdr-layouts.xml"),
-    ["--reference-layout-file"] = Path.Combine(configuration, "reference-layouts.xml"),
+    ["--recognizer-directory"] = Path.Combine(project, "src", "PresidioDemo.Core", "Configuration", "recognizers"),
+    ["--detection-log"] = "off",
     ["--fail-publishes"] = "0"
 };
 var supplied = new HashSet<string>();
 for (int i = 0; i < args.Length; i += 2)
 {
-    if (i + 1 >= args.Length || args[i] is not ("--input" or "--output" or "--policy-file" or "--xdr-layout-file" or "--reference-layout-file" or "--fail-publishes") || !supplied.Add(args[i]))
+    if (i + 1 >= args.Length || args[i] is not ("--input" or "--output" or "--recognizer-directory" or "--detection-log" or "--fail-publishes") || !supplied.Add(args[i]))
     {
         Console.Error.WriteLine(usage);
         return 1;
     }
-    settings[args[i]] = args[i] == "--fail-publishes" ? args[i + 1] : Path.GetFullPath(args[i + 1]);
+    settings[args[i]] = args[i] is "--fail-publishes" or "--detection-log" ? args[i + 1] : Path.GetFullPath(args[i + 1]);
 }
-if (!settings.ContainsKey("--input") || !settings.ContainsKey("--output") || !int.TryParse(settings["--fail-publishes"], out int failPublishes))
+if (!settings.ContainsKey("--input") || !settings.ContainsKey("--output") || !int.TryParse(settings["--fail-publishes"], out int failPublishes) ||
+    settings["--detection-log"] is not ("on" or "off"))
 {
     Console.Error.WriteLine(usage);
     return 1;
@@ -53,7 +52,7 @@ FeedPipelineConfiguration pipeline;
 List<(string Path, FeedType Feed, byte[] Content)> inputs = [];
 try
 {
-    pipeline = FeedPipelineConfiguration.Load(settings["--policy-file"], settings["--xdr-layout-file"], settings["--reference-layout-file"]);
+    pipeline = FeedPipelineConfiguration.Load(settings["--recognizer-directory"]);
     foreach (string file in Directory.EnumerateFiles(settings["--input"], "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
     {
         if (FeedFileRouting.IsFeedFile(file))
@@ -84,11 +83,25 @@ Console.WriteLine("Initializing embedded local Presidio and the bundled NLP mode
 PythonHost.Start();
 try
 {
-    var processor = new FeedMessageProcessor(pipeline.CreateRouter(new PresidioFeedProtector()));
+    var protector = pipeline.CreateProtector();
+    protector.Configure();
+    var processor = new FeedMessageProcessor(pipeline.CreateRouter(protector));
     using var stop = new CancellationTokenSource();
+    bool detectionLog = settings["--detection-log"] == "on";
     var workers = routes.Select(pair => new FeedWorker(pair.Key, pair.Value, messaging, broker, broker, processor, NullLogger.Instance, outcome =>
     {
         outcomes[outcome.Input.CorrelationId!] = outcome;
+        if (detectionLog && outcome.Result.Workflow?.Events is { } events)
+        {
+            // The same value-free lines the worker writes with Presidio:DetectionLog on (WR-018).
+            lock (outcomes)
+            {
+                foreach (string line in DetectionLog.Format(pair.Key, outcome.Result.Message.Delivery.MessageId, events))
+                {
+                    Console.WriteLine(line);
+                }
+            }
+        }
         return ValueTask.CompletedTask;
     }).RunAsync(stop.Token)).ToArray();
     for (int i = 0; i < inputs.Count; i++)

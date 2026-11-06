@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Test-only spike: freezes today's protection as a value-free parity baseline and compares decoded-text detection with it. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/PresidioDemo.Core/PresidioDemo.Core.csproj" />
+  </ItemGroup>
+
+</Project>

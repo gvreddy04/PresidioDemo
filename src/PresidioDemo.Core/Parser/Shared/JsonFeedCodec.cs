@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using PresidioDemo.Protection;
 
 namespace PresidioDemo.Feeds.Shared;
 
@@ -13,6 +12,24 @@ public abstract class JsonFeedCodec(FeedType feed, JsonTokenType rootKind) : IFe
 {
 
     #region Methods
+
+    /// <summary>
+    /// Returns every JSON string scalar of a parse, in payload order, as a text candidate for detection. The field name is
+    /// the wildcard key path (for example <c>/*/Customers/*/FirstName</c>), whose last segment is the detection context.
+    /// Numbers, booleans and nulls are never candidates and must stay unchanged.
+    /// </summary>
+    /// <param name="parsed">A parse result from a JSON feed codec.</param>
+    /// <returns>The string fields.</returns>
+    /// <exception cref="InvalidDataException">The parse did not come from a JSON feed codec.</exception>
+    public static IReadOnlyList<FeedField> StringFields(ParsedFeed parsed)
+    {
+        if (parsed.Layout is not JsonLayout layout)
+        {
+            throw new InvalidDataException("The parse did not come from a JSON feed codec.");
+        }
+        var strings = layout.Scalars.Where(scalar => scalar.Kind == JsonTokenType.String).Select(scalar => scalar.Field.Id).ToHashSet(StringComparer.Ordinal);
+        return parsed.Fields.Where(field => strings.Contains(field.Id)).ToArray();
+    }
 
     /// <summary>
     /// Parses the complete input, validates its supported shape and retains the layout required for reconstruction.
@@ -91,10 +108,6 @@ public abstract class JsonFeedCodec(FeedType feed, JsonTokenType rootKind) : IFe
                     {
                         throw new InvalidDataException("Non-string JSON fields must remain unchanged.");
                     }
-                    if (FieldPolicy.IsPnr(scalar.Field.Name))
-                    {
-                        throw new InvalidDataException("JSON PNRs must remain unchanged.");
-                    }
                     output.Write(JsonSerializer.SerializeToUtf8Bytes(value));
                 }
                 cursor = scalar.Offset + scalar.Length;
@@ -125,10 +138,10 @@ public abstract class JsonFeedCodec(FeedType feed, JsonTokenType rootKind) : IFe
         {
             var left = before.Scalars[index];
             var right = after.Scalars[index];
-            if (left.Field.Id != right.Field.Id || left.Field.Name != right.Field.Name || left.Kind != right.Kind ||
-                (FieldPolicy.IsPnr(left.Field.Name) && left.Field.Value != right.Field.Value))
+            // PNR preservation is enforced by the PNR anchors in the detecting protector (WR-017).
+            if (left.Field.Id != right.Field.Id || left.Field.Name != right.Field.Name || left.Kind != right.Kind)
             {
-                throw new InvalidDataException("Serialized field locations, types, or PNR preservation failed validation.");
+                throw new InvalidDataException("Serialized field locations or types failed validation.");
             }
             // Comparing the gaps also protects property names, separators and empty containers.
             if (!before.Envelope.Payload.AsSpan(leftCursor, left.Offset - leftCursor).SequenceEqual(

@@ -1,0 +1,379 @@
+{
+  "parity": "PASS",
+  "protected": {
+    "baseline": 211,
+    "caught": 190,
+    "missed": 21,
+    "approvedExceptions": 21,
+    "unapproved": 0
+  },
+  "pnrs": {
+    "baseline": 17,
+    "unchanged": 17
+  },
+  "rebuilds": {
+    "production": 17,
+    "valid": 17
+  },
+  "falsePositives": 7,
+  "identicalToToday": {
+    "count": 8,
+    "of": 17,
+    "samples": [
+      "ACI.txt",
+      "ACI_02.txt",
+      "ACI_03.txt",
+      "ACI_04.txt",
+      "ACI_05.txt",
+      "PNR_LINKING.txt",
+      "SEATS.txt",
+      "SEATS_03.txt"
+    ]
+  },
+  "negatives": [
+    {
+      "sample": "PNR_LINKING_02_Negative_Testing.txt",
+      "status": "published",
+      "reason": ""
+    },
+    {
+      "sample": "PNR_LINKING_03_Negative_Testing.txt",
+      "status": "rejected",
+      "reason": "A personal-data property holds a number or boolean that cannot be protected in its JSON type; input retained and no output was published."
+    },
+    {
+      "sample": "SEATS_02_Negative_Testing.txt",
+      "status": "rejected",
+      "reason": "JSON MQ exports require UTF-8 CCSID 1208; no implicit code-page conversion is performed."
+    }
+  ],
+  "misses": [
+    {
+      "sample": "ACI_06.txt",
+      "feed": "ACI",
+      "location": "676",
+      "length": 3,
+      "entity": "UNCLASSIFIED_IDENTIFIER",
+      "shape": " 9A",
+      "decision": "rejected",
+      "format": ""
+    },
+    {
+      "sample": "ACI_06.txt",
+      "feed": "ACI",
+      "location": "692",
+      "length": 1,
+      "entity": "UNCLASSIFIED_IDENTIFIER",
+      "shape": "A",
+      "decision": "rejected",
+      "format": ""
+    },
+    {
+      "sample": "ETKT.txt",
+      "feed": "ETKT",
+      "location": "48",
+      "length": 3,
+      "entity": "UNCLASSIFIED_IDENTIFIER",
+      "shape": "AAA",
+      "decision": "rejected",
+      "format": ""
+    },
+    {
+      "sample": "ETKT.txt",
+      "feed": "ETKT",
+      "location": "76",
+      "length": 4,
+      "entity": "UNCLASSIFIED_IDENTIFIER",
+      "shape": "9999",
+      "decision": "kept",
+      "format": "timeOrFlightNumber"
+    },
+    {
+      "sample": "ETKT_02.txt",
+      "feed": "ETKT",
+      "location": "48",
+      "length": 3,
+      "entity": "UNCLASSIFIED_IDENTIFIER",
+      "shape": "AAA",
+      "decision": "rejected",
+      "format": ""
+    },
+    {
+      "sample": "ETKT_02.txt",
+      "feed": "ETKT",
+      "location": "76",
+      "length": 4,
+      "entity": "UNCLASSIFIED_IDENTIFIER",
+      "shape": "9999",
+      "decision": "kept",
+      "format": "timeOrFlightNumber"
+    },
+    {
+      "sample": "ETKT_03.txt",
+      "feed": "ETKT",
+      "location": "48",
+      "length": 3,
+      "entity": "UNCLASSIFIED_IDENTIFIER",
+      "shape": "AAA",
+      "decision": "rejected",
+      "format": ""
+    },
+    {
+      "sample": "ETKT_03.txt",
+      "feed": "ETKT",
+      "location": "76",
+      "length": 4,
+      "entity": "UNCLASSIFIED_IDENTIFIER",
+      "shape": "9999",
+      "decision": "kept",
+      "format": "timeOrFlightNumber"
+    },
+    {
+      "sample": "ETKT_04.txt",
+      "feed": "ETKT",
+      "location": "48",
+      "length": 3,
+      "entity": "UNCLASSIFIED_IDENTIFIER",
+      "shape": "AAA",
+      "decision": "rejected",
+      "format": ""
+    },
+    {
+      "sample": "ETKT_04.txt",
+      "feed": "ETKT",
+      "location": "76",
+      "length": 4,
+      "entity": "UNCLASSIFIED_IDENTIFIER",
+      "shape": "9999",
+      "decision": "kept",
+      "format": "timeOrFlightNumber"
+    },
+    {
+      "sample": "ETKT_05.txt",
+      "feed": "ETKT",
+      "location": "48",
+      "length": 3,
+      "entity": "UNCLASSIFIED_IDENTIFIER",
+      "shape": "AAA",
+      "decision": "rejected",
+      "format": ""
+    },
+    {
+      "sample": "ETKT_05.txt",
+      "feed": "ETKT",
+      "location": "76",
+      "length": 4,
+      "entity": "UNCLASSIFIED_IDENTIFIER",
+      "shape": "9999",
+      "decision": "kept",
+      "format": "timeOrFlightNumber"
+    },
+    {
+      "sample": "ETKT_06.txt",
+      "feed": "ETKT",
+      "location": "48",
+      "length": 3,
+      "entity": "UNCLASSIFIED_IDENTIFIER",
+      "shape": "AAA",
+      "decision": "rejected",
+      "format": ""
+    },
+    {
+      "sample": "ETKT_06.txt",
+      "feed": "ETKT",
+      "location": "76",
+      "length": 4,
+      "entity": "UNCLASSIFIED_IDENTIFIER",
+      "shape": "9999",
+      "decision": "kept",
+      "format": "timeOrFlightNumber"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2056",
+      "length": 3,
+      "entity": "PHONE_NUMBER",
+      "shape": "999",
+      "decision": "rejected",
+      "format": ""
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2108",
+      "length": 3,
+      "entity": "PHONE_NUMBER",
+      "shape": "999",
+      "decision": "rejected",
+      "format": ""
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2184",
+      "length": 3,
+      "entity": "PHONE_NUMBER",
+      "shape": "999",
+      "decision": "rejected",
+      "format": ""
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2280",
+      "length": 3,
+      "entity": "PHONE_NUMBER",
+      "shape": "999",
+      "decision": "rejected",
+      "format": ""
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2348",
+      "length": 3,
+      "entity": "PHONE_NUMBER",
+      "shape": "999",
+      "decision": "rejected",
+      "format": ""
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "896",
+      "length": 3,
+      "entity": "PHONE_NUMBER",
+      "shape": "999",
+      "decision": "rejected",
+      "format": ""
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "956",
+      "length": 3,
+      "entity": "PHONE_NUMBER",
+      "shape": "999",
+      "decision": "rejected",
+      "format": ""
+    }
+  ],
+  "falsePositiveList": [
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "56",
+      "length": 6,
+      "entity": "",
+      "shape": "999999",
+      "decision": "masked-by-default",
+      "format": "none"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3312",
+      "length": 45,
+      "entity": "",
+      "shape": "AAAAA AAAAAAA AAAAAAAAA - 99999 AAAAA * AAAAA",
+      "decision": "masked-by-default",
+      "format": "none"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3388",
+      "length": 43,
+      "entity": "",
+      "shape": "AAA AA/AAAAAAA AAAAAA 99999 - AA AAAAAAAA 9",
+      "decision": "masked-by-default",
+      "format": "none"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3580",
+      "length": 59,
+      "entity": "",
+      "shape": "AAA99AAA*A$99.99AA 99.99AAA A99A-A99A AAA 99.999A AAA AAAAA",
+      "decision": "masked-by-default",
+      "format": "none"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "5092",
+      "length": 23,
+      "entity": "",
+      "shape": "9 -  9 AAAA AA AAA AAAA",
+      "decision": "masked-by-default",
+      "format": "none"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "5140",
+      "length": 56,
+      "entity": "",
+      "shape": "AAA9.99        AA99.99                          AAA99.99",
+      "decision": "masked-by-default",
+      "format": "none"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "56",
+      "length": 6,
+      "entity": "",
+      "shape": "999999",
+      "decision": "masked-by-default",
+      "format": "none"
+    }
+  ],
+  "throughput": {
+    "rounds": 20,
+    "messages": 340,
+    "nlpNer": "on (spaCy en_core_web_lg)",
+    "messagesPerSecondPerTask": 50.6,
+    "feeds": [
+      {
+        "feed": "ACI",
+        "messagesPerSecondPerTask": 57.5,
+        "tasksForEqualShareOfPeak": 7
+      },
+      {
+        "feed": "ETKT",
+        "messagesPerSecondPerTask": 69.3,
+        "tasksForEqualShareOfPeak": 6
+      },
+      {
+        "feed": "PNR",
+        "messagesPerSecondPerTask": 13.9,
+        "tasksForEqualShareOfPeak": 29
+      },
+      {
+        "feed": "PNR-Linking",
+        "messagesPerSecondPerTask": 1620.2,
+        "tasksForEqualShareOfPeak": 1
+      },
+      {
+        "feed": "Seats",
+        "messagesPerSecondPerTask": 2027.1,
+        "tasksForEqualShareOfPeak": 1
+      }
+    ],
+    "tasksForPeak": 44,
+    "assumption": "2,000 msg/s shared equally by the five feeds; one worker process per ECS task"
+  },
+  "rejected": [
+    {
+      "sample": "PNR_LINKING_03_Negative_Testing.txt",
+      "reason": "A personal-data property holds a number or boolean that cannot be protected in its JSON type; input retained and no output was published."
+    },
+    {
+      "sample": "SEATS_02_Negative_Testing.txt",
+      "reason": "JSON MQ exports require UTF-8 CCSID 1208; no implicit code-page conversion is performed."
+    }
+  ]
+}

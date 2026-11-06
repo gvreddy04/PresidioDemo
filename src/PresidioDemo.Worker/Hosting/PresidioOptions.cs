@@ -11,10 +11,11 @@ public sealed class PresidioOptions
     #region Properties, Indexers
 
     /// <summary>
-    /// Gets or sets the feed-policies XML file.
+    /// Gets or sets whether the value-free detection log is written (WR-018). Off by default; an environment settings file
+    /// or the <c>Presidio__DetectionLog</c> environment variable turns it on for one feed service. Read at startup.
     /// </summary>
-    /// <value>The file path.</value>
-    public string PolicyFile { get; set; } = "Configuration/feed-policies.xml";
+    /// <value>True to write one value-free line per decoded string.</value>
+    public bool DetectionLog { get; set; }
 
     /// <summary>
     /// Gets or sets the Python virtual environment folder, or null for the project's src/.venv.
@@ -23,16 +24,11 @@ public sealed class PresidioOptions
     public string? PythonEnvironment { get; set; }
 
     /// <summary>
-    /// Gets or sets the reference layouts XML file.
+    /// Gets or sets the folder that holds one recognizer XML file per feed (WR-014). The files ship inside the image
+    /// (PR-005); the folder is resolved against the application folder.
     /// </summary>
-    /// <value>The file path.</value>
-    public string ReferenceLayoutFile { get; set; } = "Configuration/reference-layouts.xml";
-
-    /// <summary>
-    /// Gets or sets the XDR layouts XML file.
-    /// </summary>
-    /// <value>The file path.</value>
-    public string XdrLayoutFile { get; set; } = "Configuration/xdr-layouts.xml";
+    /// <value>The folder path, by default <c>Configuration/recognizers</c>.</value>
+    public string RecognizerDirectory { get; set; } = "Configuration/recognizers";
 
     #endregion
 
@@ -48,9 +44,13 @@ public sealed class PresidioOptions
     public static PresidioOptions Load(IConfiguration configuration, string baseDirectory)
     {
         var options = configuration.GetSection("Presidio").Get<PresidioOptions>(binder => binder.ErrorOnUnknownConfiguration = true) ?? new();
-        options.PolicyFile = Path.GetFullPath(options.PolicyFile, baseDirectory);
-        options.ReferenceLayoutFile = Path.GetFullPath(options.ReferenceLayoutFile, baseDirectory);
-        options.XdrLayoutFile = Path.GetFullPath(options.XdrLayoutFile, baseDirectory);
+        options.RecognizerDirectory = Path.GetFullPath(options.RecognizerDirectory, baseDirectory);
+        string application = Path.TrimEndingDirectorySeparator(Path.GetFullPath(baseDirectory)) + Path.DirectorySeparatorChar;
+        if (!options.RecognizerDirectory.StartsWith(application, StringComparison.OrdinalIgnoreCase))
+        {
+            // Recognizer files ship only inside the reviewed image (PR-005), never from a mounted or other folder.
+            throw new InvalidOperationException("Presidio:RecognizerDirectory must be a folder inside the application folder.");
+        }
         if (string.IsNullOrWhiteSpace(options.PythonEnvironment))
         {
             options.PythonEnvironment = null;

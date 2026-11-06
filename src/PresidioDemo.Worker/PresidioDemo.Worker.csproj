@@ -22,7 +22,8 @@
   <ItemGroup>
     <!-- One settings file for every environment; DOTNET_ENVIRONMENT selects the section. -->
     <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="../PresidioDemo.Core/Configuration/*.xml" Link="Configuration/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Recognizer files ship inside the build output and the image only (PR-005). -->
+    <None Include="../PresidioDemo.Core/Configuration/recognizers/*.xml" Link="Configuration/recognizers/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

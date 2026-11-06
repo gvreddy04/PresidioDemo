@@ -1,0 +1,1606 @@
+{
+  "source": "feed-policies.xml, xdr-layouts.xml and reference-layouts.xml before decoded-text detection",
+  "samples": [
+    "ACI.txt",
+    "ACI_02.txt",
+    "ACI_03.txt",
+    "ACI_04.txt",
+    "ACI_05.txt",
+    "ACI_06.txt",
+    "ETKT.txt",
+    "ETKT_02.txt",
+    "ETKT_03.txt",
+    "ETKT_04.txt",
+    "ETKT_05.txt",
+    "ETKT_06.txt",
+    "PNR_LINKING.txt",
+    "PNR.txt",
+    "PNR_02.txt",
+    "SEATS.txt",
+    "SEATS_03.txt"
+  ],
+  "protected": [
+    {
+      "sample": "ACI.txt",
+      "feed": "ACI",
+      "location": "428",
+      "length": 11,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "ACI.txt",
+      "feed": "ACI",
+      "location": "844",
+      "length": 11,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ACI.txt",
+      "feed": "ACI",
+      "location": "860",
+      "length": 9,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ACI_02.txt",
+      "feed": "ACI",
+      "location": "428",
+      "length": 11,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "ACI_02.txt",
+      "feed": "ACI",
+      "location": "844",
+      "length": 11,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ACI_02.txt",
+      "feed": "ACI",
+      "location": "860",
+      "length": 9,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ACI_03.txt",
+      "feed": "ACI",
+      "location": "428",
+      "length": 11,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "ACI_04.txt",
+      "feed": "ACI",
+      "location": "428",
+      "length": 11,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "ACI_04.txt",
+      "feed": "ACI",
+      "location": "684",
+      "length": 8,
+      "entity": "LOYALTY_NUMBER"
+    },
+    {
+      "sample": "ACI_05.txt",
+      "feed": "ACI",
+      "location": "424",
+      "length": 13,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "ACI_06.txt",
+      "feed": "ACI",
+      "location": "428",
+      "length": 11,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "ACI_06.txt",
+      "feed": "ACI",
+      "location": "676",
+      "length": 3,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ACI_06.txt",
+      "feed": "ACI",
+      "location": "692",
+      "length": 1,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ACI_06.txt",
+      "feed": "ACI",
+      "location": "728",
+      "length": 8,
+      "entity": "LOYALTY_NUMBER"
+    },
+    {
+      "sample": "ACI_06.txt",
+      "feed": "ACI",
+      "location": "932",
+      "length": 11,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT.txt",
+      "feed": "ETKT",
+      "location": "48",
+      "length": 3,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT.txt",
+      "feed": "ETKT",
+      "location": "76",
+      "length": 4,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT.txt",
+      "feed": "ETKT",
+      "location": "92",
+      "length": 15,
+      "entity": "TICKET_REFERENCE"
+    },
+    {
+      "sample": "ETKT.txt",
+      "feed": "ETKT",
+      "location": "156",
+      "length": 13,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT.txt",
+      "feed": "ETKT",
+      "location": "176",
+      "length": 8,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_02.txt",
+      "feed": "ETKT",
+      "location": "48",
+      "length": 3,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_02.txt",
+      "feed": "ETKT",
+      "location": "76",
+      "length": 4,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_02.txt",
+      "feed": "ETKT",
+      "location": "92",
+      "length": 15,
+      "entity": "TICKET_REFERENCE"
+    },
+    {
+      "sample": "ETKT_02.txt",
+      "feed": "ETKT",
+      "location": "156",
+      "length": 13,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_02.txt",
+      "feed": "ETKT",
+      "location": "176",
+      "length": 8,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_03.txt",
+      "feed": "ETKT",
+      "location": "48",
+      "length": 3,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_03.txt",
+      "feed": "ETKT",
+      "location": "76",
+      "length": 4,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_03.txt",
+      "feed": "ETKT",
+      "location": "92",
+      "length": 15,
+      "entity": "TICKET_REFERENCE"
+    },
+    {
+      "sample": "ETKT_03.txt",
+      "feed": "ETKT",
+      "location": "156",
+      "length": 13,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_03.txt",
+      "feed": "ETKT",
+      "location": "176",
+      "length": 8,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_04.txt",
+      "feed": "ETKT",
+      "location": "48",
+      "length": 3,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_04.txt",
+      "feed": "ETKT",
+      "location": "76",
+      "length": 4,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_04.txt",
+      "feed": "ETKT",
+      "location": "92",
+      "length": 15,
+      "entity": "TICKET_REFERENCE"
+    },
+    {
+      "sample": "ETKT_04.txt",
+      "feed": "ETKT",
+      "location": "156",
+      "length": 13,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_04.txt",
+      "feed": "ETKT",
+      "location": "176",
+      "length": 8,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_05.txt",
+      "feed": "ETKT",
+      "location": "48",
+      "length": 3,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_05.txt",
+      "feed": "ETKT",
+      "location": "76",
+      "length": 4,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_05.txt",
+      "feed": "ETKT",
+      "location": "92",
+      "length": 15,
+      "entity": "TICKET_REFERENCE"
+    },
+    {
+      "sample": "ETKT_05.txt",
+      "feed": "ETKT",
+      "location": "156",
+      "length": 13,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_05.txt",
+      "feed": "ETKT",
+      "location": "176",
+      "length": 8,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_06.txt",
+      "feed": "ETKT",
+      "location": "48",
+      "length": 3,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_06.txt",
+      "feed": "ETKT",
+      "location": "76",
+      "length": 4,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_06.txt",
+      "feed": "ETKT",
+      "location": "92",
+      "length": 15,
+      "entity": "TICKET_REFERENCE"
+    },
+    {
+      "sample": "ETKT_06.txt",
+      "feed": "ETKT",
+      "location": "156",
+      "length": 13,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "ETKT_06.txt",
+      "feed": "ETKT",
+      "location": "176",
+      "length": 8,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/PaxLinkId",
+      "length": 36,
+      "entity": "PASSENGER_LINK_ID"
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/PaxFlightLegLinkId",
+      "length": 49,
+      "entity": "PASSENGER_LINK_ID"
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/Customers/0/PaxId",
+      "length": 11,
+      "entity": "PASSENGER_ID"
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/Customers/0/OrderId",
+      "length": 13,
+      "entity": "ORDER_ID"
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/Customers/0/FirstName",
+      "length": 5,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/Customers/0/LastName",
+      "length": 4,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/Customers/0/BookedAs",
+      "length": 10,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/Customers/0/DOB",
+      "length": 10,
+      "entity": "DATE_OF_BIRTH"
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/Customers/1/PaxId",
+      "length": 11,
+      "entity": "PASSENGER_ID"
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/Customers/1/OrderId",
+      "length": 13,
+      "entity": "ORDER_ID"
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/Customers/1/FirstName",
+      "length": 6,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/Customers/1/LastName",
+      "length": 4,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/Customers/1/BookedAs",
+      "length": 11,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/Customers/1/DOB",
+      "length": 10,
+      "entity": "DATE_OF_BIRTH"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "68",
+      "length": 9,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "172",
+      "length": 6,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "288",
+      "length": 6,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "404",
+      "length": 5,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "444",
+      "length": 4,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "514",
+      "length": 7,
+      "entity": "DATE_OF_BIRTH"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "522",
+      "length": 1,
+      "entity": "GENDER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "525",
+      "length": 10,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "537",
+      "length": 10,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "596",
+      "length": 53,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "700",
+      "length": 50,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "800",
+      "length": 29,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "890",
+      "length": 24,
+      "entity": "EMAIL_ADDRESS"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "916",
+      "length": 10,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "986",
+      "length": 10,
+      "entity": "PHONE_NUMBER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "998",
+      "length": 10,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1056",
+      "length": 37,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1144",
+      "length": 38,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1232",
+      "length": 38,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1320",
+      "length": 21,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1392",
+      "length": 52,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1492",
+      "length": 35,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1576",
+      "length": 8,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1659",
+      "length": 10,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1670",
+      "length": 14,
+      "entity": "TICKET_REFERENCE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1763",
+      "length": 10,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1774",
+      "length": 14,
+      "entity": "TICKET_REFERENCE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1864",
+      "length": 8,
+      "entity": "LOYALTY_NUMBER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1875",
+      "length": 4,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1884",
+      "length": 10,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1968",
+      "length": 8,
+      "entity": "LOYALTY_NUMBER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1979",
+      "length": 4,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "1988",
+      "length": 10,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2056",
+      "length": 3,
+      "entity": "PHONE_NUMBER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2064",
+      "length": 7,
+      "entity": "PHONE_NUMBER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2108",
+      "length": 3,
+      "entity": "PHONE_NUMBER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2117",
+      "length": 28,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2184",
+      "length": 3,
+      "entity": "PHONE_NUMBER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2193",
+      "length": 49,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2280",
+      "length": 3,
+      "entity": "PHONE_NUMBER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2289",
+      "length": 22,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2348",
+      "length": 3,
+      "entity": "PHONE_NUMBER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2357",
+      "length": 47,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2875",
+      "length": 4,
+      "entity": "PAYMENT_REFERENCE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2922",
+      "length": 9,
+      "entity": "IP_ADDRESS"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "2960",
+      "length": 25,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3016",
+      "length": 23,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3068",
+      "length": 6,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3112",
+      "length": 10,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3128",
+      "length": 8,
+      "entity": "LOYALTY_NUMBER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3137",
+      "length": 2,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3187",
+      "length": 8,
+      "entity": "LOYALTY_NUMBER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3248",
+      "length": 8,
+      "entity": "FINANCIAL_INFORMATION"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3474",
+      "length": 8,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3524",
+      "length": 26,
+      "entity": "EMAIL_ADDRESS"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3677",
+      "length": 36,
+      "entity": "ORDER_ID"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3744",
+      "length": 48,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3835",
+      "length": 36,
+      "entity": "ORDER_ID"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3905",
+      "length": 10,
+      "entity": "ADDRESS"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "3949",
+      "length": 13,
+      "entity": "ADDRESS"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4001",
+      "length": 7,
+      "entity": "ADDRESS"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4046",
+      "length": 2,
+      "entity": "ADDRESS"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4084",
+      "length": 5,
+      "entity": "ADDRESS"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4125",
+      "length": 16,
+      "entity": "ADDRESS"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4179",
+      "length": 36,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4244",
+      "length": 48,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4339",
+      "length": 6,
+      "entity": "PAYMENT_REFERENCE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4405",
+      "length": 36,
+      "entity": "ORDER_ID"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4472",
+      "length": 48,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4548",
+      "length": 51,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4628",
+      "length": 48,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4704",
+      "length": 49,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4784",
+      "length": 48,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4872",
+      "length": 8,
+      "entity": "LOYALTY_NUMBER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4889",
+      "length": 11,
+      "entity": "TICKET_REFERENCE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "4957",
+      "length": 8,
+      "entity": "LOYALTY_NUMBER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "5004",
+      "length": 6,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "5280",
+      "length": 10,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "5368",
+      "length": 6,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "5420",
+      "length": 11,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "68",
+      "length": 9,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "172",
+      "length": 6,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "288",
+      "length": 6,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "400",
+      "length": 5,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "440",
+      "length": 15,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "522",
+      "length": 7,
+      "entity": "DATE_OF_BIRTH"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "530",
+      "length": 1,
+      "entity": "GENDER"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "533",
+      "length": 21,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "556",
+      "length": 6,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "612",
+      "length": 24,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "684",
+      "length": 59,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "792",
+      "length": 48,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "896",
+      "length": 3,
+      "entity": "PHONE_NUMBER"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "904",
+      "length": 15,
+      "entity": "PHONE_NUMBER"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "956",
+      "length": 3,
+      "entity": "PHONE_NUMBER"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "964",
+      "length": 8,
+      "entity": "PHONE_NUMBER"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "1216",
+      "length": 50,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "1296",
+      "length": 48,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "1384",
+      "length": 6,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "1396",
+      "length": 38,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "1468",
+      "length": 6,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "1560",
+      "length": 6,
+      "entity": "UNCLASSIFIED_IDENTIFIER"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "1612",
+      "length": 62,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "1708",
+      "length": 51,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/OrderId",
+      "length": 13,
+      "entity": "ORDER_ID"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/PaxId",
+      "length": 11,
+      "entity": "PASSENGER_ID"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/FirstName",
+      "length": 4,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/LastName",
+      "length": 5,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/BookedAsName",
+      "length": 10,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/Attributes/0",
+      "length": 18,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/Attributes/1",
+      "length": 13,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/Attributes/2",
+      "length": 10,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/Attributes/3",
+      "length": 13,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/Attributes/4",
+      "length": 17,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/Attributes/5",
+      "length": 5,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/Attributes/6",
+      "length": 9,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/Attributes/7",
+      "length": 17,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/Attributes/8",
+      "length": 11,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/Attributes/9",
+      "length": 4,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/IATAAttributes/0",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/IATAAttributes/1",
+      "length": 2,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/IATAAttributes/2",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/IATAAttributes/3",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/IATAAttributes/4",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/IATAAttributes/5",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/IATAAttributes/6",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/TTYAttributes/0",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/TTYAttributes/1",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/TTYAttributes/2",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/TTYAttributes/3",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/TTYAttributes/4",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/ServiceItems/0/TTYAttributes/5",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/EventDetail/EmpId",
+      "length": 13,
+      "entity": "EMPLOYEE_ID"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/OrderId",
+      "length": 13,
+      "entity": "ORDER_ID"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/PaxId",
+      "length": 11,
+      "entity": "PASSENGER_ID"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/FirstName",
+      "length": 4,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/LastName",
+      "length": 4,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/BookedAsName",
+      "length": 9,
+      "entity": "PERSON"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/ServiceItems/0/Attributes/0",
+      "length": 13,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/ServiceItems/0/Attributes/1",
+      "length": 6,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/ServiceItems/0/Attributes/2",
+      "length": 10,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/ServiceItems/0/Attributes/3",
+      "length": 13,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/ServiceItems/0/Attributes/4",
+      "length": 10,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/ServiceItems/0/Attributes/5",
+      "length": 17,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/ServiceItems/0/Attributes/6",
+      "length": 11,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/ServiceItems/0/Attributes/7",
+      "length": 11,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/ServiceItems/0/Attributes/8",
+      "length": 8,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/ServiceItems/0/IATAAttributes/0",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/ServiceItems/0/IATAAttributes/1",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/ServiceItems/0/IATAAttributes/2",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/ServiceItems/0/IATAAttributes/3",
+      "length": 1,
+      "entity": "SENSITIVE_ATTRIBUTE"
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/EventDetail/EmpId",
+      "length": 14,
+      "entity": "EMPLOYEE_ID"
+    }
+  ],
+  "pnrs": [
+    {
+      "sample": "ACI.txt",
+      "feed": "ACI",
+      "location": "408",
+      "length": 6
+    },
+    {
+      "sample": "ACI.txt",
+      "feed": "ACI",
+      "location": "869",
+      "length": 6
+    },
+    {
+      "sample": "ACI_02.txt",
+      "feed": "ACI",
+      "location": "408",
+      "length": 6
+    },
+    {
+      "sample": "ACI_02.txt",
+      "feed": "ACI",
+      "location": "869",
+      "length": 6
+    },
+    {
+      "sample": "ACI_03.txt",
+      "feed": "ACI",
+      "location": "408",
+      "length": 6
+    },
+    {
+      "sample": "ACI_04.txt",
+      "feed": "ACI",
+      "location": "408",
+      "length": 6
+    },
+    {
+      "sample": "ACI_05.txt",
+      "feed": "ACI",
+      "location": "404",
+      "length": 6
+    },
+    {
+      "sample": "ACI_06.txt",
+      "feed": "ACI",
+      "location": "408",
+      "length": 6
+    },
+    {
+      "sample": "ETKT_05.txt",
+      "feed": "ETKT",
+      "location": "488",
+      "length": 6
+    },
+    {
+      "sample": "ETKT_05.txt",
+      "feed": "ETKT",
+      "location": "500",
+      "length": 6
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/PNROwner",
+      "length": 6
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/Customers/0/UaRecordLocator",
+      "length": 6
+    },
+    {
+      "sample": "PNR_LINKING.txt",
+      "feed": "PNR-Linking",
+      "location": "/0/Customers/1/UaRecordLocator",
+      "length": 6
+    },
+    {
+      "sample": "PNR.txt",
+      "feed": "PNR",
+      "location": "84",
+      "length": 6
+    },
+    {
+      "sample": "PNR_02.txt",
+      "feed": "PNR",
+      "location": "84",
+      "length": 6
+    },
+    {
+      "sample": "SEATS.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/Old/Customers/0/UARecloc",
+      "length": 6
+    },
+    {
+      "sample": "SEATS_03.txt",
+      "feed": "Seats",
+      "location": "/OrderChangeNotif/New/Customers/0/UARecloc",
+      "length": 6
+    }
+  ],
+  "alreadyMasked": 0
+}

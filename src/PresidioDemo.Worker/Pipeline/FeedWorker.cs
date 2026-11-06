@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using PresidioDemo.Feeds.Shared;
 using PresidioDemo.Messaging;
 using PresidioDemo.Pipeline;
+using PresidioDemo.Transport;
 
 namespace PresidioDemo.Worker;
 
@@ -33,8 +34,10 @@ public sealed record FeedWorkerOutcome(InboundMessage Input, FeedProcessingResul
 /// <param name="processor">Runs the feed workflow.</param>
 /// <param name="logger">Writes summaries without personal data.</param>
 /// <param name="onOutcome">Optional observer, used by tests.</param>
+/// <param name="detectionLog">Whether to write the value-free detection log (<c>Presidio:DetectionLog</c>, WR-018).</param>
 public sealed class FeedWorker(FeedType feed, MessageRoute route, MessagingOptions options, IMessageConsumer consumer,
-    IMessagePublisher publisher, FeedMessageProcessor processor, ILogger logger, Func<FeedWorkerOutcome, ValueTask>? onOutcome = null)
+    IMessagePublisher publisher, FeedMessageProcessor processor, ILogger logger, Func<FeedWorkerOutcome, ValueTask>? onOutcome = null,
+    bool detectionLog = false)
 {
 
     #region Fields and Constants
@@ -143,6 +146,13 @@ public sealed class FeedWorker(FeedType feed, MessageRoute route, MessagingOptio
             logger.LogWarning("{Feed} {Transaction} acknowledgment failed and will be redelivered: {Reason}", FeedCatalog.Get(feed).FolderName, id.ToString("N"), ex.Message);
         }
         LogSummary(id, input, result, outbound, timer.ElapsedMilliseconds);
+        if (detectionLog && result.Workflow?.Events is { } events)
+        {
+            foreach (string line in DetectionLog.Format(feed, id, events))
+            {
+                logger.LogInformation("{DetectionLine}", line);
+            }
+        }
         if (onOutcome is not null)
         {
             await onOutcome(new(input, result, outbound));

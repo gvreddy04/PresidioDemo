@@ -18,7 +18,7 @@ try
     var messaging = MessagingOptions.Load(configuration);
     FeedWorkerService.Routes(messaging);
     var presidio = PresidioOptions.Load(configuration, baseDirectory);
-    var pipeline = FeedPipelineConfiguration.Load(presidio.PolicyFile, presidio.XdrLayoutFile, presidio.ReferenceLayoutFile);
+    var pipeline = FeedPipelineConfiguration.Load(presidio.RecognizerDirectory);
 
     var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
     {

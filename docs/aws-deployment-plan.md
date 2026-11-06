@@ -41,12 +41,12 @@ The Existing? column records what we assume; confirm each row with the platform 
 - **Numbers:** 8 consumers per task and 32 partitions per feed, so at most 4 tasks per feed and 20 in total. That covers 2,000 per second only if no single feed carries more than about 400–800 per second. If one feed carries most of the load, raise that feed's partitions; no code change is needed.
 - **Start tasks before they're needed.** Each service's minimum is sized for the normal peak (50,000–100,000 messages an hour, about 28 a second in total, so one task per feed). Scheduled scaling raises the minimums before holidays, so slow task start-up rarely matters. CPU target tracking at 60 % handles the rest, up to the partition count.
 
-**What one message costs:** in local harness runs (20 sample messages, in-memory broker), parsing, masking and rebuilding took about 1–20 ms per message. Current policies mask known fields and run no NLP analysis. In production, the round trip to the broker adds to this: a task reading one message at a time waits about two round trips per message.
+**What one message costs:** decoded-text detection runs local Presidio on every decoded string, with spaCy NER on. In the detection spike (17 production samples, 20 rounds, one process, no broker) one task handled about 50 messages per second overall: ACI 57, ETKT 69, PNR 14, PNR-Linking about 1,600 and Seats about 2,000 per second. PNR is the slowest because each message holds about 90 strings. Presidio calls are serialized inside a task, so extra consumers per task overlap broker round trips but do not add detection throughput; scale with tasks. If the 2,000 per second peak were shared equally by the five feeds, it would need about 44 tasks: ACI 7, ETKT 6, PNR 29, PNR-Linking 1, Seats 1. Confirm the real split between feeds before sizing. The figures come from `dotnet run --project tests/DetectionSpike -- spike` and are recorded in [tests/fixtures/spike-summary.json](../tests/fixtures/spike-summary.json). In production, the round trip to the broker adds to this.
 
 | | One consumer per task (`ConsumersPerTask=1`) | Several consumers per task (chosen) |
 |---|---|---|
 | What limits throughput | The wait on the broker; CPU stays low | CPU |
-| Messages per second, one 1-vCPU task | 14–65, depending on broker distance | About 100–200 |
+| Messages per second, one 1-vCPU task | 14–65, depending on broker distance; with detection, at most the spike rates above | About 100–200 before detection; with detection, at most the spike rates above |
 | Tasks for 2,000 per second, with headroom | About 40 (broker in the same region) to 185 (broker about 30 ms away) | About 15–30 |
 | Scaling signal | Queue depth, or a fixed count per feed | CPU target tracking at 60 % |
 | Approximate Fargate cost at full scale | About $2–11 per hour | About $1–2 per hour |
